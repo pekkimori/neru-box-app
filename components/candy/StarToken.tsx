@@ -1,4 +1,4 @@
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyColors, CandyRadii, StarTone, StarToneColors } from '@/constants/candy-theme';
 
@@ -8,7 +8,7 @@ type StarTokenProps = {
   state?: StarState;
   tone?: StarTone;
   size?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function StarToken({ state = 'filled', tone = 'gold', size = 40, style }: StarTokenProps) {

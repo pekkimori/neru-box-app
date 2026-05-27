@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CandyGradients, CandySpacing } from '@/constants/candy-theme';
@@ -7,7 +7,7 @@ import { CandyGradients, CandySpacing } from '@/constants/candy-theme';
 type CandyScreenProps = {
   children: ReactNode;
   variant?: keyof typeof CandyGradients;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CandyScreen({ children, variant = 'app', style }: CandyScreenProps) {

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
 
@@ -6,7 +6,7 @@ type StatusPillProps = {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
   tone?: 'gold' | 'mint' | 'lavender' | 'pink' | 'sky';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 const toneStyles = {

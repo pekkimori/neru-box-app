@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { CandyColors, CandyRadii, CandyShadow, CandySpacing } from '@/constants/candy-theme';
 
 type CandyCardProps = {
   children: ReactNode;
   tone?: 'plain' | 'gold' | 'mint' | 'lavender' | 'pink' | 'sky';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 const toneBorders = {

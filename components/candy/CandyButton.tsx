@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyColors, CandyRadii, CandyShadow, CandySpacing } from '@/constants/candy-theme';
 
@@ -11,7 +11,7 @@ type CandyButtonProps = {
   variant?: CandyButtonVariant;
   icon?: keyof typeof Ionicons.glyphMap;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
 
@@ -28,6 +28,8 @@ export function CandyButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.base,
         styles[variant],
