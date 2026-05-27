@@ -47,7 +47,7 @@ export default function DreamsHub() {
           </View>
           <View style={styles.statusRow}>
             <StatusPill tone="gold" icon="star" label={`${stars.length} stars`} />
-            <StatusPill tone="gold" icon="ellipse" label={`${coins}`} />
+            <StatusPill tone="gold" icon="ellipse" label={`${coins} coins`} />
           </View>
         </View>
 
@@ -73,11 +73,13 @@ export default function DreamsHub() {
             label="Constellations"
             variant="secondary"
             icon="sparkles"
+            style={styles.actionButton}
             onPress={() => router.push('/dreams/constellations')}
           />
           <CandyButton
             label="Plan Week"
             icon="calendar"
+            style={styles.actionButton}
             onPress={() => router.push('/dreams/plan')}
           />
         </View>
@@ -101,6 +103,8 @@ export default function DreamsHub() {
               <TouchableOpacity
                 key={block.key}
                 activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${block.label} block`}
                 onPress={() => router.push(`/dreams/block/${block.key}`)}
               >
                 <CandyCard tone={blockDone ? 'mint' : 'lavender'} style={styles.blockCard}>
@@ -195,6 +199,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: CandySpacing.sm,
     flexWrap: 'wrap',
+  },
+  actionButton: {
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',
