@@ -1,0 +1,21 @@
+import { CandyColors } from './candy-theme';
+
+export const NeruColors = {
+  bg: CandyColors.cream,
+  card: CandyColors.white,
+  cardBorder: CandyColors.border,
+  text: CandyColors.ink,
+  textMuted: CandyColors.inkSoft,
+  textDim: CandyColors.inkMuted,
+  amber: CandyColors.gold,
+  amberLight: '#FFF1A8',
+  violet: CandyColors.lavender,
+  violetDark: CandyColors.lavenderDeep,
+  pink: CandyColors.pink,
+  sky: CandyColors.sky,
+  red: CandyColors.danger,
+  emerald: CandyColors.mintDeep,
+  indigo: '#7B8CFF',
+  tabBar: CandyColors.white,
+  tabBarBorder: CandyColors.border,
+};
