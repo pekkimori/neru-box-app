@@ -2,6 +2,8 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { CandyButton, CandyCard, CandyScreen, QuestProgress, StarToken, StatusPill } from '@/components/candy';
+import { CandyColors, CandySpacing } from '@/constants/candy-theme';
 import { NeruColors } from '../../constants/neru-theme';
 import { useCoins } from '../../hooks/useCoins';
 import { useDailyPlan } from '../../hooks/useDailyPlan';
@@ -30,60 +32,63 @@ export default function DreamsHub() {
   const { coins } = useCoins();
   const { plan, isBlockComplete } = useDailyPlan(today);
   const { getQuestsForBlock, areBlockRoutinesDone } = useRoutineQuests(today);
-  const { constellations, stars } = useConstellations();
+  const { stars } = useConstellations();
 
   const hasPlan = BLOCK_CONFIG.some((b) => plan.blocks[b.key].length > 0);
+  const completedBlocks = BLOCK_CONFIG.filter((b) => isBlockComplete(b.key)).length;
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams">
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <View>
+            <Text style={styles.kicker}>Neru path</Text>
             <Text style={styles.dateText}>{formatDate(today)}</Text>
-            <Text style={styles.weekIndicator}>
-              {stars.filter((s) =>
-                constellations.some((c) => c.id === s.constellationId)
-              ).length} stars across {constellations.length} constellations
-            </Text>
           </View>
-          <View style={styles.headerRight}>
-            <View style={styles.coinBadge}>
-              <Text style={styles.coinText}>🪙 {coins}</Text>
+          <View style={styles.statusRow}>
+            <StatusPill tone="gold" icon="star" label={`${stars.length} stars`} />
+            <StatusPill tone="gold" icon="ellipse" label={`${coins}`} />
+          </View>
+        </View>
+
+        <CandyCard tone="lavender" style={styles.heroCard}>
+          <View style={styles.heroTop}>
+            <StarToken state="glow" tone="gold" size={58} />
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroTitle}>{"Light today's stars"}</Text>
+              <Text style={styles.heroText}>
+                Complete your time blocks to fill the path and save the best moments in your diary.
+              </Text>
             </View>
           </View>
-        </View>
+          <QuestProgress
+            completed={completedBlocks}
+            total={BLOCK_CONFIG.length}
+            label={`${completedBlocks}/${BLOCK_CONFIG.length} blocks glowing`}
+          />
+        </CandyCard>
 
-        {/* Action Buttons */}
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
+          <CandyButton
+            label="Constellations"
+            variant="secondary"
+            icon="sparkles"
             onPress={() => router.push('/dreams/constellations')}
-          >
-            <Ionicons name="star" size={18} color={NeruColors.amber} />
-            <Text style={styles.actionText}>Constellations</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
+          />
+          <CandyButton
+            label="Plan Week"
+            icon="calendar"
             onPress={() => router.push('/dreams/plan')}
-          >
-            <Ionicons name="calendar" size={18} color={NeruColors.violet} />
-            <Text style={styles.actionText}>Plan Week</Text>
-          </TouchableOpacity>
+          />
         </View>
 
-        {/* Time Block Cards */}
         {!hasPlan ? (
-          <TouchableOpacity
-            style={styles.emptyState}
-            onPress={() => router.push('/dreams/plan')}
-          >
-            <Ionicons name="calendar-outline" size={48} color={NeruColors.textDim} />
-            <Text style={styles.emptyTitle}>Plan your day</Text>
-            <Text style={styles.emptySubtitle}>
-              Assign stars to time blocks to get started
-            </Text>
-          </TouchableOpacity>
+          <CandyCard tone="gold" style={styles.emptyState}>
+            <StarToken state="empty" tone="gold" size={64} />
+            <Text style={styles.emptyTitle}>Light your first star</Text>
+            <Text style={styles.emptySubtitle}>Assign stars to morning, afternoon, and evening.</Text>
+            <CandyButton label="Plan today" icon="add-circle" onPress={() => router.push('/dreams/plan')} />
+          </CandyCard>
         ) : (
           BLOCK_CONFIG.map((block) => {
             const tasks = plan.blocks[block.key];
@@ -95,158 +100,151 @@ export default function DreamsHub() {
             return (
               <TouchableOpacity
                 key={block.key}
-                style={[styles.blockCard, blockDone && styles.blockCardDone]}
+                activeOpacity={0.82}
                 onPress={() => router.push(`/dreams/block/${block.key}`)}
               >
-                <View style={styles.blockHeader}>
-                  <View style={styles.blockTitleRow}>
-                    <Ionicons name={block.icon as any} size={20} color={block.color} />
-                    <Text style={styles.blockTitle}>{block.label}</Text>
+                <CandyCard tone={blockDone ? 'mint' : 'lavender'} style={styles.blockCard}>
+                  <View style={styles.blockHeader}>
+                    <View style={styles.blockTitleRow}>
+                      <StarToken state={blockDone ? 'filled' : 'empty'} tone={blockDone ? 'mint' : 'gold'} size={42} />
+                      <View>
+                        <Text style={styles.blockTitle}>{block.label}</Text>
+                        <Text style={styles.blockTaskCount}>
+                          {tasks.length > 0 ? `${litCount}/${tasks.length} stars lit` : 'No stars planned'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={CandyColors.inkMuted} />
                   </View>
-                  {blockDone && (
-                    <Ionicons name="checkmark-circle" size={20} color={NeruColors.emerald} />
-                  )}
-                </View>
-                <View style={styles.blockMeta}>
-                  <Text style={styles.blockTaskCount}>
-                    {tasks.length > 0
-                      ? `${litCount}/${tasks.length} tasks`
-                      : 'No tasks planned'}
-                  </Text>
-                  {routineCount > 0 && (
-                    <Text style={styles.blockRoutineStatus}>
-                      {routinesDone ? '✓ Routines done' : `${routineCount} routines`}
-                    </Text>
-                  )}
-                </View>
+                  {routineCount > 0 ? (
+                    <StatusPill
+                      tone={routinesDone ? 'mint' : 'sky'}
+                      icon={routinesDone ? 'checkmark-circle' : 'sparkles'}
+                      label={routinesDone ? 'Routines done' : `${routineCount} routines`}
+                      style={styles.blockPill}
+                    />
+                  ) : null}
+                </CandyCard>
               </TouchableOpacity>
             );
           })
         )}
       </ScrollView>
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: NeruColors.bg,
-  },
   scroll: {
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 120,
+    paddingTop: CandySpacing.lg,
+    paddingBottom: 128,
+    gap: CandySpacing.lg,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+    alignItems: 'center',
+    gap: CandySpacing.md,
+    flexWrap: 'wrap',
+  },
+  kicker: {
+    color: CandyColors.lavenderDeep,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   dateText: {
+    color: CandyColors.ink,
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 30,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CandySpacing.xs,
+    justifyContent: 'flex-end',
+    flexShrink: 1,
+  },
+  heroCard: {
+    gap: CandySpacing.lg,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: CandySpacing.md,
+  },
+  heroCopy: {
+    flex: 1,
+    gap: CandySpacing.xs,
+  },
+  heroTitle: {
+    color: CandyColors.ink,
     fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 27,
+  },
+  heroText: {
+    color: CandyColors.inkSoft,
+    fontSize: 14,
     fontWeight: '700',
-    color: NeruColors.text,
-  },
-  weekIndicator: {
-    fontSize: 13,
-    color: NeruColors.textMuted,
-    marginTop: 4,
-  },
-  headerRight: {
-    alignItems: 'flex-end',
-  },
-  coinBadge: {
-    backgroundColor: 'rgba(251,191,36,0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  coinText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: NeruColors.amber,
+    lineHeight: 20,
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 14,
-    paddingVertical: 14,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: NeruColors.text,
+    gap: CandySpacing.sm,
+    flexWrap: 'wrap',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 18,
+    gap: CandySpacing.sm,
+    paddingVertical: CandySpacing.xxl,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: NeruColors.text,
-    marginTop: 12,
+    color: CandyColors.ink,
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
   },
   emptySubtitle: {
+    color: CandyColors.inkSoft,
     fontSize: 14,
-    color: NeruColors.textMuted,
-    marginTop: 4,
+    fontWeight: '700',
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: CandySpacing.xs,
   },
   blockCard: {
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 12,
-  },
-  blockCardDone: {
-    borderColor: 'rgba(52,211,153,0.2)',
+    gap: CandySpacing.md,
   },
   blockHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: CandySpacing.md,
   },
   blockTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: CandySpacing.md,
+    flex: 1,
+    minWidth: 0,
   },
   blockTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: NeruColors.text,
-  },
-  blockMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
+    color: CandyColors.ink,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 23,
   },
   blockTaskCount: {
+    color: CandyColors.inkSoft,
     fontSize: 13,
-    color: NeruColors.textMuted,
+    fontWeight: '800',
+    lineHeight: 18,
   },
-  blockRoutineStatus: {
-    fontSize: 13,
-    color: NeruColors.textMuted,
+  blockPill: {
+    alignSelf: 'flex-start',
   },
 });
