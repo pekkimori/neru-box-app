@@ -6,7 +6,8 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
-import { NeruColors } from '../../../constants/neru-theme';
+import { CandyButton, CandyCard, CandyScreen, StarToken } from '@/components/candy';
+import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
 import { useConstellations } from '../../../hooks/useConstellations';
 
 export default function ConstellationDetail() {
@@ -21,9 +22,12 @@ export default function ConstellationDetail() {
 
   if (!constellation) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Constellation not found</Text>
-      </View>
+      <CandyScreen variant="dreams">
+        <CandyCard tone="lavender" style={styles.emptyCard}>
+          <StarToken state="locked" tone="lavender" size={42} />
+          <Text style={styles.emptyText}>Constellation not found</Text>
+        </CandyCard>
+      </CandyScreen>
     );
   }
 
@@ -37,23 +41,23 @@ export default function ConstellationDetail() {
   const renderRightActions = (starId: string) => {
     return (
       <TouchableOpacity style={styles.deleteAction} onPress={() => deleteStar(starId)}>
-        <Ionicons name="trash-outline" size={20} color="#fff" />
+        <Ionicons name="trash-outline" size={20} color={CandyColors.white} />
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams">
       <Stack.Screen options={{ title: `${constellation.icon} ${constellation.name}` }} />
 
       {/* Progress Header */}
-      <View style={styles.progressHeader}>
+      <CandyCard tone="gold" style={styles.progressHeader}>
         <Text style={styles.progressIcon}>{constellation.icon}</Text>
         <View>
           <Text style={styles.progressTitle}>{constellation.name}</Text>
           <Text style={styles.progressCount}>{starList.length} stars</Text>
         </View>
-      </View>
+      </CandyCard>
 
       {/* Star List */}
       <FlatList
@@ -62,122 +66,105 @@ export default function ConstellationDetail() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Swipeable renderRightActions={() => renderRightActions(item.id)}>
-            <View style={styles.starRow}>
-              <View style={styles.starDot} />
+            <CandyCard tone="lavender" style={styles.starRow}>
+              <StarToken state="filled" tone="gold" size={36} />
               <Text style={styles.starLabel}>{item.label}</Text>
-            </View>
+            </CandyCard>
           </Swipeable>
         )}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No stars yet. Add your first task!</Text>
+          <CandyCard tone="lavender" style={styles.emptyCard}>
+            <StarToken state="locked" tone="lavender" size={42} />
+            <Text style={styles.emptyText}>No stars yet. Add your first task!</Text>
+          </CandyCard>
         }
       />
 
       {/* Add Star */}
       {showInput ? (
         <View style={styles.inputBar}>
+          <StarToken state="empty" tone="lavender" size={38} />
           <TextInput
             ref={inputRef}
             style={styles.input}
             placeholder="Task label (e.g., Practice scales 20 min)"
-            placeholderTextColor={NeruColors.textDim}
+            placeholderTextColor={CandyColors.inkMuted}
             value={newLabel}
             onChangeText={setNewLabel}
             onSubmitEditing={handleAdd}
             returnKeyType="done"
             autoFocus
           />
-          <TouchableOpacity onPress={handleAdd} disabled={!newLabel.trim()}>
-            <Ionicons
-              name="add-circle"
-              size={36}
-              color={newLabel.trim() ? NeruColors.violet : NeruColors.textDim}
-            />
-          </TouchableOpacity>
+          <CandyButton
+            label="Add"
+            icon="add"
+            onPress={handleAdd}
+            disabled={!newLabel.trim()}
+            style={styles.inputButton}
+          />
         </View>
       ) : (
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowInput(true)}>
-          <Ionicons name="add" size={20} color={NeruColors.violet} />
-          <Text style={styles.addText}>Add Star</Text>
-        </TouchableOpacity>
+        <CandyButton
+          label="Add Star"
+          icon="add"
+          variant="secondary"
+          onPress={() => setShowInput(true)}
+          style={styles.addButton}
+        />
       )}
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NeruColors.bg },
   progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 20,
-    paddingBottom: 12,
+    gap: CandySpacing.md,
+    marginTop: CandySpacing.lg,
   },
   progressIcon: { fontSize: 40 },
-  progressTitle: { fontSize: 20, fontWeight: '700', color: NeruColors.text },
-  progressCount: { fontSize: 14, color: NeruColors.textMuted, marginTop: 2 },
-  list: { padding: 20, paddingTop: 0, paddingBottom: 120 },
+  progressTitle: { fontSize: 20, fontWeight: '900', color: CandyColors.ink },
+  progressCount: { fontSize: 14, fontWeight: '800', color: CandyColors.inkSoft, marginTop: 2 },
+  list: { paddingTop: CandySpacing.md, paddingBottom: 120 },
   starRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    gap: CandySpacing.md,
+    marginBottom: CandySpacing.sm,
   },
-  starDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: NeruColors.textDim,
-  },
-  starLabel: { fontSize: 15, color: NeruColors.text, flex: 1 },
+  starLabel: { fontSize: 15, fontWeight: '800', color: CandyColors.ink, flex: 1 },
   deleteAction: {
-    backgroundColor: NeruColors.red,
+    backgroundColor: CandyColors.danger,
     justifyContent: 'center',
     alignItems: 'center',
     width: 64,
-    borderRadius: 12,
-    marginBottom: 8,
-    marginLeft: 8,
+    borderRadius: CandyRadii.lg,
+    marginBottom: CandySpacing.sm,
+    marginLeft: CandySpacing.sm,
   },
-  emptyText: { fontSize: 14, color: NeruColors.textMuted, textAlign: 'center', marginTop: 40 },
+  emptyCard: {
+    alignItems: 'center',
+    gap: CandySpacing.sm,
+    marginTop: CandySpacing.lg,
+  },
+  emptyText: { fontSize: 14, fontWeight: '800', color: CandyColors.inkSoft, textAlign: 'center' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderTopColor: NeruColors.cardBorder,
-    backgroundColor: NeruColors.bg,
+    gap: CandySpacing.sm,
+    paddingVertical: CandySpacing.md,
   },
   input: {
     flex: 1,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: CandyColors.white,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
+    borderRadius: CandyRadii.md,
+    padding: CandySpacing.md,
     fontSize: 15,
-    color: NeruColors.text,
+    color: CandyColors.ink,
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    margin: 20,
-    marginBottom: 32,
-    paddingVertical: 14,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 14,
-  },
-  addText: { fontSize: 15, fontWeight: '600', color: NeruColors.violet },
+  inputButton: { minWidth: 82, paddingHorizontal: CandySpacing.md },
+  addButton: { marginBottom: CandySpacing.xl },
 });

@@ -5,15 +5,16 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NeruColors } from '../../constants/neru-theme';
+import { CandyButton, CandyScreen, StarToken } from '@/components/candy';
+import { CandyColors, CandyRadii, CandyShadow, CandySpacing } from '@/constants/candy-theme';
 import { useConstellations } from '../../hooks/useConstellations';
 import { useDailyPlan } from '../../hooks/useDailyPlan';
 import type { BlockType } from '../../types/dreams';
 
 const BLOCK_LABELS: { key: BlockType; label: string; color: string }[] = [
-  { key: 'morning', label: 'Morning', color: NeruColors.amber },
-  { key: 'afternoon', label: 'Afternoon', color: NeruColors.sky },
-  { key: 'evening', label: 'Evening', color: NeruColors.violet },
+  { key: 'morning', label: 'Morning', color: CandyColors.goldDeep },
+  { key: 'afternoon', label: 'Afternoon', color: '#257198' },
+  { key: 'evening', label: 'Evening', color: CandyColors.lavenderDeep },
 ];
 
 function getWeekDays(offset: number): { date: string; label: string; dayNum: number; isPast: boolean }[] {
@@ -79,11 +80,11 @@ export default function PlanDay() {
   };
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams">
       {/* Week Navigation */}
       <View style={styles.weekNav}>
         <TouchableOpacity onPress={() => setWeekOffset((w) => w - 1)}>
-          <Ionicons name="chevron-back" size={24} color={NeruColors.textMuted} />
+          <Ionicons name="chevron-back" size={24} color={CandyColors.inkSoft} />
         </TouchableOpacity>
         <View style={styles.weekDays}>
           {weekDays.map((day) => (
@@ -96,13 +97,17 @@ export default function PlanDay() {
               ]}
               onPress={() => { setSelectedDate(day.date); setSelectedStarId(null); }}
             >
-              <Text style={[styles.dayLabel, day.isPast && styles.dayLabelPast]}>
+              <Text style={[
+                styles.dayLabel,
+                day.isPast && styles.dayLabelPast,
+                selectedDate === day.date && styles.dayTextSelected,
+              ]}>
                 {day.label}
               </Text>
               <Text style={[
                 styles.dayNum,
-                selectedDate === day.date && styles.dayNumSelected,
                 day.isPast && styles.dayNumPast,
+                selectedDate === day.date && styles.dayTextSelected,
               ]}>
                 {day.dayNum}
               </Text>
@@ -110,7 +115,7 @@ export default function PlanDay() {
           ))}
         </View>
         <TouchableOpacity onPress={() => setWeekOffset((w) => w + 1)}>
-          <Ionicons name="chevron-forward" size={24} color={NeruColors.textMuted} />
+          <Ionicons name="chevron-forward" size={24} color={CandyColors.inkSoft} />
         </TouchableOpacity>
       </View>
 
@@ -133,7 +138,7 @@ export default function PlanDay() {
                         selectedStarId === star.id ? null : star.id
                       )}
                     >
-                      <View style={styles.starDot} />
+                      <StarToken state={selectedStarId === star.id ? 'filled' : 'empty'} tone="gold" size={34} />
                       <Text style={styles.starLabel}>{star.label}</Text>
                     </TouchableOpacity>
                   ))}
@@ -183,11 +188,12 @@ export default function PlanDay() {
                           if (!isPastDay) removeTask(task.starId, block.key);
                         }}
                       >
+                        <StarToken state="filled" tone="lavender" size={26} />
                         <Text style={styles.chipText}>
-                          {c?.icon} {s?.label ? (s.label.length > 18 ? s.label.slice(0, 18) + '…' : s.label) : ''}
+                          {c?.icon} {s?.label ? (s.label.length > 18 ? s.label.slice(0, 18) + '...' : s.label) : ''}
                         </Text>
                         {!isPastDay && (
-                          <Ionicons name="close-circle" size={14} color={NeruColors.textDim} />
+                          <Ionicons name="close-circle" size={16} color={CandyColors.inkMuted} />
                         )}
                       </TouchableOpacity>
                     );
@@ -204,83 +210,86 @@ export default function PlanDay() {
 
         {/* Save Button */}
         {!isPastDay && (
-          <TouchableOpacity style={styles.saveButton} onPress={() => router.back()}>
-            <Text style={styles.saveText}>Done</Text>
-          </TouchableOpacity>
+          <CandyButton label="Done" icon="checkmark" onPress={() => router.back()} style={styles.saveButton} />
         )}
       </ScrollView>
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NeruColors.bg },
   weekNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: NeruColors.cardBorder,
+    paddingVertical: CandySpacing.md,
+    gap: CandySpacing.xs,
   },
-  weekDays: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
-  dayPill: { alignItems: 'center', paddingVertical: 6, paddingHorizontal: 6, borderRadius: 12 },
-  dayPillSelected: { backgroundColor: 'rgba(167,139,250,0.15)' },
-  dayPillToday: { borderWidth: 1, borderColor: NeruColors.violet },
-  dayLabel: { fontSize: 11, color: NeruColors.textMuted, marginBottom: 2 },
-  dayLabelPast: { color: NeruColors.textDim },
-  dayNum: { fontSize: 16, fontWeight: '600', color: NeruColors.text },
-  dayNumSelected: { color: NeruColors.violet },
-  dayNumPast: { color: NeruColors.textDim },
-  content: { padding: 20, paddingBottom: 120 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: NeruColors.text, marginBottom: 12 },
-  constellationGroup: { marginBottom: 12 },
-  groupLabel: { fontSize: 13, color: NeruColors.textMuted, marginBottom: 6 },
+  weekDays: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', gap: 4 },
+  dayPill: {
+    minWidth: 38,
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 5,
+    borderRadius: CandyRadii.pill,
+    backgroundColor: CandyColors.white,
+    borderWidth: 2,
+    borderColor: '#E9DCF9',
+  },
+  dayPillSelected: {
+    backgroundColor: CandyColors.lavender,
+    borderColor: CandyColors.lavenderDeep,
+  },
+  dayPillToday: { borderColor: CandyColors.gold },
+  dayLabel: { fontSize: 11, fontWeight: '800', color: CandyColors.inkSoft, marginBottom: 2 },
+  dayLabelPast: { color: CandyColors.inkMuted },
+  dayNum: { fontSize: 16, fontWeight: '900', color: CandyColors.ink },
+  dayTextSelected: { color: CandyColors.white },
+  dayNumPast: { color: CandyColors.inkMuted },
+  content: { paddingTop: CandySpacing.sm, paddingBottom: 120 },
+  sectionTitle: { fontSize: 16, fontWeight: '900', color: CandyColors.ink, marginBottom: CandySpacing.sm },
+  constellationGroup: { marginBottom: CandySpacing.md },
+  groupLabel: { fontSize: 13, fontWeight: '800', color: CandyColors.inkSoft, marginBottom: CandySpacing.xs },
   starRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 6,
+    gap: CandySpacing.sm,
+    backgroundColor: CandyColors.white,
+    borderWidth: 2,
+    borderColor: '#FFE7A0',
+    borderRadius: CandyRadii.lg,
+    padding: CandySpacing.md,
+    marginBottom: CandySpacing.xs,
+    ...CandyShadow.card,
   },
-  starRowSelected: { borderColor: NeruColors.violet, backgroundColor: 'rgba(167,139,250,0.08)' },
-  starDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: NeruColors.textDim },
-  starLabel: { fontSize: 14, color: NeruColors.text, flex: 1 },
-  emptyText: { fontSize: 13, color: NeruColors.textDim, textAlign: 'center', paddingVertical: 20 },
+  starRowSelected: { borderColor: CandyColors.lavenderDeep, backgroundColor: '#F7F2FF' },
+  starLabel: { fontSize: 14, fontWeight: '800', color: CandyColors.ink, flex: 1 },
+  emptyText: { fontSize: 13, color: CandyColors.inkMuted, textAlign: 'center', paddingVertical: 20 },
   blockZone: {
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: CandyColors.white,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
+    borderRadius: CandyRadii.lg,
+    padding: CandySpacing.lg,
+    marginBottom: CandySpacing.sm,
+    ...CandyShadow.card,
   },
-  blockZoneActive: { borderColor: 'rgba(167,139,250,0.3)' },
-  blockHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  blockLabel: { fontSize: 15, fontWeight: '600' },
-  blockCount: { fontSize: 12, color: NeruColors.textMuted },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  blockZoneActive: { borderColor: CandyColors.lavenderDeep, backgroundColor: '#F9F5FF' },
+  blockHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: CandySpacing.sm },
+  blockLabel: { fontSize: 15, fontWeight: '900' },
+  blockCount: { fontSize: 12, fontWeight: '900', color: CandyColors.inkSoft },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: CandySpacing.xs },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: CandySpacing.xs,
+    backgroundColor: '#F0E9FF',
+    borderRadius: CandyRadii.pill,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
+    paddingHorizontal: CandySpacing.sm,
+    paddingVertical: 5,
   },
-  chipText: { fontSize: 13, color: NeruColors.text },
-  emptyBlock: { fontSize: 13, color: NeruColors.textDim },
-  saveButton: {
-    backgroundColor: NeruColors.violet,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  saveText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  chipText: { fontSize: 13, fontWeight: '800', color: CandyColors.ink },
+  emptyBlock: { fontSize: 13, color: CandyColors.inkMuted },
+  saveButton: { marginTop: CandySpacing.lg },
 });

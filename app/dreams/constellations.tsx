@@ -4,14 +4,14 @@ import {
   View, Text, TouchableOpacity, FlatList, TextInput, Modal, StyleSheet, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { NeruColors } from '../../constants/neru-theme';
+import { CandyButton, CandyCard, CandyScreen, StatusPill } from '@/components/candy';
+import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
 import { useConstellations } from '../../hooks/useConstellations';
 
 const CONSTELLATION_PALETTE = [
-  NeruColors.amber, NeruColors.sky, NeruColors.pink,
-  NeruColors.violet, NeruColors.emerald, NeruColors.indigo,
-];
+  'gold', 'sky', 'pink',
+  'lavender', 'mint', 'gold',
+] as const;
 
 const EMOJI_CATEGORIES: { label: string; emojis: string[] }[] = [
   { label: 'Music', emojis: ['🎵', '🎸', '🎹', '🎻', '🥁', '🎤', '🎷', '🎺'] },
@@ -45,7 +45,7 @@ export default function ConstellationList() {
   };
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams">
       <FlatList
         data={constellations}
         keyExtractor={(item) => item.id}
@@ -57,21 +57,31 @@ export default function ConstellationList() {
           const starCount = stars.filter((s) => s.constellationId === item.id).length;
           return (
             <TouchableOpacity
-              style={styles.card}
+              style={styles.cardTouch}
               onPress={() => router.push(`/dreams/constellation/${item.id}`)}
               onLongPress={() => handleDelete(item.id, item.name)}
             >
-              <Text style={styles.cardIcon}>{item.icon}</Text>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={[styles.cardCount, { color }]}>{starCount} stars</Text>
+              <CandyCard tone={color} style={styles.card}>
+                <Text style={styles.cardIcon}>{item.icon}</Text>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <StatusPill
+                  label={`${starCount} stars`}
+                  icon="star"
+                  tone={color}
+                  style={styles.cardCount}
+                />
+              </CandyCard>
             </TouchableOpacity>
           );
         }}
         ListFooterComponent={
-          <TouchableOpacity style={styles.createButton} onPress={() => setShowCreate(true)}>
-            <Ionicons name="add-circle-outline" size={24} color={NeruColors.violet} />
-            <Text style={styles.createText}>New Constellation</Text>
-          </TouchableOpacity>
+          <CandyButton
+            label="New Constellation"
+            icon="add-circle-outline"
+            variant="secondary"
+            onPress={() => setShowCreate(true)}
+            style={styles.createButton}
+          />
         }
       />
 
@@ -84,7 +94,7 @@ export default function ConstellationList() {
             <TextInput
               style={styles.input}
               placeholder="Name (e.g., Piano)"
-              placeholderTextColor={NeruColors.textDim}
+              placeholderTextColor={CandyColors.inkMuted}
               value={newName}
               onChangeText={setNewName}
               autoFocus
@@ -114,92 +124,83 @@ export default function ConstellationList() {
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmButton, (!newName.trim() || !selectedEmoji) && styles.confirmDisabled]}
+              <CandyButton
+                label="Create"
                 onPress={handleCreate}
                 disabled={!newName.trim() || !selectedEmoji}
-              >
-                <Text style={styles.confirmText}>Create</Text>
-              </TouchableOpacity>
+                style={styles.confirmButton}
+              />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NeruColors.bg },
-  list: { padding: 20, paddingBottom: 120 },
-  row: { gap: 12, marginBottom: 12 },
-  card: {
+  list: { paddingTop: CandySpacing.lg, paddingBottom: 120 },
+  row: { gap: CandySpacing.md, marginBottom: CandySpacing.md },
+  cardTouch: {
     flex: 1,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 16,
-    padding: 18,
-    alignItems: 'center',
   },
-  cardIcon: { fontSize: 32 },
-  cardName: { fontSize: 15, fontWeight: '600', color: NeruColors.text, marginTop: 8 },
-  cardCount: { fontSize: 12, marginTop: 4 },
-  createButton: {
-    flexDirection: 'row',
+  card: {
+    minHeight: 158,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 18,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 16,
-    marginTop: 4,
+    gap: CandySpacing.sm,
   },
-  createText: { fontSize: 15, fontWeight: '600', color: NeruColors.violet },
+  cardIcon: { fontSize: 36 },
+  cardName: { fontSize: 15, fontWeight: '900', color: CandyColors.ink, textAlign: 'center' },
+  cardCount: { alignSelf: 'center' },
+  createButton: {
+    marginTop: CandySpacing.xs,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: CandyColors.overlay,
     justifyContent: 'flex-end',
+    padding: CandySpacing.lg,
   },
   modalContent: {
-    backgroundColor: NeruColors.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
+    backgroundColor: CandyColors.white,
+    borderRadius: CandyRadii.xl,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
+    padding: CandySpacing.lg,
+    maxHeight: '92%',
   },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: NeruColors.text, marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: CandyColors.ink, marginBottom: CandySpacing.md },
   input: {
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: CandyColors.cream,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
+    borderRadius: CandyRadii.md,
+    padding: CandySpacing.md,
     fontSize: 16,
-    color: NeruColors.text,
-    marginBottom: 16,
+    color: CandyColors.ink,
+    marginBottom: CandySpacing.md,
   },
-  emojiLabel: { fontSize: 15, fontWeight: '600', color: NeruColors.text, marginBottom: 8 },
-  categoryLabel: { fontSize: 12, color: NeruColors.textMuted, marginTop: 8, marginBottom: 4 },
-  emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  emojiButton: { padding: 6, borderRadius: 8 },
-  emojiSelected: { backgroundColor: 'rgba(167,139,250,0.2)', borderRadius: 8 },
+  emojiLabel: { fontSize: 15, fontWeight: '900', color: CandyColors.ink, marginBottom: CandySpacing.xs },
+  categoryLabel: { fontSize: 12, fontWeight: '800', color: CandyColors.inkSoft, marginTop: CandySpacing.sm, marginBottom: 4 },
+  emojiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: CandySpacing.xs },
+  emojiButton: {
+    padding: CandySpacing.xs,
+    borderRadius: CandyRadii.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: CandyColors.white,
+  },
+  emojiSelected: { backgroundColor: '#F0E9FF', borderColor: CandyColors.lavender },
   emoji: { fontSize: 24 },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: CandySpacing.lg,
   },
-  cancelText: { fontSize: 15, color: NeruColors.textMuted },
+  cancelText: { fontSize: 15, fontWeight: '800', color: CandyColors.inkSoft },
   confirmButton: {
-    backgroundColor: NeruColors.violet,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 12,
+    minWidth: 128,
   },
-  confirmDisabled: { opacity: 0.4 },
-  confirmText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });
