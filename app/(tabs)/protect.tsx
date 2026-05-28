@@ -133,10 +133,6 @@ export default function ProtectScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.titleGroup}>
-            <Text style={styles.eyebrow}>Shield Room</Text>
-            <Text style={styles.headerText}>Protecting Your Sleep</Text>
-          </View>
           <StatusPill tone="gold" icon="ellipse" label={`${coins} coins`} />
         </View>
 

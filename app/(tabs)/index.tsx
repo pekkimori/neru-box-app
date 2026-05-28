@@ -41,10 +41,7 @@ export default function DreamsHub() {
     <CandyScreen variant="dreams">
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.kicker}>Neru path</Text>
-            <Text style={styles.dateText}>{formatDate(today)}</Text>
-          </View>
+          <Text style={styles.dateText}>{formatDate(today)}</Text>
           <View style={styles.statusRow}>
             <StatusPill tone="gold" icon="star" label={`${stars.length} stars`} />
             <StatusPill tone="gold" icon="ellipse" label={`${coins} coins`} />

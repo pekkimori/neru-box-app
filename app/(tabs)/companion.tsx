@@ -295,13 +295,6 @@ export default function CompanionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* -------- Header -------- */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>
-            Dream <Text style={styles.headerAccent}>Companion</Text>
-          </Text>
-        </View>
-
         {/* -------- Profile card (collapsible) -------- */}
         <Pressable
           style={styles.profileToggle}

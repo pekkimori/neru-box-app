@@ -61,14 +61,6 @@ export default function DiaryScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="book-outline" size={26} color={NeruColors.pink} />
-          <Text style={styles.headerTitle}>
-            Dream <Text style={styles.headerAccent}>Diary</Text>
-          </Text>
-        </View>
-
         {/* Scattered decoration top */}
         <View style={styles.decoRowTop}>
           <Text style={styles.decoEmoji}>⭐</Text>

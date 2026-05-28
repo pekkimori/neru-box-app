@@ -294,12 +294,6 @@ export default function SocialScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ===== HEADER ===== */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Friends & Rewards</Text>
-          <Text style={styles.headerAccent}>Co-op Boss Raid</Text>
-        </View>
-
         {/* ===== BOSS RAID ===== */}
         <View style={styles.bossCard}>
           {/* Boss info */}
