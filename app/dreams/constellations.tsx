@@ -1,7 +1,17 @@
 // app/dreams/constellations.tsx
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, TextInput, Modal, StyleSheet, Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  Modal,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CandyButton, CandyCard, CandyScreen, StatusPill } from '@/components/candy';
@@ -60,6 +70,9 @@ export default function ConstellationList() {
               style={styles.cardTouch}
               onPress={() => router.push(`/dreams/constellation/${item.id}`)}
               onLongPress={() => handleDelete(item.id, item.name)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${item.name} constellation, ${starCount} stars`}
+              accessibilityHint="Opens the constellation. Long press to delete it."
             >
               <CandyCard tone={color} style={styles.card}>
                 <Text style={styles.cardIcon}>{item.icon}</Text>
@@ -88,50 +101,71 @@ export default function ConstellationList() {
       {/* Create Modal */}
       <Modal visible={showCreate} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>New Constellation</Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoiding}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>New Constellation</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Name (e.g., Piano)"
-              placeholderTextColor={CandyColors.inkMuted}
-              value={newName}
-              onChangeText={setNewName}
-              autoFocus
-            />
-
-            <Text style={styles.emojiLabel}>Choose an icon</Text>
-            {EMOJI_CATEGORIES.map((cat) => (
-              <View key={cat.label}>
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
-                <View style={styles.emojiRow}>
-                  {cat.emojis.map((e) => (
-                    <TouchableOpacity
-                      key={e}
-                      style={[styles.emojiButton, selectedEmoji === e && styles.emojiSelected]}
-                      onPress={() => setSelectedEmoji(e)}
-                    >
-                      <Text style={styles.emoji}>{e}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ))}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                onPress={() => { setShowCreate(false); setNewName(''); setSelectedEmoji(''); }}
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <CandyButton
-                label="Create"
-                onPress={handleCreate}
-                disabled={!newName.trim() || !selectedEmoji}
-                style={styles.confirmButton}
-              />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Name (e.g., Piano)"
+                  placeholderTextColor={CandyColors.inkMuted}
+                  value={newName}
+                  onChangeText={setNewName}
+                  autoFocus
+                  accessibilityLabel="Constellation name"
+                  accessibilityHint="Enter the name for the new constellation."
+                />
+
+                <Text style={styles.emojiLabel}>Choose an icon</Text>
+                {EMOJI_CATEGORIES.map((cat) => (
+                  <View key={cat.label}>
+                    <Text style={styles.categoryLabel}>{cat.label}</Text>
+                    <View style={styles.emojiRow}>
+                      {cat.emojis.map((e) => (
+                        <TouchableOpacity
+                          key={e}
+                          style={[styles.emojiButton, selectedEmoji === e && styles.emojiSelected]}
+                          onPress={() => setSelectedEmoji(e)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Choose ${e} icon`}
+                          accessibilityHint={`Sets ${e} as the constellation icon.`}
+                          accessibilityState={{ selected: selectedEmoji === e }}
+                        >
+                          <Text style={styles.emoji}>{e}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  onPress={() => { setShowCreate(false); setNewName(''); setSelectedEmoji(''); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel creating constellation"
+                  accessibilityHint="Closes this form and clears the entered name and selected icon."
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <CandyButton
+                  label="Create"
+                  onPress={handleCreate}
+                  disabled={!newName.trim() || !selectedEmoji}
+                  style={styles.confirmButton}
+                />
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </CandyScreen>
@@ -162,13 +196,23 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: CandySpacing.lg,
   },
+  keyboardAvoiding: {
+    width: '100%',
+    maxHeight: '92%',
+  },
   modalContent: {
     backgroundColor: CandyColors.white,
     borderRadius: CandyRadii.xl,
     borderWidth: 2,
     borderColor: '#D8CAFF',
     padding: CandySpacing.lg,
-    maxHeight: '92%',
+    maxHeight: '100%',
+  },
+  modalScroll: {
+    flexShrink: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: CandySpacing.sm,
   },
   modalTitle: { fontSize: 20, fontWeight: '900', color: CandyColors.ink, marginBottom: CandySpacing.md },
   input: {

@@ -40,7 +40,13 @@ export default function ConstellationDetail() {
 
   const renderRightActions = (starId: string) => {
     return (
-      <TouchableOpacity style={styles.deleteAction} onPress={() => deleteStar(starId)}>
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={() => deleteStar(starId)}
+        accessibilityRole="button"
+        accessibilityLabel="Delete star"
+        accessibilityHint="Deletes this star from the constellation."
+      >
         <Ionicons name="trash-outline" size={20} color={CandyColors.white} />
       </TouchableOpacity>
     );

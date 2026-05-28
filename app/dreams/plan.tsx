@@ -83,7 +83,12 @@ export default function PlanDay() {
     <CandyScreen variant="dreams">
       {/* Week Navigation */}
       <View style={styles.weekNav}>
-        <TouchableOpacity onPress={() => setWeekOffset((w) => w - 1)}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Previous week"
+          accessibilityHint="Shows the previous week of planning days."
+          onPress={() => setWeekOffset((w) => w - 1)}
+        >
           <Ionicons name="chevron-back" size={24} color={CandyColors.inkSoft} />
         </TouchableOpacity>
         <View style={styles.weekDays}>
@@ -96,6 +101,10 @@ export default function PlanDay() {
                 day.date === today && styles.dayPillToday,
               ]}
               onPress={() => { setSelectedDate(day.date); setSelectedStarId(null); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${day.label} ${day.dayNum}`}
+              accessibilityHint="Shows planning blocks and available stars for this day."
+              accessibilityState={{ selected: selectedDate === day.date }}
             >
               <Text style={[
                 styles.dayLabel,
@@ -114,7 +123,12 @@ export default function PlanDay() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity onPress={() => setWeekOffset((w) => w + 1)}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Next week"
+          accessibilityHint="Shows the next week of planning days."
+          onPress={() => setWeekOffset((w) => w + 1)}
+        >
           <Ionicons name="chevron-forward" size={24} color={CandyColors.inkSoft} />
         </TouchableOpacity>
       </View>
@@ -137,6 +151,10 @@ export default function PlanDay() {
                       onPress={() => setSelectedStarId(
                         selectedStarId === star.id ? null : star.id
                       )}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select star ${star.label}`}
+                      accessibilityHint="Selects this star so it can be assigned to a time block."
+                      accessibilityState={{ selected: selectedStarId === star.id }}
                     >
                       <StarToken state={selectedStarId === star.id ? 'filled' : 'empty'} tone="gold" size={34} />
                       <Text style={styles.starLabel}>{star.label}</Text>
@@ -168,6 +186,10 @@ export default function PlanDay() {
               ]}
               onPress={() => handleAssign(block.key)}
               disabled={!selectedStarId || isPastDay || blockTasks.length >= 4}
+              accessibilityRole="button"
+              accessibilityLabel={`${block.label} block, ${blockTasks.length} of 4 stars assigned`}
+              accessibilityHint="Assigns the selected star to this time block."
+              accessibilityState={{ disabled: !selectedStarId || isPastDay || blockTasks.length >= 4 }}
             >
               <View style={styles.blockHeader}>
                 <Text style={[styles.blockLabel, { color: block.color }]}>{block.label}</Text>
@@ -180,6 +202,7 @@ export default function PlanDay() {
                   {blockTasks.map((task) => {
                     const c = constellations.find((x) => x.id === task.constellationId);
                     const s = stars.find((x) => x.id === task.starId);
+                    const starLabel = s?.label ?? 'assigned star';
                     return (
                       <TouchableOpacity
                         key={task.starId}
@@ -187,6 +210,10 @@ export default function PlanDay() {
                         onPress={() => {
                           if (!isPastDay) removeTask(task.starId, block.key);
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${starLabel} from ${block.label}`}
+                        accessibilityHint="Removes this star from the time block."
+                        accessibilityState={{ disabled: isPastDay }}
                       >
                         <StarToken state="filled" tone="lavender" size={26} />
                         <Text style={styles.chipText}>
