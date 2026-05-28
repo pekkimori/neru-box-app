@@ -1,11 +1,11 @@
 // app/dreams/reflection/[blockId].tsx
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
+  View, Text, TextInput, ScrollView, StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { NeruColors } from '../../../constants/neru-theme';
+import { CandyButton, CandyCard, CandyScreen, StarToken, StatusPill } from '@/components/candy';
+import { CandyColors, CandySpacing } from '@/constants/candy-theme';
 import { useDailyPlan } from '../../../hooks/useDailyPlan';
 import { useRoutineQuests } from '../../../hooks/useRoutineQuests';
 import type { BlockType } from '../../../types/dreams';
@@ -46,53 +46,50 @@ export default function BlockReflection() {
   };
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams" style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Celebration */}
-        <Text style={styles.emoji}>✨</Text>
-        <Text style={styles.title}>
-          {BLOCK_LABELS[block]} Complete!
-        </Text>
+        <StarToken state="glow" tone="gold" size={72} />
+        <Text style={styles.title}>Star lit!</Text>
         <Text style={styles.subtitle}>
-          You completed {litCount}/{blockTasks.length} tasks
+          {BLOCK_LABELS[block]} block: {litCount}/{blockTasks.length} tasks complete
         </Text>
 
         {/* Coin Breakdown */}
-        <View style={styles.breakdownCard}>
-          <Text style={styles.breakdownTitle}>Coins Earned</Text>
+        <CandyCard tone="gold" style={styles.breakdownCard}>
+          <View style={styles.breakdownHeader}>
+            <Text style={styles.breakdownTitle}>Coins Earned</Text>
+            <StatusPill tone="gold" icon="ellipse" label={`+${totalCoins + routineCoins + blockBonus}`} />
+          </View>
 
           {routinesDoneCount > 0 && (
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>
                 Routine quests ({routinesDoneCount})
               </Text>
-              <Text style={styles.breakdownValue}>+{routineCoins} 🪙</Text>
+              <StatusPill tone="sky" icon="ellipse" label={`+${routineCoins}`} />
             </View>
           )}
 
           {blockTasks.map((task, i) => (
             <View key={task.starId} style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Task {i + 1}</Text>
-              <Text style={styles.breakdownValue}>+{task.coinsEarned} 🪙</Text>
+              <StatusPill tone="lavender" icon="ellipse" label={`+${task.coinsEarned}`} />
             </View>
           ))}
 
           {blockBonus > 0 && (
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Block complete bonus</Text>
-              <Text style={[styles.breakdownValue, { color: NeruColors.amber }]}>
-                +{blockBonus} 🪙
-              </Text>
+              <StatusPill tone="mint" icon="checkmark-circle" label={`+${blockBonus}`} />
             </View>
           )}
 
           <View style={[styles.breakdownRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>
-              +{totalCoins + routineCoins + blockBonus} 🪙
-            </Text>
+            <StatusPill tone="gold" icon="ellipse" label={`+${totalCoins + routineCoins + blockBonus}`} />
           </View>
-        </View>
+        </CandyCard>
 
         {/* Reflection */}
         <Text style={styles.reflectionPrompt}>
@@ -101,7 +98,7 @@ export default function BlockReflection() {
         <TextInput
           style={styles.reflectionInput}
           placeholder="Write your thoughts... (optional)"
-          placeholderTextColor={NeruColors.textDim}
+          placeholderTextColor={CandyColors.inkMuted}
           value={text}
           onChangeText={setText}
           multiline
@@ -109,69 +106,62 @@ export default function BlockReflection() {
           textAlignVertical="top"
         />
 
-        <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-          <Text style={styles.doneText}>Done</Text>
-        </TouchableOpacity>
+        <CandyButton label="Done" icon="checkmark" onPress={handleDone} style={styles.doneButton} />
       </ScrollView>
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NeruColors.bg },
-  scroll: { padding: 24, paddingTop: 40, paddingBottom: 120, alignItems: 'center' },
-  emoji: { fontSize: 48, marginBottom: 12 },
-  title: { fontSize: 24, fontWeight: '700', color: NeruColors.text },
-  subtitle: { fontSize: 15, color: NeruColors.textMuted, marginTop: 4, marginBottom: 24 },
+  container: { flex: 1 },
+  scroll: { paddingTop: 40, paddingBottom: 120, alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: '900', color: CandyColors.ink, marginTop: 14 },
+  subtitle: { fontSize: 15, color: CandyColors.inkSoft, marginTop: 4, marginBottom: 24, textAlign: 'center' },
   breakdownCard: {
     width: '100%',
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 16,
-    padding: 18,
     marginBottom: 24,
   },
-  breakdownTitle: { fontSize: 16, fontWeight: '600', color: NeruColors.text, marginBottom: 12 },
+  breakdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: CandySpacing.sm,
+    marginBottom: 10,
+  },
+  breakdownTitle: { fontSize: 16, fontWeight: '900', color: CandyColors.ink },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: CandySpacing.md,
     paddingVertical: 6,
   },
-  breakdownLabel: { fontSize: 14, color: NeruColors.textMuted },
-  breakdownValue: { fontSize: 14, color: NeruColors.text },
+  breakdownLabel: { fontSize: 14, color: CandyColors.inkSoft, fontWeight: '700', flex: 1 },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: NeruColors.cardBorder,
+    borderTopColor: CandyColors.border,
     marginTop: 8,
     paddingTop: 12,
   },
-  totalLabel: { fontSize: 16, fontWeight: '700', color: NeruColors.text },
-  totalValue: { fontSize: 16, fontWeight: '700', color: NeruColors.amber },
+  totalLabel: { fontSize: 16, fontWeight: '900', color: CandyColors.ink, flex: 1 },
   reflectionPrompt: {
     fontSize: 15,
-    color: NeruColors.text,
+    color: CandyColors.ink,
+    fontWeight: '800',
     alignSelf: 'flex-start',
     marginBottom: 10,
   },
   reflectionInput: {
     width: '100%',
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
+    backgroundColor: CandyColors.white,
+    borderWidth: 2,
+    borderColor: '#D8CAFF',
     borderRadius: 14,
     padding: 14,
     fontSize: 15,
-    color: NeruColors.text,
+    color: CandyColors.ink,
     minHeight: 100,
     marginBottom: 20,
   },
-  doneButton: {
-    width: '100%',
-    backgroundColor: NeruColors.violet,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  doneText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  doneButton: { width: '100%' },
 });

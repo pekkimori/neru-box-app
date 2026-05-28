@@ -1,11 +1,13 @@
 // app/dreams/block/[blockId].tsx
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { CandyCard, CandyScreen, StarToken, StatusPill } from '@/components/candy';
+import { CandyColors, CandySpacing } from '@/constants/candy-theme';
 import { NeruColors } from '../../../constants/neru-theme';
 import { useDailyPlan } from '../../../hooks/useDailyPlan';
 import { useRoutineQuests } from '../../../hooks/useRoutineQuests';
@@ -38,7 +40,7 @@ export default function TimeBlockScreen() {
   const [routinesSkipped, setRoutinesSkipped] = useState(false);
   const blockConfig = BLOCK_TITLES[block] || BLOCK_TITLES.morning;
   const blockQuests = getQuestsForBlock(block);
-  const blockTasks = plan.blocks[block] || [];
+  const blockTasks = useMemo(() => plan.blocks[block] || [], [plan.blocks, block]);
   const routinesDone = areBlockRoutinesDone(block) || routinesSkipped;
 
   const handleRoutineToggle = useCallback((questId: string) => {
@@ -83,7 +85,7 @@ export default function TimeBlockScreen() {
   }, [block, router]);
 
   return (
-    <View style={styles.container}>
+    <CandyScreen variant="dreams" style={styles.container}>
       <Stack.Screen
         options={{
           title: blockConfig.label,
@@ -103,19 +105,17 @@ export default function TimeBlockScreen() {
               return (
                 <TouchableOpacity
                   key={quest.id}
-                  style={[styles.questRow, done && styles.questRowDone]}
                   onPress={() => handleRoutineToggle(quest.id)}
+                  activeOpacity={0.82}
                 >
-                  <Ionicons
-                    name={done ? 'checkbox' : 'square-outline'}
-                    size={22}
-                    color={done ? NeruColors.emerald : NeruColors.textMuted}
-                  />
-                  <Text style={styles.questIcon}>{quest.icon}</Text>
-                  <Text style={[styles.questLabel, done && styles.questLabelDone]}>
-                    {quest.label}
-                  </Text>
-                  {done && <Text style={styles.questCoins}>+5 🪙</Text>}
+                  <CandyCard tone={done ? 'mint' : 'sky'} style={styles.questRow}>
+                    <StarToken state={done ? 'filled' : 'empty'} tone={done ? 'mint' : 'sky'} size={36} />
+                    <Text style={styles.questIcon}>{quest.icon}</Text>
+                    <Text style={[styles.questLabel, done && styles.questLabelDone]}>
+                      {quest.label}
+                    </Text>
+                    {done ? <StatusPill tone="gold" icon="ellipse" label="+5" /> : null}
+                  </CandyCard>
                 </TouchableOpacity>
               );
             })}
@@ -138,19 +138,20 @@ export default function TimeBlockScreen() {
                 const isLit = task.status === 'lit';
 
                 return (
-                  <View key={task.starId} style={[styles.taskCard, isLit && styles.taskCardDone]}>
+                  <CandyCard key={task.starId} tone={isLit ? 'mint' : 'lavender'} style={styles.taskCard}>
                     <View style={styles.taskHeader}>
                       <View style={styles.taskTitleRow}>
-                        <Text style={styles.taskIcon}>{constellation?.icon}</Text>
-                        <Text style={[styles.taskLabel, isLit && styles.taskLabelDone]}>
-                          {star?.label}
-                        </Text>
+                        <StarToken state={isLit ? 'filled' : 'empty'} tone={isLit ? 'mint' : 'gold'} size={40} />
+                        <View style={styles.taskTitleText}>
+                          <Text style={[styles.taskLabel, isLit && styles.taskLabelDone]}>
+                            {star?.label}
+                          </Text>
+                          <Text style={styles.taskConstellation}>
+                            {constellation?.icon} {constellation?.name}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={[
-                        styles.statusDot,
-                        task.status === 'dim' && styles.statusDim,
-                        task.status === 'lit' && styles.statusLit,
-                      ]} />
+                      {isLit ? <StatusPill tone="mint" icon="checkmark-circle" label="Lit" /> : null}
                     </View>
 
                     {(task.setupPhotoUri || task.completionPhotoUri) && (
@@ -186,64 +187,52 @@ export default function TimeBlockScreen() {
                     )}
 
                     {isLit && (
-                      <Text style={styles.earnedCoins}>+{task.coinsEarned} 🪙</Text>
+                      <StatusPill
+                        tone="gold"
+                        icon="ellipse"
+                        label={`+${task.coinsEarned}`}
+                        style={styles.earnedCoins}
+                      />
                     )}
-                  </View>
+                  </CandyCard>
                 );
               })
             )}
           </View>
         )}
       </ScrollView>
-    </View>
+    </CandyScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: NeruColors.bg },
-  scroll: { padding: 20, paddingBottom: 120 },
+  container: { flex: 1 },
+  scroll: { paddingTop: 20, paddingBottom: 120 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: NeruColors.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: '900', color: CandyColors.ink, marginBottom: 12 },
   questRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  questRowDone: { borderColor: 'rgba(52,211,153,0.15)' },
-  questIcon: { fontSize: 18 },
-  questLabel: { fontSize: 15, color: NeruColors.text, flex: 1 },
-  questLabelDone: { color: NeruColors.textMuted, textDecorationLine: 'line-through' },
-  questCoins: { fontSize: 12, color: NeruColors.amber },
-  skipText: { fontSize: 13, color: NeruColors.textDim, textAlign: 'center', marginTop: 8 },
-  emptyText: { fontSize: 14, color: NeruColors.textDim, textAlign: 'center', paddingVertical: 24 },
-  taskCard: {
-    backgroundColor: NeruColors.card,
-    borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
-    borderRadius: 14,
-    padding: 16,
+    gap: CandySpacing.sm,
+    padding: CandySpacing.md,
     marginBottom: 10,
   },
-  taskCardDone: { borderColor: 'rgba(52,211,153,0.2)' },
-  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  taskTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  taskIcon: { fontSize: 20 },
-  taskLabel: { fontSize: 15, color: NeruColors.text, flex: 1 },
-  taskLabelDone: { color: NeruColors.textMuted, textDecorationLine: 'line-through' },
-  statusDot: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: NeruColors.textDim,
+  questIcon: { fontSize: 18 },
+  questLabel: { fontSize: 15, color: CandyColors.ink, flex: 1, fontWeight: '800' },
+  questLabelDone: { color: CandyColors.inkMuted, textDecorationLine: 'line-through' },
+  skipText: { fontSize: 13, color: CandyColors.inkMuted, textAlign: 'center', marginTop: 8, fontWeight: '700' },
+  emptyText: { fontSize: 14, color: CandyColors.inkMuted, textAlign: 'center', paddingVertical: 24 },
+  taskCard: {
+    marginBottom: 12,
   },
-  statusDim: { backgroundColor: NeruColors.amber, opacity: 0.5 },
-  statusLit: { backgroundColor: NeruColors.emerald, shadowColor: NeruColors.emerald, shadowRadius: 4, shadowOpacity: 0.6 },
+  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
+  taskTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  taskTitleText: { flex: 1, gap: 2 },
+  taskLabel: { fontSize: 15, color: CandyColors.ink, fontWeight: '900' },
+  taskLabelDone: { color: CandyColors.inkMuted, textDecorationLine: 'line-through' },
+  taskConstellation: { fontSize: 12, color: CandyColors.inkSoft, fontWeight: '700' },
   photoRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  photoThumb: { width: 60, height: 60, borderRadius: 8, backgroundColor: NeruColors.card },
+  photoThumb: { width: 60, height: 60, borderRadius: 8, backgroundColor: CandyColors.creamDeep },
   taskActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
   cameraButton: {
     flexDirection: 'row',
@@ -252,19 +241,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: NeruColors.cardBorder,
+    borderColor: '#D8CAFF',
     borderRadius: 10,
+    backgroundColor: CandyColors.white,
   },
-  cameraText: { fontSize: 13, color: NeruColors.textMuted },
+  cameraText: { fontSize: 13, color: CandyColors.inkSoft, fontWeight: '700' },
   completeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: NeruColors.emerald,
+    backgroundColor: CandyColors.mintDeep,
     borderRadius: 10,
   },
   completeText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  earnedCoins: { fontSize: 13, color: NeruColors.amber, marginTop: 8 },
+  earnedCoins: { alignSelf: 'flex-start', marginTop: 12 },
 });
