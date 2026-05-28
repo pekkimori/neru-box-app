@@ -134,21 +134,9 @@ export default function DreamsHub() {
       return;
     }
 
-    Alert.alert(
-      'Complete this star?',
-      `${star.label} will be marked complete for ${planned.block}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Complete',
-          onPress: () => {
-            updateTaskStatus(star.id, planned.block, 'lit');
-            awardCoins(star.id, planned.block, 10);
-            addCoins(10);
-          },
-        },
-      ]
-    );
+    updateTaskStatus(star.id, planned.block, 'lit');
+    awardCoins(star.id, planned.block, 10);
+    addCoins(10);
   };
 
   const promptDeleteStar = (star: Star) => {
