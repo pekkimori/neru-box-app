@@ -79,7 +79,8 @@ export default function DreamsHub() {
   const [constellationDraftOpen, setConstellationDraftOpen] = useState(false);
   const [constellationName, setConstellationName] = useState('');
   const [constellationIcon, setConstellationIcon] = useState('✨');
-  const [destroyModeId, setDestroyModeId] = useState<string | null>(null);
+  const [destroyMode, setDestroyMode] = useState(false);
+  const [pendingDeleteStar, setPendingDeleteStar] = useState<Star | null>(null);
   const { coins, addCoins } = useCoins();
   const { plan, updateTaskStatus, awardCoins, removeTask } = useDailyPlan(today);
   const { getQuestsForBlock, isQuestComplete, toggleQuestComplete } = useRoutineQuests(today);
@@ -139,28 +140,24 @@ export default function DreamsHub() {
     addCoins(10);
   };
 
+  const deleteStarFromToday = (star: Star) => {
+    const planned = plannedByStar.get(star.id);
+
+    if (planned) {
+      removeTask(star.id, planned.block);
+    }
+    deleteStar(star.id);
+  };
+
   const promptDeleteStar = (star: Star) => {
     const planned = plannedByStar.get(star.id);
-    const deleteFromToday = () => {
-      if (planned) {
-        removeTask(star.id, planned.block);
-      }
-      deleteStar(star.id);
-    };
 
     if (planned?.status === 'lit') {
-      Alert.alert(
-        'Delete completed star?',
-        `${star.label} is already completed today. Delete it anyway?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: deleteFromToday },
-        ]
-      );
+      setPendingDeleteStar(star);
       return;
     }
 
-    deleteFromToday();
+    deleteStarFromToday(star);
   };
 
   return (
@@ -282,13 +279,11 @@ export default function DreamsHub() {
                       <TouchableOpacity
                         activeOpacity={0.82}
                         accessibilityRole="button"
-                        accessibilityLabel={`${destroyModeId === constellation.id ? 'Turn off' : 'Turn on'} destroy mode for ${constellation.name}`}
-                        onPress={() =>
-                          setDestroyModeId((current) => (current === constellation.id ? null : constellation.id))
-                        }
+                        accessibilityLabel={`${destroyMode ? 'Turn off' : 'Turn on'} destroy mode`}
+                        onPress={() => setDestroyMode((current) => !current)}
                         style={[
                           styles.iconButton,
-                          destroyModeId === constellation.id && styles.iconButtonDanger,
+                          destroyMode && styles.iconButtonDanger,
                         ]}
                       >
                         <Ionicons name="trash" size={19} color={CandyColors.white} />
@@ -296,7 +291,7 @@ export default function DreamsHub() {
                     </View>
                   </View>
 
-                  {destroyModeId === constellation.id ? (
+                  {destroyMode ? (
                     <StatusPill tone="gold" icon="trash" label="Destroy mode: tap stars to delete" />
                   ) : null}
 
@@ -324,10 +319,11 @@ export default function DreamsHub() {
                             accessibilityRole="button"
                             accessibilityLabel={`${star.label}, ${planned ? `${planned.status} in ${planned.block}` : 'not planned today'}`}
                             onPress={() =>
-                              destroyModeId === constellation.id ? promptDeleteStar(star) : promptStarCompletion(star)
+                              destroyMode ? promptDeleteStar(star) : promptStarCompletion(star)
                             }
                             style={[
                               styles.constellationNode,
+                              destroyMode && styles.constellationNodeDestroy,
                               {
                                 left: NODE_LAYOUT[index].left,
                                 top: NODE_LAYOUT[index].top,
@@ -411,6 +407,36 @@ export default function DreamsHub() {
                 onPress={() => setConstellationDraftOpen(false)}
               />
               <CandyButton label="Create" icon="add-circle" style={styles.modalButton} onPress={handleAddConstellation} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal transparent animationType="fade" visible={pendingDeleteStar !== null} onRequestClose={() => setPendingDeleteStar(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setPendingDeleteStar(null)}>
+          <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitle}>Delete completed star?</Text>
+            <Text style={styles.modalText}>
+              {pendingDeleteStar?.label} is already complete today. Delete it anyway?
+            </Text>
+            <View style={styles.modalActions}>
+              <CandyButton
+                label="Cancel"
+                variant="secondary"
+                style={styles.modalButton}
+                onPress={() => setPendingDeleteStar(null)}
+              />
+              <CandyButton
+                label="Delete"
+                icon="trash"
+                style={styles.modalButton}
+                onPress={() => {
+                  if (pendingDeleteStar) {
+                    deleteStarFromToday(pendingDeleteStar);
+                  }
+                  setPendingDeleteStar(null);
+                }}
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -596,6 +622,9 @@ const styles = StyleSheet.create({
     gap: 4,
     transform: [{ translateX: -18 }],
   },
+  constellationNodeDestroy: {
+    opacity: 0.72,
+  },
   nodeLabel: {
     color: CandyColors.ink,
     fontSize: 10,
@@ -676,6 +705,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     lineHeight: 25,
+  },
+  modalText: {
+    color: CandyColors.inkSoft,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   input: {
     minHeight: 52,
