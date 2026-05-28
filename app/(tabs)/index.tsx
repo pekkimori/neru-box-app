@@ -1,5 +1,5 @@
 // app/(tabs)/index.tsx
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyButton, CandyCard, CandyScreen, QuestProgress, StarToken, StatusPill } from '@/components/candy';
@@ -42,8 +42,8 @@ function truncateLabel(label: string): string {
 export default function DreamsHub() {
   const router = useRouter();
   const today = todayString();
-  const { coins } = useCoins();
-  const { plan, isBlockComplete } = useDailyPlan(today);
+  const { coins, addCoins } = useCoins();
+  const { plan, isBlockComplete, updateTaskStatus, awardCoins } = useDailyPlan(today);
   const { getQuestsForBlock, areBlockRoutinesDone } = useRoutineQuests(today);
   const { constellations, stars } = useConstellations();
 
@@ -56,13 +56,39 @@ export default function DreamsHub() {
     });
   });
 
-  const openStar = (star: Star) => {
+  const promptStarCompletion = (star: Star) => {
     const planned = plannedByStar.get(star.id);
-    if (planned) {
-      router.push(`/dreams/block/${planned.block}`);
+    if (!planned) {
+      Alert.alert(
+        'Plan this star first',
+        'Add this star to a time block before completing it today.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Plan Week', onPress: () => router.push('/dreams/plan') },
+        ]
+      );
       return;
     }
-    router.push(`/dreams/constellation/${star.constellationId}`);
+    if (planned.status === 'lit') {
+      Alert.alert('Already lit', `${star.label} is already complete for today.`);
+      return;
+    }
+
+    Alert.alert(
+      'Complete this star?',
+      `${star.label} will be marked complete for ${planned.block}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete',
+          onPress: () => {
+            updateTaskStatus(star.id, planned.block, 'lit');
+            awardCoins(star.id, planned.block, 10);
+            addCoins(10);
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -180,7 +206,7 @@ export default function DreamsHub() {
                             activeOpacity={0.82}
                             accessibilityRole="button"
                             accessibilityLabel={`${star.label}, ${planned ? `${planned.status} in ${planned.block}` : 'not planned today'}`}
-                            onPress={() => openStar(star)}
+                            onPress={() => promptStarCompletion(star)}
                             style={[
                               styles.constellationNode,
                               {
