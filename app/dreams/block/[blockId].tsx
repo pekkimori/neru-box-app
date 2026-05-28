@@ -107,6 +107,9 @@ export default function TimeBlockScreen() {
                   key={quest.id}
                   onPress={() => handleRoutineToggle(quest.id)}
                   activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Toggle routine ${quest.label}`}
+                  accessibilityState={{ checked: done }}
                 >
                   <CandyCard tone={done ? 'mint' : 'sky'} style={styles.questRow}>
                     <StarToken state={done ? 'filled' : 'empty'} tone={done ? 'mint' : 'sky'} size={36} />
@@ -114,12 +117,21 @@ export default function TimeBlockScreen() {
                     <Text style={[styles.questLabel, done && styles.questLabelDone]}>
                       {quest.label}
                     </Text>
-                    {done ? <StatusPill tone="gold" icon="ellipse" label="+5" /> : null}
+                    {done ? (
+                      <View accessible accessibilityLabel="Earned 5 coins">
+                        <StatusPill tone="gold" icon="ellipse" label="+5" />
+                      </View>
+                    ) : null}
                   </CandyCard>
                 </TouchableOpacity>
               );
             })}
-            <TouchableOpacity onPress={() => setRoutinesSkipped(true)}>
+            <TouchableOpacity
+              onPress={() => setRoutinesSkipped(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Skip routines"
+              accessibilityHint="Moves directly to this block's tasks"
+            >
               <Text style={styles.skipText}>Skip routines</Text>
             </TouchableOpacity>
           </View>
@@ -136,6 +148,8 @@ export default function TimeBlockScreen() {
                 const constellation = constellations.find((c) => c.id === task.constellationId);
                 const star = stars.find((s) => s.id === task.starId);
                 const isLit = task.status === 'lit';
+                const starLabel = star?.label ?? 'task';
+                const photoActionLabel = task.status === 'unlit' ? 'setup photo' : 'done photo';
 
                 return (
                   <CandyCard key={task.starId} tone={isLit ? 'mint' : 'lavender'} style={styles.taskCard}>
@@ -170,6 +184,8 @@ export default function TimeBlockScreen() {
                         <TouchableOpacity
                           style={styles.cameraButton}
                           onPress={() => handleCameraPress(task)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Add ${photoActionLabel} for ${starLabel}`}
                         >
                           <Ionicons name="camera-outline" size={18} color={NeruColors.textMuted} />
                           <Text style={styles.cameraText}>
@@ -179,6 +195,8 @@ export default function TimeBlockScreen() {
                         <TouchableOpacity
                           style={styles.completeButton}
                           onPress={() => handleCompleteTask(task)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Complete ${starLabel}`}
                         >
                           <Ionicons name="checkmark" size={18} color="#fff" />
                           <Text style={styles.completeText}>Complete</Text>
@@ -187,12 +205,17 @@ export default function TimeBlockScreen() {
                     )}
 
                     {isLit && (
-                      <StatusPill
-                        tone="gold"
-                        icon="ellipse"
-                        label={`+${task.coinsEarned}`}
+                      <View
+                        accessible
+                        accessibilityLabel={`Earned ${task.coinsEarned} coins`}
                         style={styles.earnedCoins}
-                      />
+                      >
+                        <StatusPill
+                          tone="gold"
+                          icon="ellipse"
+                          label={`+${task.coinsEarned}`}
+                        />
+                      </View>
                     )}
                   </CandyCard>
                 );

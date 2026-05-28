@@ -92,13 +92,25 @@ export default function CameraScreen() {
           </View>
         </View>
       ) : (
-        <TouchableOpacity style={styles.captureArea} onPress={takePhoto}>
+        <TouchableOpacity
+          style={styles.captureArea}
+          onPress={takePhoto}
+          accessibilityRole="button"
+          accessibilityLabel={isSetup ? 'Take setup photo' : 'Take completion photo'}
+          accessibilityHint="Opens the camera"
+        >
           <Ionicons name="camera" size={48} color={CandyColors.lavenderDeep} />
           <Text style={styles.captureText}>Tap to take photo</Text>
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={styles.skipButton} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.skipButton}
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel="Skip photo"
+        accessibilityHint="Returns to the time block without adding a photo"
+      >
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
     </CandyScreen>
