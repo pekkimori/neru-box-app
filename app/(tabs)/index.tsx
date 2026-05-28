@@ -1,8 +1,9 @@
 // app/(tabs)/index.tsx
-import { Alert, View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { Alert, Modal, Pressable, TextInput, View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { CandyButton, CandyCard, CandyScreen, QuestProgress, StarToken, StatusPill } from '@/components/candy';
+import { CandyButton, CandyCard, CandyScreen, StarToken, StatusPill } from '@/components/candy';
 import { CandyColors, CandySpacing } from '@/constants/candy-theme';
 import { NeruColors } from '../../constants/neru-theme';
 import { useCoins } from '../../hooks/useCoins';
@@ -39,22 +40,81 @@ function truncateLabel(label: string): string {
   return label.length > 18 ? `${label.slice(0, 18)}...` : label;
 }
 
+function getCurrentBlock(now = new Date()): { key: BlockType; label: string; endAt: Date } {
+  const hour = now.getHours();
+  const endAt = new Date(now);
+
+  if (hour >= 5 && hour < 12) {
+    endAt.setHours(12, 0, 0, 0);
+    return { key: 'morning', label: 'Morning', endAt };
+  }
+
+  if (hour >= 12 && hour < 18) {
+    endAt.setHours(18, 0, 0, 0);
+    return { key: 'afternoon', label: 'Afternoon', endAt };
+  }
+
+  if (hour >= 18) {
+    endAt.setDate(endAt.getDate() + 1);
+  }
+  endAt.setHours(5, 0, 0, 0);
+  return { key: 'evening', label: 'Evening', endAt };
+}
+
+function formatTimeLeft(endAt: Date): string {
+  const minutes = Math.max(0, Math.ceil((endAt.getTime() - Date.now()) / 60000));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+
+  if (hours <= 0) return `${remainder}m left`;
+  if (remainder === 0) return `${hours}h left`;
+  return `${hours}h ${remainder}m left`;
+}
+
 export default function DreamsHub() {
   const router = useRouter();
   const today = todayString();
+  const [starDraftFor, setStarDraftFor] = useState<string | null>(null);
+  const [starDraft, setStarDraft] = useState('');
+  const [constellationDraftOpen, setConstellationDraftOpen] = useState(false);
+  const [constellationName, setConstellationName] = useState('');
+  const [constellationIcon, setConstellationIcon] = useState('✨');
+  const [destroyModeId, setDestroyModeId] = useState<string | null>(null);
   const { coins, addCoins } = useCoins();
-  const { plan, isBlockComplete, updateTaskStatus, awardCoins } = useDailyPlan(today);
-  const { getQuestsForBlock, areBlockRoutinesDone } = useRoutineQuests(today);
-  const { constellations, stars } = useConstellations();
+  const { plan, updateTaskStatus, awardCoins, removeTask } = useDailyPlan(today);
+  const { getQuestsForBlock, isQuestComplete, toggleQuestComplete } = useRoutineQuests(today);
+  const { constellations, stars, addConstellation, addStar, deleteStar } = useConstellations();
 
-  const hasPlan = BLOCK_CONFIG.some((b) => plan.blocks[b.key].length > 0);
-  const completedBlocks = BLOCK_CONFIG.filter((b) => isBlockComplete(b.key)).length;
+  const currentBlock = getCurrentBlock();
+  const currentRoutines = getQuestsForBlock(currentBlock.key);
   const plannedByStar = new Map<string, { block: BlockType; status: TaskStatus }>();
   BLOCK_CONFIG.forEach((block) => {
     plan.blocks[block.key].forEach((task) => {
       plannedByStar.set(task.starId, { block: block.key, status: task.status });
     });
   });
+
+  const openAddStar = (constellationId: string) => {
+    setStarDraftFor(constellationId);
+    setStarDraft('');
+  };
+
+  const handleAddStar = () => {
+    const label = starDraft.trim();
+    if (!starDraftFor || !label) return;
+    addStar(starDraftFor, label);
+    setStarDraftFor(null);
+    setStarDraft('');
+  };
+
+  const handleAddConstellation = () => {
+    const name = constellationName.trim();
+    if (!name) return;
+    addConstellation(name, constellationIcon.trim() || '✨');
+    setConstellationName('');
+    setConstellationIcon('✨');
+    setConstellationDraftOpen(false);
+  };
 
   const promptStarCompletion = (star: Star) => {
     const planned = plannedByStar.get(star.id);
@@ -64,7 +124,7 @@ export default function DreamsHub() {
         'Add this star to a time block before completing it today.',
         [
           { text: 'Not now', style: 'cancel' },
-          { text: 'Plan Week', onPress: () => router.push('/dreams/plan') },
+          { text: 'Planning', onPress: () => router.push('/dreams/plan') },
         ]
       );
       return;
@@ -91,6 +151,30 @@ export default function DreamsHub() {
     );
   };
 
+  const promptDeleteStar = (star: Star) => {
+    const planned = plannedByStar.get(star.id);
+    const deleteFromToday = () => {
+      if (planned) {
+        removeTask(star.id, planned.block);
+      }
+      deleteStar(star.id);
+    };
+
+    if (planned?.status === 'lit') {
+      Alert.alert(
+        'Delete completed star?',
+        `${star.label} is already completed today. Delete it anyway?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: deleteFromToday },
+        ]
+      );
+      return;
+    }
+
+    deleteFromToday();
+  };
+
   return (
     <CandyScreen variant="dreams">
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -108,30 +192,53 @@ export default function DreamsHub() {
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>{"Light today's stars"}</Text>
               <Text style={styles.heroText}>
-                Complete your time blocks to fill the path and save the best moments in your diary.
+                {currentBlock.label} routines are active now. You have {formatTimeLeft(currentBlock.endAt)} before the next window.
               </Text>
             </View>
           </View>
-          <QuestProgress
-            completed={completedBlocks}
-            total={BLOCK_CONFIG.length}
-            label={`${completedBlocks}/${BLOCK_CONFIG.length} blocks glowing`}
-          />
+          <View style={styles.routinePanel}>
+            <StatusPill
+              tone="sky"
+              icon="time"
+              label={`${currentBlock.label} · ${formatTimeLeft(currentBlock.endAt)}`}
+              style={styles.currentPill}
+            />
+            {currentRoutines.length === 0 ? (
+              <Text style={styles.routineEmpty}>No routine tasks for this time window.</Text>
+            ) : (
+              currentRoutines.map((quest) => {
+                const complete = isQuestComplete(quest.id);
+                return (
+                  <TouchableOpacity
+                    key={quest.id}
+                    activeOpacity={0.82}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: complete }}
+                    accessibilityLabel={`${quest.label}, ${complete ? 'complete' : 'not complete'}`}
+                    onPress={() => toggleQuestComplete(quest.id)}
+                    style={styles.routineRow}
+                  >
+                    <Ionicons
+                      name={complete ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={21}
+                      color={complete ? CandyColors.mint : CandyColors.lavenderDeep}
+                    />
+                    <Text style={[styles.routineText, complete && styles.routineTextDone]}>
+                      {quest.icon} {quest.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
         </CandyCard>
 
         <View style={styles.actions}>
           <CandyButton
-            label="Plan Week"
+            label="Planning"
             icon="calendar"
             style={styles.actionButton}
             onPress={() => router.push('/dreams/plan')}
-          />
-          <CandyButton
-            label="Edit Stars"
-            variant="secondary"
-            icon="sparkles"
-            style={styles.actionButton}
-            onPress={() => router.push('/dreams/constellations')}
           />
         </View>
 
@@ -146,9 +253,9 @@ export default function DreamsHub() {
                 </Text>
               </View>
               <CandyButton
-                label="Add stars"
+                label="New constellation"
                 icon="add-circle"
-                onPress={() => router.push('/dreams/constellations')}
+                onPress={() => setConstellationDraftOpen(true)}
               />
             </CandyCard>
           ) : (
@@ -162,13 +269,7 @@ export default function DreamsHub() {
                   tone={constellationIndex % 2 === 0 ? 'lavender' : 'gold'}
                   style={styles.constellationCard}
                 >
-                  <TouchableOpacity
-                    activeOpacity={0.82}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open ${constellation.name} constellation`}
-                    onPress={() => router.push(`/dreams/constellation/${constellation.id}`)}
-                    style={styles.constellationHeader}
-                  >
+                  <View style={styles.constellationHeader}>
                     <View style={styles.constellationNameRow}>
                       <Text style={styles.constellationIcon}>{constellation.icon}</Text>
                       <View style={styles.constellationNameCopy}>
@@ -180,15 +281,43 @@ export default function DreamsHub() {
                         </Text>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={CandyColors.inkMuted} />
-                  </TouchableOpacity>
+                    <View style={styles.constellationActions}>
+                      <TouchableOpacity
+                        activeOpacity={0.82}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add star to ${constellation.name}`}
+                        onPress={() => openAddStar(constellation.id)}
+                        style={styles.iconButton}
+                      >
+                        <Ionicons name="add" size={22} color={CandyColors.white} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        activeOpacity={0.82}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${destroyModeId === constellation.id ? 'Turn off' : 'Turn on'} destroy mode for ${constellation.name}`}
+                        onPress={() =>
+                          setDestroyModeId((current) => (current === constellation.id ? null : constellation.id))
+                        }
+                        style={[
+                          styles.iconButton,
+                          destroyModeId === constellation.id && styles.iconButtonDanger,
+                        ]}
+                      >
+                        <Ionicons name="trash" size={19} color={CandyColors.white} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {destroyModeId === constellation.id ? (
+                    <StatusPill tone="gold" icon="trash" label="Destroy mode: tap stars to delete" />
+                  ) : null}
 
                   {constellationStars.length === 0 ? (
                     <TouchableOpacity
                       activeOpacity={0.82}
                       accessibilityRole="button"
                       accessibilityLabel={`Add task stars to ${constellation.name}`}
-                      onPress={() => router.push(`/dreams/constellation/${constellation.id}`)}
+                      onPress={() => openAddStar(constellation.id)}
                       style={styles.emptyConstellationMap}
                     >
                       <StarToken state="empty" tone="gold" size={42} />
@@ -206,7 +335,9 @@ export default function DreamsHub() {
                             activeOpacity={0.82}
                             accessibilityRole="button"
                             accessibilityLabel={`${star.label}, ${planned ? `${planned.status} in ${planned.block}` : 'not planned today'}`}
-                            onPress={() => promptStarCompletion(star)}
+                            onPress={() =>
+                              destroyModeId === constellation.id ? promptDeleteStar(star) : promptStarCompletion(star)
+                            }
                             style={[
                               styles.constellationNode,
                               {
@@ -221,15 +352,9 @@ export default function DreamsHub() {
                         );
                       })}
                       {constellationStars.length > NODE_LAYOUT.length ? (
-                        <TouchableOpacity
-                          activeOpacity={0.82}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Open ${constellation.name} to view all stars`}
-                          onPress={() => router.push(`/dreams/constellation/${constellation.id}`)}
-                          style={styles.moreStarsPill}
-                        >
+                        <View style={styles.moreStarsPill}>
                           <Text style={styles.moreStarsText}>+{constellationStars.length - NODE_LAYOUT.length}</Text>
-                        </TouchableOpacity>
+                        </View>
                       ) : null}
                     </View>
                   )}
@@ -239,56 +364,69 @@ export default function DreamsHub() {
           )}
         </View>
 
-        {!hasPlan ? (
-          <CandyCard tone="gold" style={styles.emptyState}>
-            <StarToken state="empty" tone="gold" size={64} />
-            <Text style={styles.emptyTitle}>Light your first star</Text>
-            <Text style={styles.emptySubtitle}>Assign stars to morning, afternoon, and evening.</Text>
-            <CandyButton label="Plan today" icon="add-circle" onPress={() => router.push('/dreams/plan')} />
-          </CandyCard>
-        ) : (
-          BLOCK_CONFIG.map((block) => {
-            const tasks = plan.blocks[block.key];
-            const litCount = tasks.filter((t) => t.status === 'lit').length;
-            const routinesDone = areBlockRoutinesDone(block.key);
-            const blockDone = isBlockComplete(block.key);
-            const routineCount = getQuestsForBlock(block.key).length;
-
-            return (
-              <TouchableOpacity
-                key={block.key}
-                activeOpacity={0.82}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${block.label} block`}
-                onPress={() => router.push(`/dreams/block/${block.key}`)}
-              >
-                <CandyCard tone={blockDone ? 'mint' : 'lavender'} style={styles.blockCard}>
-                  <View style={styles.blockHeader}>
-                    <View style={styles.blockTitleRow}>
-                      <StarToken state={blockDone ? 'filled' : 'empty'} tone={blockDone ? 'mint' : 'gold'} size={42} />
-                      <View>
-                        <Text style={styles.blockTitle}>{block.label}</Text>
-                        <Text style={styles.blockTaskCount}>
-                          {tasks.length > 0 ? `${litCount}/${tasks.length} stars lit` : 'No stars planned'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={CandyColors.inkMuted} />
-                  </View>
-                  {routineCount > 0 ? (
-                    <StatusPill
-                      tone={routinesDone ? 'mint' : 'sky'}
-                      icon={routinesDone ? 'checkmark-circle' : 'sparkles'}
-                      label={routinesDone ? 'Routines done' : `${routineCount} routines`}
-                      style={styles.blockPill}
-                    />
-                  ) : null}
-                </CandyCard>
-              </TouchableOpacity>
-            );
-          })
-        )}
+        <CandyButton
+          label="New constellation"
+          icon="add-circle"
+          variant="secondary"
+          style={styles.bottomAddButton}
+          onPress={() => setConstellationDraftOpen(true)}
+        />
       </ScrollView>
+
+      <Modal transparent animationType="fade" visible={starDraftFor !== null} onRequestClose={() => setStarDraftFor(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setStarDraftFor(null)}>
+          <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitle}>Add task star</Text>
+            <TextInput
+              value={starDraft}
+              onChangeText={setStarDraft}
+              placeholder="Task name"
+              placeholderTextColor={CandyColors.inkMuted}
+              style={styles.input}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <CandyButton label="Cancel" variant="secondary" style={styles.modalButton} onPress={() => setStarDraftFor(null)} />
+              <CandyButton label="Add" icon="add" style={styles.modalButton} onPress={handleAddStar} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal transparent animationType="fade" visible={constellationDraftOpen} onRequestClose={() => setConstellationDraftOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setConstellationDraftOpen(false)}>
+          <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.modalTitle}>New constellation</Text>
+            <View style={styles.constellationInputRow}>
+              <TextInput
+                value={constellationIcon}
+                onChangeText={setConstellationIcon}
+                placeholder="✨"
+                placeholderTextColor={CandyColors.inkMuted}
+                style={[styles.input, styles.iconInput]}
+                maxLength={3}
+              />
+              <TextInput
+                value={constellationName}
+                onChangeText={setConstellationName}
+                placeholder="Constellation name"
+                placeholderTextColor={CandyColors.inkMuted}
+                style={[styles.input, styles.nameInput]}
+                autoFocus
+              />
+            </View>
+            <View style={styles.modalActions}>
+              <CandyButton
+                label="Cancel"
+                variant="secondary"
+                style={styles.modalButton}
+                onPress={() => setConstellationDraftOpen(false)}
+              />
+              <CandyButton label="Create" icon="add-circle" style={styles.modalButton} onPress={handleAddConstellation} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </CandyScreen>
   );
 }
@@ -350,6 +488,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 20,
   },
+  routinePanel: {
+    gap: CandySpacing.sm,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.62)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.72)',
+    padding: CandySpacing.md,
+  },
+  currentPill: {
+    alignSelf: 'flex-start',
+  },
+  routineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: CandySpacing.sm,
+    minHeight: 28,
+  },
+  routineText: {
+    flex: 1,
+    minWidth: 0,
+    color: CandyColors.ink,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
+  routineTextDone: {
+    color: CandyColors.inkSoft,
+    textDecorationLine: 'line-through',
+  },
+  routineEmpty: {
+    color: CandyColors.inkSoft,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 19,
+  },
   actions: {
     flexDirection: 'row',
     gap: CandySpacing.sm,
@@ -369,6 +542,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: CandySpacing.md,
+  },
+  constellationActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: CandySpacing.xs,
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: CandyColors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: CandyColors.white,
+    shadowColor: CandyColors.ink,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  iconButtonDanger: {
+    backgroundColor: CandyColors.danger,
   },
   constellationNameRow: {
     flex: 1,
@@ -462,55 +658,65 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
-  emptyState: {
+  bottomAddButton: {
+    alignSelf: 'stretch',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(31, 41, 55, 0.34)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: CandySpacing.sm,
-    paddingVertical: CandySpacing.xxl,
+    padding: CandySpacing.lg,
   },
-  emptyTitle: {
+  modalCard: {
+    width: '100%',
+    maxWidth: 440,
+    borderRadius: 28,
+    backgroundColor: CandyColors.white,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 226, 122, 0.8)',
+    padding: CandySpacing.lg,
+    gap: CandySpacing.md,
+    shadowColor: CandyColors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+  },
+  modalTitle: {
     color: CandyColors.ink,
     fontSize: 20,
     fontWeight: '900',
+    lineHeight: 25,
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 248, 237, 0.94)',
+    borderWidth: 2,
+    borderColor: 'rgba(167, 139, 250, 0.26)',
+    paddingHorizontal: CandySpacing.md,
+    color: CandyColors.ink,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  constellationInputRow: {
+    flexDirection: 'row',
+    gap: CandySpacing.sm,
+  },
+  iconInput: {
+    width: 72,
     textAlign: 'center',
   },
-  emptySubtitle: {
-    color: CandyColors.inkSoft,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: CandySpacing.xs,
-  },
-  blockCard: {
-    gap: CandySpacing.md,
-  },
-  blockHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: CandySpacing.md,
-  },
-  blockTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: CandySpacing.md,
+  nameInput: {
     flex: 1,
     minWidth: 0,
   },
-  blockTitle: {
-    color: CandyColors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 23,
+  modalActions: {
+    flexDirection: 'row',
+    gap: CandySpacing.sm,
   },
-  blockTaskCount: {
-    color: CandyColors.inkSoft,
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-  blockPill: {
-    alignSelf: 'flex-start',
+  modalButton: {
+    flex: 1,
   },
 });
