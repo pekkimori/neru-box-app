@@ -35,14 +35,6 @@ const NODE_LAYOUT = [
   { left: '77%', top: 92 },
 ] as const;
 
-const LINE_STYLES = [
-  { left: '19%', top: 43, width: 86, rotate: '18deg' },
-  { left: '47%', top: 42, width: 82, rotate: '-18deg' },
-  { left: '31%', top: 92, width: 92, rotate: '126deg' },
-  { left: '31%', top: 128, width: 100, rotate: '10deg' },
-  { left: '62%', top: 119, width: 70, rotate: '-28deg' },
-] as const;
-
 function truncateLabel(label: string): string {
   return label.length > 18 ? `${label.slice(0, 18)}...` : label;
 }
@@ -178,20 +170,6 @@ export default function DreamsHub() {
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.constellationMap}>
-                      {LINE_STYLES.slice(0, Math.max(0, Math.min(constellationStars.length - 1, LINE_STYLES.length))).map((line, index) => (
-                        <View
-                          key={`${constellation.id}-line-${index}`}
-                          style={[
-                            styles.constellationLine,
-                            {
-                              left: line.left,
-                              top: line.top,
-                              width: line.width,
-                              transform: [{ rotate: line.rotate }],
-                            },
-                          ]}
-                        />
-                      ))}
                       {constellationStars.slice(0, NODE_LAYOUT.length).map((star, index) => {
                         const planned = plannedByStar.get(star.id);
                         const state = planned?.status === 'lit' ? 'filled' : planned ? 'empty' : 'locked';
@@ -400,12 +378,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 226, 122, 0.65)',
     overflow: 'hidden',
     position: 'relative',
-  },
-  constellationLine: {
-    position: 'absolute',
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(167, 139, 250, 0.24)',
   },
   constellationNode: {
     position: 'absolute',
