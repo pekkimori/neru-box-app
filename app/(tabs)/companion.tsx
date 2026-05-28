@@ -407,6 +407,7 @@ export default function CompanionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingBottom: Platform.OS === 'ios' ? 98 : 80,
   },
   flex: {
     flex: 1,

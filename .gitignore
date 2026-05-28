@@ -41,3 +41,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# AI tooling configs (not part of the app)
+.omo/
+.superpowers/
+.claude/

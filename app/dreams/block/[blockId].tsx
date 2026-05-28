@@ -1,28 +1,47 @@
 // app/dreams/block/[blockId].tsx
-import { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, Image,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { CandyCard, CandyScreen, StarToken, StatusPill } from '@/components/candy';
-import { CandyColors, CandySpacing } from '@/constants/candy-theme';
-import { NeruColors } from '../../../constants/neru-theme';
-import { useDailyPlan } from '../../../hooks/useDailyPlan';
-import { useRoutineQuests } from '../../../hooks/useRoutineQuests';
-import { useConstellations } from '../../../hooks/useConstellations';
-import { useCoins } from '../../../hooks/useCoins';
-import type { BlockType, PlannedTask } from '../../../types/dreams';
+    CandyCard,
+    CandyScreen,
+    PhotoCompletionModal,
+    StarToken,
+    StatusPill,
+} from "@/components/candy";
+import { CandyColors, CandySpacing } from "@/constants/candy-theme";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import {
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { NeruColors } from "../../../constants/neru-theme";
+import { useCoins } from "../../../hooks/useCoins";
+import { useConstellations } from "../../../hooks/useConstellations";
+import { useDailyPlan } from "../../../hooks/useDailyPlan";
+import { useRoutineQuests } from "../../../hooks/useRoutineQuests";
+import type { BlockType, PlannedTask } from "../../../types/dreams";
 
 function todayString(): string {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toISOString().split("T")[0];
 }
 
-const BLOCK_TITLES: Record<BlockType, { label: string; icon: string; color: string }> = {
-  morning: { label: 'Morning', icon: 'sunny', color: NeruColors.amber },
-  afternoon: { label: 'Afternoon', icon: 'partly-sunny', color: NeruColors.sky },
-  evening: { label: 'Evening', icon: 'moon', color: NeruColors.violet },
+const BLOCK_TITLES: Record<
+  BlockType,
+  { label: string; icon: string; color: string }
+> = {
+  morning: { label: "Morning", icon: "sunny", color: NeruColors.amber },
+  afternoon: {
+    label: "Afternoon",
+    icon: "partly-sunny",
+    color: NeruColors.sky,
+  },
+  evening: { label: "Evening", icon: "moon", color: NeruColors.violet },
 };
 
 export default function TimeBlockScreen() {
@@ -31,58 +50,113 @@ export default function TimeBlockScreen() {
   const router = useRouter();
   const today = todayString();
 
-  const { plan, updateTaskStatus, awardCoins, isBlockComplete } = useDailyPlan(today);
-  const { getQuestsForBlock, toggleQuestComplete, isQuestComplete, areBlockRoutinesDone } =
-    useRoutineQuests(today);
+  const { plan, updateTaskStatus, awardCoins, isBlockComplete } =
+    useDailyPlan(today);
+  const {
+    getQuestsForBlock,
+    toggleQuestComplete,
+    isQuestComplete,
+    areBlockRoutinesDone,
+  } = useRoutineQuests(today);
   const { constellations, stars } = useConstellations();
   const { addCoins } = useCoins();
 
   const [routinesSkipped, setRoutinesSkipped] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [pendingTaskCompletion, setPendingTaskCompletion] = useState<PlannedTask | null>(null);
   const blockConfig = BLOCK_TITLES[block] || BLOCK_TITLES.morning;
   const blockQuests = getQuestsForBlock(block);
-  const blockTasks = useMemo(() => plan.blocks[block] || [], [plan.blocks, block]);
+  const blockTasks = useMemo(
+    () => plan.blocks[block] || [],
+    [plan.blocks, block],
+  );
   const routinesDone = areBlockRoutinesDone(block) || routinesSkipped;
+  const routinesComplete =
+    blockQuests.length === 0 || areBlockRoutinesDone(block);
 
-  const handleRoutineToggle = useCallback((questId: string) => {
-    toggleQuestComplete(questId);
-    if (!isQuestComplete(questId)) {
-      addCoins(5);
+  const handleRoutineToggle = useCallback(
+    (questId: string) => {
+      toggleQuestComplete(questId);
+      if (!isQuestComplete(questId)) {
+        addCoins(5);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    },
+    [toggleQuestComplete, isQuestComplete, addCoins],
+  );
+
+  const handleCompleteTask = useCallback(
+    (task: PlannedTask) => {
+      if (!routinesComplete) {
+        Alert.alert(
+          "Finish routines first",
+          `Complete all ${blockConfig.label} routines before lighting stars.`,
+        );
+        return;
+      }
+      setPendingTaskCompletion(task);
+      setPhotoModalVisible(true);
+    },
+    [routinesComplete, blockConfig.label],
+  );
+
+  const handlePhotoComplete = useCallback(
+    (photoUri: string) => {
+      if (!pendingTaskCompletion) return;
+      const task = pendingTaskCompletion;
+
+      let coins = 10;
+      if (task.setupPhotoUri && !task.completionPhotoUri) {
+        coins = 15;
+      }
+      updateTaskStatus(task.starId, block, "lit", photoUri);
+      awardCoins(task.starId, block, coins);
+      addCoins(coins);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-  }, [toggleQuestComplete, isQuestComplete, addCoins]);
 
-  const handleCompleteTask = useCallback((task: PlannedTask) => {
-    let coins = 10;
-    if (task.setupPhotoUri && !task.completionPhotoUri) {
-      coins = 15;
-    }
-    updateTaskStatus(task.starId, block, 'lit');
-    awardCoins(task.starId, block, coins);
-    addCoins(coins);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPhotoModalVisible(false);
+      setPendingTaskCompletion(null);
 
-    const updatedTasks = blockTasks.map((t) =>
-      t.starId === task.starId ? { ...t, status: 'lit' as const } : t
-    );
-    const allDone = updatedTasks.every((t) => t.status === 'lit');
-    if (allDone && updatedTasks.length > 0) {
-      addCoins(10);
-      setTimeout(() => {
-        router.push(`/dreams/reflection/${block}`);
-      }, 600);
-    }
-  }, [block, blockTasks, updateTaskStatus, awardCoins, addCoins, router]);
+      const updatedTasks = blockTasks.map((t) =>
+        t.starId === task.starId ? { ...t, status: "lit" as const } : t,
+      );
+      const allDone = updatedTasks.every((t) => t.status === "lit");
+      if (allDone && updatedTasks.length > 0) {
+        addCoins(10);
+        setTimeout(() => {
+          router.push(`/dreams/reflection/${block}`);
+        }, 600);
+      }
+    },
+    [
+      pendingTaskCompletion,
+      block,
+      blockTasks,
+      updateTaskStatus,
+      awardCoins,
+      addCoins,
+      router,
+    ],
+  );
 
-  const handleCameraPress = useCallback((task: PlannedTask) => {
-    router.push({
-      pathname: '/dreams/camera',
-      params: {
-        starId: task.starId,
-        block,
-        mode: task.status === 'unlit' ? 'setup' : 'completion',
-      },
-    });
-  }, [block, router]);
+  const handlePhotoCancel = useCallback(() => {
+    setPhotoModalVisible(false);
+    setPendingTaskCompletion(null);
+  }, []);
+
+  const handleCameraPress = useCallback(
+    (task: PlannedTask) => {
+      router.push({
+        pathname: "/dreams/camera",
+        params: {
+          starId: task.starId,
+          block,
+          mode: task.status === "unlit" ? "setup" : "completion",
+        },
+      });
+    },
+    [block, router],
+  );
 
   return (
     <CandyScreen variant="dreams" style={styles.container}>
@@ -91,11 +165,18 @@ export default function TimeBlockScreen() {
           title: blockConfig.label,
           headerRight: () =>
             isBlockComplete(block) ? (
-              <Ionicons name="checkmark-circle" size={24} color={NeruColors.emerald} />
+              <Ionicons
+                name="checkmark-circle"
+                size={24}
+                color={NeruColors.emerald}
+              />
             ) : null,
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Phase 1: Routine Quests */}
         {!routinesDone && blockQuests.length > 0 && (
           <View style={styles.section}>
@@ -111,10 +192,19 @@ export default function TimeBlockScreen() {
                   accessibilityLabel={`Toggle routine ${quest.label}`}
                   accessibilityState={{ checked: done }}
                 >
-                  <CandyCard tone={done ? 'mint' : 'sky'} style={styles.questRow}>
-                    <StarToken state={done ? 'filled' : 'empty'} tone={done ? 'mint' : 'sky'} size={36} />
+                  <CandyCard
+                    tone={done ? "mint" : "sky"}
+                    style={styles.questRow}
+                  >
+                    <StarToken
+                      state={done ? "filled" : "empty"}
+                      tone={done ? "mint" : "sky"}
+                      size={36}
+                    />
                     <Text style={styles.questIcon}>{quest.icon}</Text>
-                    <Text style={[styles.questLabel, done && styles.questLabelDone]}>
+                    <Text
+                      style={[styles.questLabel, done && styles.questLabelDone]}
+                    >
                       {quest.label}
                     </Text>
                     {done ? (
@@ -142,22 +232,40 @@ export default function TimeBlockScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Tasks</Text>
             {blockTasks.length === 0 ? (
-              <Text style={styles.emptyText}>No tasks planned for this block</Text>
+              <Text style={styles.emptyText}>
+                No tasks planned for this block
+              </Text>
             ) : (
               blockTasks.map((task) => {
-                const constellation = constellations.find((c) => c.id === task.constellationId);
+                const constellation = constellations.find(
+                  (c) => c.id === task.constellationId,
+                );
                 const star = stars.find((s) => s.id === task.starId);
-                const isLit = task.status === 'lit';
-                const starLabel = star?.label ?? 'task';
-                const photoActionLabel = task.status === 'unlit' ? 'setup photo' : 'done photo';
+                const isLit = task.status === "lit";
+                const starLabel = star?.label ?? "task";
+                const photoActionLabel =
+                  task.status === "unlit" ? "setup photo" : "done photo";
 
                 return (
-                  <CandyCard key={task.starId} tone={isLit ? 'mint' : 'lavender'} style={styles.taskCard}>
+                  <CandyCard
+                    key={task.starId}
+                    tone={isLit ? "mint" : "lavender"}
+                    style={styles.taskCard}
+                  >
                     <View style={styles.taskHeader}>
                       <View style={styles.taskTitleRow}>
-                        <StarToken state={isLit ? 'filled' : 'empty'} tone={isLit ? 'mint' : 'gold'} size={40} />
+                        <StarToken
+                          state={isLit ? "filled" : "empty"}
+                          tone={isLit ? "mint" : "gold"}
+                          size={40}
+                        />
                         <View style={styles.taskTitleText}>
-                          <Text style={[styles.taskLabel, isLit && styles.taskLabelDone]}>
+                          <Text
+                            style={[
+                              styles.taskLabel,
+                              isLit && styles.taskLabelDone,
+                            ]}
+                          >
                             {star?.label}
                           </Text>
                           <Text style={styles.taskConstellation}>
@@ -165,16 +273,28 @@ export default function TimeBlockScreen() {
                           </Text>
                         </View>
                       </View>
-                      {isLit ? <StatusPill tone="mint" icon="checkmark-circle" label="Lit" /> : null}
+                      {isLit ? (
+                        <StatusPill
+                          tone="mint"
+                          icon="checkmark-circle"
+                          label="Lit"
+                        />
+                      ) : null}
                     </View>
 
                     {(task.setupPhotoUri || task.completionPhotoUri) && (
                       <View style={styles.photoRow}>
                         {task.setupPhotoUri && (
-                          <Image source={{ uri: task.setupPhotoUri }} style={styles.photoThumb} />
+                          <Image
+                            source={{ uri: task.setupPhotoUri }}
+                            style={styles.photoThumb}
+                          />
                         )}
                         {task.completionPhotoUri && (
-                          <Image source={{ uri: task.completionPhotoUri }} style={styles.photoThumb} />
+                          <Image
+                            source={{ uri: task.completionPhotoUri }}
+                            style={styles.photoThumb}
+                          />
                         )}
                       </View>
                     )}
@@ -187,9 +307,15 @@ export default function TimeBlockScreen() {
                           accessibilityRole="button"
                           accessibilityLabel={`Add ${photoActionLabel} for ${starLabel}`}
                         >
-                          <Ionicons name="camera-outline" size={18} color={NeruColors.textMuted} />
+                          <Ionicons
+                            name="camera-outline"
+                            size={18}
+                            color={NeruColors.textMuted}
+                          />
                           <Text style={styles.cameraText}>
-                            {task.status === 'unlit' ? 'Setup photo' : 'Done photo'}
+                            {task.status === "unlit"
+                              ? "Setup photo"
+                              : "Done photo"}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -224,6 +350,17 @@ export default function TimeBlockScreen() {
           </View>
         )}
       </ScrollView>
+
+      <PhotoCompletionModal
+        visible={photoModalVisible}
+        taskLabel={
+          pendingTaskCompletion
+            ? (stars.find((s) => s.id === pendingTaskCompletion.starId)?.label ?? 'task')
+            : ''
+        }
+        onComplete={handlePhotoComplete}
+        onCancel={handlePhotoCancel}
+      />
     </CandyScreen>
   );
 }
@@ -232,52 +369,98 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingTop: 20, paddingBottom: 120 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 17, fontWeight: '900', color: CandyColors.ink, marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: CandyColors.ink,
+    marginBottom: 12,
+  },
   questRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: CandySpacing.sm,
     padding: CandySpacing.md,
     marginBottom: 10,
   },
   questIcon: { fontSize: 18 },
-  questLabel: { fontSize: 15, color: CandyColors.ink, flex: 1, fontWeight: '800' },
-  questLabelDone: { color: CandyColors.inkMuted, textDecorationLine: 'line-through' },
-  skipText: { fontSize: 13, color: CandyColors.inkMuted, textAlign: 'center', marginTop: 8, fontWeight: '700' },
-  emptyText: { fontSize: 14, color: CandyColors.inkMuted, textAlign: 'center', paddingVertical: 24 },
+  questLabel: {
+    fontSize: 15,
+    color: CandyColors.ink,
+    flex: 1,
+    fontWeight: "800",
+  },
+  questLabelDone: {
+    color: CandyColors.inkMuted,
+    textDecorationLine: "line-through",
+  },
+  skipText: {
+    fontSize: 13,
+    color: CandyColors.inkMuted,
+    textAlign: "center",
+    marginTop: 8,
+    fontWeight: "700",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: CandyColors.inkMuted,
+    textAlign: "center",
+    paddingVertical: 24,
+  },
   taskCard: {
     marginBottom: 12,
   },
-  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  taskTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  taskHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  taskTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
   taskTitleText: { flex: 1, gap: 2 },
-  taskLabel: { fontSize: 15, color: CandyColors.ink, fontWeight: '900' },
-  taskLabelDone: { color: CandyColors.inkMuted, textDecorationLine: 'line-through' },
-  taskConstellation: { fontSize: 12, color: CandyColors.inkSoft, fontWeight: '700' },
-  photoRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  photoThumb: { width: 60, height: 60, borderRadius: 8, backgroundColor: CandyColors.creamDeep },
-  taskActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  taskLabel: { fontSize: 15, color: CandyColors.ink, fontWeight: "900" },
+  taskLabelDone: {
+    color: CandyColors.inkMuted,
+    textDecorationLine: "line-through",
+  },
+  taskConstellation: {
+    fontSize: 12,
+    color: CandyColors.inkSoft,
+    fontWeight: "700",
+  },
+  photoRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  photoThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: CandyColors.creamDeep,
+  },
+  taskActions: { flexDirection: "row", gap: 8, marginTop: 12 },
   cameraButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#D8CAFF',
+    borderColor: "#D8CAFF",
     borderRadius: 10,
     backgroundColor: CandyColors.white,
   },
-  cameraText: { fontSize: 13, color: CandyColors.inkSoft, fontWeight: '700' },
+  cameraText: { fontSize: 13, color: CandyColors.inkSoft, fontWeight: "700" },
   completeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: CandyColors.mintDeep,
     borderRadius: 10,
   },
-  completeText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  earnedCoins: { alignSelf: 'flex-start', marginTop: 12 },
+  completeText: { fontSize: 13, fontWeight: "600", color: "#fff" },
+  earnedCoins: { alignSelf: "flex-start", marginTop: 12 },
 });
