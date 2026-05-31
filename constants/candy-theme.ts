@@ -20,6 +20,12 @@ export const CandyColors = {
   shadow: 'rgba(84, 58, 130, 0.18)',
   border: 'rgba(126, 99, 217, 0.16)',
   overlay: 'rgba(36, 36, 58, 0.36)',
+  garnet: '#c1121f',
+  garnetDeep: '#9a0e18',
+  garnetBorder: 'rgba(193,18,31,0.16)',
+  garnetTint: 'rgba(193,18,31,0.12)',
+  garnetTintBg: 'rgba(193,18,31,0.06)',
+  duoCream: '#fdf0d5',
 };
 
 export const CandyGradients = {
@@ -29,6 +35,7 @@ export const CandyGradients = {
   companion: ['#FFF4FA', '#F4EDFF'] as const,
   social: ['#FFF8ED', '#EEF9FF'] as const,
   diary: ['#FFF7E6', '#FFF0F7'] as const,
+  gacha: ['#fdf0d5', '#fdf0d5', '#FFF5E6'] as const,
 };
 
 export const CandyRadii = {

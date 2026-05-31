@@ -18,4 +18,8 @@ export const NeruColors = {
   indigo: '#7B8CFF',
   tabBar: CandyColors.white,
   tabBarBorder: CandyColors.border,
+  gacha: CandyColors.garnet,
+  gachaDark: CandyColors.garnetDeep,
+  gachaBorder: CandyColors.garnetBorder,
+  gachaBg: CandyColors.duoCream,
 };

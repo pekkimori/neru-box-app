@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,9 @@ import Animated, {
 import { useNeru } from '@/context/NeruContext';
 import { NeruColors } from '@/constants/neru-theme';
 import { CandyCard, CandyScreen, NeruAvatar, StarToken, StatusPill } from '@/components/candy';
+import SleepTimeSlider from '@/components/candy/SleepTimeSlider';
 import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
+import { useSleepSchedule } from '@/hooks/useSleepSchedule';
 
 type Mode = 'normal' | 'focus' | 'sleep';
 
@@ -92,6 +94,39 @@ export default function ProtectScreen() {
   const [wallSuggestion, setWallSuggestion] = useState<string | null>(null);
 
   const config = MODE_CONFIG[mode];
+
+  const {
+    schedule,
+    setSleepTime,
+    setWakeTime,
+    periods,
+    sleepDuration,
+    isValid,
+    validationMessage,
+    loaded,
+  } = useSleepSchedule();
+
+  const activePeriodType = useMemo(() => {
+    if (!schedule || periods.length === 0) return null;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return periods.find(p => {
+      const [sh, sm] = p.start.split(':').map(Number);
+      const [eh, em] = p.end.split(':').map(Number);
+      const startMins = sh * 60 + sm;
+      let endMins = eh * 60 + em;
+      if (endMins <= startMins) endMins += 24 * 60;
+      const adjCurrent = currentMinutes < startMins ? currentMinutes + 24 * 60 : currentMinutes;
+      return adjCurrent >= startMins && adjCurrent < endMins;
+    })?.type ?? null;
+  }, [periods, schedule]);
+
+  const formatDuration = (hours: number): string => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    if (m === 0) return `${h}h sleep`;
+    return `${h}h ${m}m sleep`;
+  };
 
   const handleAppTap = useCallback((app: AppInfo) => {
     if (mode === 'sleep') return;
@@ -184,6 +219,79 @@ export default function ProtectScreen() {
             );
           })}
         </View>
+
+        {/* Sleep Schedule */}
+        <CandyCard tone="lavender" style={styles.sleepCard}>
+          <Text style={styles.sleepCardTitle}>Sleep Schedule</Text>
+
+          <SleepTimeSlider
+            sleepTime={schedule?.sleepTime ?? '22:00'}
+            wakeTime={schedule?.wakeTime ?? '07:00'}
+            onSleepTimeChange={setSleepTime}
+            onWakeTimeChange={setWakeTime}
+            sleepDuration={sleepDuration}
+          />
+
+          {/* Duration / Validation */}
+          <View style={styles.sleepDurationRow}>
+            {schedule && sleepDuration !== null ? (
+              <>
+                <Text style={styles.sleepDurationText}>
+                  {formatDuration(sleepDuration)}
+                </Text>
+                {!isValid && validationMessage && (
+                  <Text style={styles.sleepWarning}>{validationMessage}</Text>
+                )}
+              </>
+            ) : (
+              <Text style={styles.sleepPrompt}>Set your sleep schedule</Text>
+            )}
+          </View>
+
+          {/* Timeline */}
+          {schedule && periods.length > 0 ? (
+            <View style={styles.sleepTimeline}>
+              {periods.map((p) => {
+                const isActive = p.type === activePeriodType;
+                return (
+                  <View
+                    key={p.type}
+                    style={[
+                      styles.sleepPeriodCard,
+                      isActive && styles.sleepPeriodCardActive,
+                    ]}
+                  >
+                    <Text style={styles.sleepPeriodEmoji}>{p.emoji}</Text>
+                    <View style={styles.sleepPeriodInfo}>
+                      <Text style={styles.sleepPeriodLabel}>{p.label}</Text>
+                      <Text style={styles.sleepPeriodTime}>
+                        {p.start} — {p.end}
+                      </Text>
+                      {p.type === 'wind-down' && (
+                        <Text style={styles.sleepPeriodSubtitle}>
+                          No tasks — time to relax and unwind
+                        </Text>
+                      )}
+                    </View>
+                    <View
+                      style={[
+                        styles.sleepPeriodDot,
+                        { backgroundColor: p.color },
+                        isActive && styles.sleepPeriodDotActive,
+                      ]}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            !schedule && (
+              <Text style={styles.sleepPlaceholder}>
+                Set your bedtime and wake time to see your daily task periods
+              </Text>
+            )
+          )}
+        </CandyCard>
 
         {config.modifiers.length > 0 && (
           <View style={styles.modifiersRow}>
@@ -721,5 +829,93 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     color: '#9C6B00',
+  },
+
+  // Sleep Schedule
+  sleepCard: {
+    gap: CandySpacing.md,
+  },
+  sleepCardTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: CandyColors.ink,
+  },
+
+  // Duration / Validation
+  sleepDurationRow: {
+    alignItems: 'center',
+    gap: CandySpacing.xs,
+  },
+  sleepDurationText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: CandyColors.inkSoft,
+  },
+  sleepWarning: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: CandyColors.pink,
+  },
+  sleepPrompt: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: CandyColors.inkMuted,
+  },
+
+  // Timeline
+  sleepTimeline: {
+    gap: CandySpacing.xs,
+  },
+  sleepPeriodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: CandySpacing.sm,
+    backgroundColor: CandyColors.cream,
+    borderRadius: CandyRadii.md,
+    padding: CandySpacing.md,
+  },
+  sleepPeriodCardActive: {
+    backgroundColor: '#F0E9FF',
+    borderWidth: 1.5,
+    borderColor: '#D8CAFF',
+  },
+  sleepPeriodEmoji: {
+    fontSize: 22,
+  },
+  sleepPeriodInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  sleepPeriodLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: CandyColors.ink,
+  },
+  sleepPeriodTime: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: CandyColors.inkMuted,
+  },
+  sleepPeriodSubtitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: CandyColors.lavenderDeep,
+    marginTop: 2,
+  },
+  sleepPeriodDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  sleepPeriodDotActive: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  sleepPlaceholder: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: CandyColors.inkMuted,
+    textAlign: 'center',
   },
 });

@@ -5,5 +5,6 @@ export * from './GalaxyView';
 export * from './NeruAvatar';
 export * from './PhotoCompletionModal';
 export * from './QuestProgress';
+export * from './SleepTimeSlider';
 export * from './StarToken';
 export * from './StatusPill';
