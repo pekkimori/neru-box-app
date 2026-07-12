@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -36,24 +36,61 @@ export function PhotoCompletionModal({
   const [step, setStep] = useState<ModalStep>('choose');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const processingAnim = useRef(new Animated.Value(0)).current;
-  const processingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const photoUriRef = useRef<string | null>(null);
+  const isUnmountedRef = useRef(false);
 
-  const reset = () => {
+  // Keep photoUriRef synchronised with state so timeout closures always see the
+  // value that was current when handleProcess was called, even after reset().
+  useEffect(() => {
+    photoUriRef.current = photoUri;
+  }, [photoUri]);
+
+  // Clean up every timer and animation on unmount so no callback fires on a
+  // dead component.
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+      if (processingTimerRef.current) {
+        clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = null;
+      }
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
+      if (animationRef.current) {
+        animationRef.current.stop();
+        animationRef.current = null;
+      }
+    };
+  }, []);
+
+  const reset = useCallback(() => {
     setStep('choose');
     setPhotoUri(null);
     processingAnim.setValue(0);
-    if (processingTimer.current) {
-      clearTimeout(processingTimer.current);
-      processingTimer.current = null;
+    // Cancel in-flight processing but *not* a pending success timer — once the
+    // success state has been displayed onComplete must still fire.
+    if (processingTimerRef.current) {
+      clearTimeout(processingTimerRef.current);
+      processingTimerRef.current = null;
     }
-  };
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
+  }, [processingAnim]);
 
   useEffect(() => {
     if (!visible) {
-      // Clean up on close
+      // Clean up visual state on close.  The success timer (if any) is left
+      // running so that the completion callback is not silently dropped.
       reset();
     }
-  }, [visible]);
+  }, [visible, reset]);
 
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -94,18 +131,32 @@ export function PhotoCompletionModal({
   const handleProcess = () => {
     if (!photoUri) return;
 
+    // Cancel any success timer still in flight from a previous flow so we
+    // never fire duplicate onComplete callbacks.
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
+
     setStep('processing');
 
-    Animated.timing(processingAnim, {
+    animationRef.current = Animated.timing(processingAnim, {
       toValue: 1,
       duration: 1500,
       useNativeDriver: true,
-    }).start();
+    });
+    animationRef.current.start();
 
-    processingTimer.current = setTimeout(() => {
+    processingTimerRef.current = setTimeout(() => {
+      if (isUnmountedRef.current) return;
+      processingTimerRef.current = null;
+      animationRef.current = null;
       setStep('success');
-      setTimeout(() => {
-        onComplete(photoUri);
+
+      successTimerRef.current = setTimeout(() => {
+        if (isUnmountedRef.current) return;
+        successTimerRef.current = null;
+        onComplete(photoUriRef.current!);
         reset();
       }, 400);
     }, 1500);
@@ -226,7 +277,7 @@ export function PhotoCompletionModal({
               </View>
               <Text style={styles.processingTitle}>Processing photo...</Text>
               <Text style={styles.processingSubtitle}>
-                Verifying completion of "{taskLabel}"
+                Verifying completion of &ldquo;{taskLabel}&rdquo;
               </Text>
               <View style={styles.progressBar}>
                 <Animated.View
@@ -246,7 +297,7 @@ export function PhotoCompletionModal({
               </View>
               <Text style={styles.successTitle}>Task Completed!</Text>
               <Text style={styles.processingSubtitle}>
-                Well done on finishing "{taskLabel}"
+                Well done on finishing &ldquo;{taskLabel}&rdquo;
               </Text>
             </View>
           )}

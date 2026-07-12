@@ -19,6 +19,7 @@ export default function DreamsLayout() {
       <Stack.Screen name="block/[blockId]" options={{ title: '' }} />
       <Stack.Screen name="camera" options={{ title: 'Take Photo', presentation: 'modal' }} />
       <Stack.Screen name="reflection/[blockId]" options={{ title: 'Reflection', headerBackVisible: false }} />
+      <Stack.Screen name="galaxy" options={{ headerShown: false }} />
     </Stack>
   );
 }

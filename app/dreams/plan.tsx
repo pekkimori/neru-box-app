@@ -19,6 +19,7 @@ import {
 import { useConstellations } from "../../hooks/useConstellations";
 import { useDailyPlan } from "../../hooks/useDailyPlan";
 import type { BlockType } from "../../types/dreams";
+import { formatLocalDate } from "../../features/dreams/time-helpers";
 
 const BLOCK_LABELS: { key: BlockType; label: string; color: string }[] = [
   { key: "morning", label: "Morning", color: CandyColors.goldDeep },
@@ -38,11 +39,11 @@ function getWeekDays(weekOffset: number): {
   sunday.setDate(today.getDate() - dayOfWeek + weekOffset * 7);
 
   const days = [];
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = formatLocalDate(today);
   for (let i = 0; i < 7; i++) {
     const d = new Date(sunday);
     d.setDate(sunday.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = formatLocalDate(d);
     days.push({
       date: dateStr,
       label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i],
@@ -53,18 +54,14 @@ function getWeekDays(weekOffset: number): {
   return days;
 }
 
-function todayString(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 export default function PlanDay() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(todayString());
+  const [selectedDate, setSelectedDate] = useState(formatLocalDate(new Date()));
   const [selectedStarId, setSelectedStarId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
-  const today = todayString();
+  const today = formatLocalDate(new Date());
 
   const { constellations, stars } = useConstellations();
   const { plan, assignTask, removeTask } = useDailyPlan(selectedDate);

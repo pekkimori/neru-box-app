@@ -1,10 +1,27 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { NeruColors } from '@/constants/neru-theme';
+
+const TAB_RED = '#E21D2F';
+const TAB_INK = '#6F6F6F';
+
+type TabIconProps = {
+  focused: boolean;
+  active: React.ComponentProps<typeof Ionicons>['name'];
+  inactive: React.ComponentProps<typeof Ionicons>['name'];
+};
+
+function TabIcon({ focused, active, inactive }: TabIconProps) {
+  return (
+    <View style={styles.iconFrame}>
+      <View style={[styles.activeRule, focused && styles.activeRuleVisible]} />
+      <Ionicons name={focused ? active : inactive} size={21} color={focused ? TAB_RED : TAB_INK} />
+    </View>
+  );
+}
 
 export default function TabLayout() {
   return (
@@ -12,31 +29,35 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarActiveTintColor: NeruColors.violetDark,
-        tabBarInactiveTintColor: NeruColors.textDim,
+        tabBarActiveTintColor: TAB_RED,
+        tabBarInactiveTintColor: TAB_INK,
         tabBarStyle: {
           position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: Platform.OS === 'ios' ? 22 : 14,
-          height: Platform.OS === 'ios' ? 76 : 66,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 18 : 10,
-          backgroundColor: NeruColors.tabBar,
+          left: 14,
+          right: 14,
+          bottom: Platform.OS === 'ios' ? 14 : 10,
+          height: Platform.OS === 'ios' ? 66 : 58,
+          paddingTop: 5,
+          paddingBottom: Platform.OS === 'ios' ? 12 : 6,
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 0,
-          borderRadius: 26,
-          borderWidth: 2,
-          borderColor: NeruColors.tabBarBorder,
-          shadowColor: '#543A82',
-          shadowOffset: { width: 0, height: 7 },
-          shadowOpacity: 0.18,
-          shadowRadius: 0,
-          elevation: 8,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: '#DEDEDE',
+          shadowColor: '#171717',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.1,
+          shadowRadius: 18,
+          elevation: 7,
+        },
+        tabBarItemStyle: {
+          paddingTop: 1,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '900',
-          letterSpacing: 0,
+          fontSize: 8,
+          fontWeight: '800',
+          letterSpacing: 0.9,
+          textTransform: 'uppercase',
         },
       }}
     >
@@ -44,26 +65,22 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dreams',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'star' : 'star-outline'} size={size} color={color} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="star" inactive="star-outline" />,
         }}
       />
       <Tabs.Screen
         name="protect"
         options={{
           title: 'Protect',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="shield" size={size} color={color} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="shield" inactive="shield-outline" />,
         }}
       />
       <Tabs.Screen
         name="companion"
         options={{
           title: 'Neru',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses" size={size} color={color} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} active="chatbubble-ellipses" inactive="chatbubble-ellipses-outline" />
           ),
         }}
       />
@@ -71,21 +88,38 @@ export default function TabLayout() {
         name="social"
         options={{
           title: 'Gacha',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="gift" size={size} color={color} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="gift" inactive="gift-outline" />,
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
           title: 'Diary',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="book" inactive="book-outline" />,
         }}
       />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconFrame: {
+    width: 32,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  activeRule: {
+    position: 'absolute',
+    top: 0,
+    width: 18,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: TAB_RED,
+    opacity: 0,
+  },
+  activeRuleVisible: {
+    opacity: 1,
+  },
+});

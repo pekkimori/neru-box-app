@@ -6,12 +6,31 @@ export function useStorage<T>(key: string, initialValue: T) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(key).then((raw) => {
-      if (raw !== null) {
-        setValue(JSON.parse(raw));
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        if (cancelled) return;
+        if (raw !== null) {
+          const parsed = JSON.parse(raw) as T;
+          if (!cancelled) {
+            setValue(parsed);
+          }
+        }
+      } catch {
+        // Keep initial value on parse/read failure; still mark loaded
       }
-      setLoaded(true);
-    });
+      if (!cancelled) {
+        setLoaded(true);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [key]);
 
   const save = useCallback(
