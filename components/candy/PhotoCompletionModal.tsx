@@ -6,6 +6,7 @@ import {
   Alert,
   Animated,
   Image,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -13,10 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-import { CandyColors, CandyRadii, CandyShadow, CandySpacing } from '@/constants/candy-theme';
-
-import { CandyButton } from './CandyButton';
+import { Palette, R } from '../../features/dreams/tokens';
 
 type PhotoCompletionModalProps = {
   visible: boolean;
@@ -26,279 +24,243 @@ type PhotoCompletionModalProps = {
 };
 
 type ModalStep = 'choose' | 'preview' | 'processing' | 'success';
+type PhotoSource = 'camera' | 'gallery';
 
 export function PhotoCompletionModal({
-  visible,
-  taskLabel,
-  onComplete,
-  onCancel,
+  visible, taskLabel, onComplete, onCancel,
 }: PhotoCompletionModalProps) {
   const [step, setStep] = useState<ModalStep>('choose');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const processingAnim = useRef(new Animated.Value(0)).current;
+  const [sourceBusy, setSourceBusy] = useState<PhotoSource | null>(null);
+  const progress = useRef(new Animated.Value(0)).current;
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const photoUriRef = useRef<string | null>(null);
   const isUnmountedRef = useRef(false);
 
-  // Keep photoUriRef synchronised with state so timeout closures always see the
-  // value that was current when handleProcess was called, even after reset().
-  useEffect(() => {
-    photoUriRef.current = photoUri;
-  }, [photoUri]);
+  useEffect(() => { photoUriRef.current = photoUri; }, [photoUri]);
 
-  // Clean up every timer and animation on unmount so no callback fires on a
-  // dead component.
-  useEffect(() => {
-    return () => {
-      isUnmountedRef.current = true;
-      if (processingTimerRef.current) {
-        clearTimeout(processingTimerRef.current);
-        processingTimerRef.current = null;
-      }
-      if (successTimerRef.current) {
-        clearTimeout(successTimerRef.current);
-        successTimerRef.current = null;
-      }
-      if (animationRef.current) {
-        animationRef.current.stop();
-        animationRef.current = null;
-      }
-    };
+  useEffect(() => () => {
+    isUnmountedRef.current = true;
+    if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    animationRef.current?.stop();
   }, []);
 
   const reset = useCallback(() => {
     setStep('choose');
     setPhotoUri(null);
-    processingAnim.setValue(0);
-    // Cancel in-flight processing but *not* a pending success timer — once the
-    // success state has been displayed onComplete must still fire.
+    setSourceBusy(null);
+    progress.setValue(0);
     if (processingTimerRef.current) {
       clearTimeout(processingTimerRef.current);
       processingTimerRef.current = null;
     }
-    if (animationRef.current) {
-      animationRef.current.stop();
-      animationRef.current = null;
-    }
-  }, [processingAnim]);
+    animationRef.current?.stop();
+    animationRef.current = null;
+  }, [progress]);
 
-  useEffect(() => {
-    if (!visible) {
-      // Clean up visual state on close.  The success timer (if any) is left
-      // running so that the completion callback is not silently dropped.
-      reset();
-    }
-  }, [visible, reset]);
+  useEffect(() => { if (!visible) reset(); }, [visible, reset]);
 
-  const handleTakePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos.');
-      return;
-    }
+  const showPermissionAlert = (source: PhotoSource, canAskAgain: boolean) => {
+    const label = source === 'camera' ? 'Camera' : 'Photo library';
+    Alert.alert(
+      `${label} access needed`,
+      `Allow ${label.toLowerCase()} access to add photo proof for this task.`,
+      canAskAgain
+        ? [{ text: 'OK' }]
+        : [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open settings', onPress: () => Linking.openSettings() },
+          ],
+    );
+  };
 
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.7,
-      allowsEditing: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-      setStep('preview');
+  const handleCamera = async () => {
+    if (sourceBusy) return;
+    setSourceBusy('camera');
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        showPermissionAlert('camera', permission.canAskAgain);
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        cameraType: ImagePicker.CameraType.back,
+        quality: 0.8,
+        allowsEditing: false,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+        setStep('preview');
+      }
+    } catch {
+      Alert.alert('Camera unavailable', 'The camera could not be opened. Try again or choose a photo from your library.');
+    } finally {
+      if (!isUnmountedRef.current) setSourceBusy(null);
     }
   };
 
-  const handleUploadFromGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Gallery permission is required to upload photos.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.7,
-      allowsEditing: false,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-      setStep('preview');
+  const handleGallery = async () => {
+    if (sourceBusy) return;
+    setSourceBusy('gallery');
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showPermissionAlert('gallery', permission.canAskAgain);
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: false,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+        setStep('preview');
+      }
+    } catch {
+      Alert.alert('Photos unavailable', 'Your photo library could not be opened. Try again or use the camera.');
+    } finally {
+      if (!isUnmountedRef.current) setSourceBusy(null);
     }
   };
 
   const handleProcess = () => {
     if (!photoUri) return;
-
-    // Cancel any success timer still in flight from a previous flow so we
-    // never fire duplicate onComplete callbacks.
     if (successTimerRef.current) {
       clearTimeout(successTimerRef.current);
       successTimerRef.current = null;
     }
-
     setStep('processing');
-
-    animationRef.current = Animated.timing(processingAnim, {
+    progress.setValue(0);
+    animationRef.current = Animated.timing(progress, {
       toValue: 1,
-      duration: 1500,
-      useNativeDriver: true,
+      duration: 1350,
+      useNativeDriver: false,
     });
     animationRef.current.start();
-
     processingTimerRef.current = setTimeout(() => {
       if (isUnmountedRef.current) return;
       processingTimerRef.current = null;
       animationRef.current = null;
       setStep('success');
-
       successTimerRef.current = setTimeout(() => {
-        if (isUnmountedRef.current) return;
+        if (isUnmountedRef.current || !photoUriRef.current) return;
         successTimerRef.current = null;
-        onComplete(photoUriRef.current!);
+        onComplete(photoUriRef.current);
         reset();
-      }, 400);
-    }, 1500);
+      }, 550);
+    }, 1350);
   };
 
-  const handleRetake = () => {
-    setStep('choose');
-    setPhotoUri(null);
-  };
-
-  const handleClose = () => {
-    reset();
-    onCancel();
-  };
-
-  const progressWidth = processingAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+  const handleClose = () => { reset(); onCancel(); };
+  const progressWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['8%', '100%'] });
 
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onRequestClose={handleClose}
-    >
-      <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable
-          style={styles.card}
-          onPress={(event) => event.stopPropagation()}
-        >
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={handleClose}>
+      <Pressable style={styles.backdrop} onPress={step === 'processing' ? undefined : handleClose}>
+        <Pressable style={styles.card} onPress={(event) => event.stopPropagation()}>
+          {(step === 'choose' || step === 'preview') && (
+            <View style={styles.header}>
+              <View style={styles.headerIcon}>
+                <Ionicons name={step === 'choose' ? 'camera-outline' : 'image-outline'} size={20} color={Palette.red} />
+              </View>
+              <View style={styles.headerCopy}>
+                <Text style={styles.eyebrow}>PHOTO PROOF</Text>
+                <Text style={styles.title}>{step === 'choose' ? 'Complete this task' : 'Use this photo?'}</Text>
+                <Text style={styles.taskName} numberOfLines={1}>{taskLabel}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityRole="button" accessibilityLabel="Close photo completion">
+                <Ionicons name="close" size={19} color={Palette.warmDim} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {step === 'choose' && (
             <>
-              <View style={styles.header}>
-                <Ionicons name="camera" size={24} color={CandyColors.lavenderDeep} />
-                <View style={styles.headerText}>
-                  <Text style={styles.title}>Complete Task</Text>
-                  <Text style={styles.taskName} numberOfLines={2}>
-                    {taskLabel}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.subtitle}>
-                Add a photo to mark this task as done
-              </Text>
-              <View style={styles.optionRow}>
-                <TouchableOpacity
-                  style={styles.optionButton}
-                  onPress={handleTakePhoto}
-                  accessibilityRole="button"
-                  accessibilityLabel="Take a photo with camera"
-                >
-                  <View style={styles.optionIcon}>
-                    <Ionicons name="camera" size={32} color={CandyColors.lavenderDeep} />
-                  </View>
-                  <Text style={styles.optionLabel}>Take Photo</Text>
-                  <Text style={styles.optionHint}>Use camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.optionButton}
-                  onPress={handleUploadFromGallery}
-                  accessibilityRole="button"
-                  accessibilityLabel="Upload photo from gallery"
-                >
-                  <View style={styles.optionIcon}>
-                    <Ionicons name="images" size={32} color={CandyColors.lavenderDeep} />
-                  </View>
-                  <Text style={styles.optionLabel}>Upload</Text>
-                  <Text style={styles.optionHint}>From gallery</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.description}>Choose where your completion photo should come from.</Text>
               <TouchableOpacity
-                style={styles.skipButton}
-                onPress={handleClose}
+                style={styles.cameraButton}
+                onPress={handleCamera}
+                disabled={sourceBusy !== null}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel"
+                accessibilityLabel="Open camera and take a photo"
               >
-                <Text style={styles.skipText}>Cancel</Text>
+                <View style={styles.cameraIcon}>
+                  {sourceBusy === 'camera'
+                    ? <ActivityIndicator size="small" color={Palette.onRed} />
+                    : <Ionicons name="camera" size={23} color={Palette.onRed} />}
+                </View>
+                <View style={styles.sourceCopy}>
+                  <Text style={styles.cameraLabel}>{sourceBusy === 'camera' ? 'Opening camera…' : 'Camera'}</Text>
+                  <Text style={styles.cameraHint}>Take a picture now</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Palette.onRed} />
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.galleryButton}
+                onPress={handleGallery}
+                disabled={sourceBusy !== null}
+                accessibilityRole="button"
+                accessibilityLabel="Choose a photo from library"
+              >
+                <View style={styles.galleryIcon}>
+                  {sourceBusy === 'gallery'
+                    ? <ActivityIndicator size="small" color={Palette.red} />
+                    : <Ionicons name="images-outline" size={21} color={Palette.red} />}
+                </View>
+                <View style={styles.sourceCopy}>
+                  <Text style={styles.galleryLabel}>{sourceBusy === 'gallery' ? 'Opening photos…' : 'Photo library'}</Text>
+                  <Text style={styles.galleryHint}>Choose an existing picture</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Palette.warmMuted} />
+              </TouchableOpacity>
+              <Text style={styles.privacyNote}>Your photo stays attached to this task on this device.</Text>
             </>
           )}
 
           {step === 'preview' && photoUri && (
             <>
-              <View style={styles.header}>
-                <Ionicons name="image" size={24} color={CandyColors.lavenderDeep} />
-                <View style={styles.headerText}>
-                  <Text style={styles.title}>Confirm Photo</Text>
-                  <Text style={styles.taskName} numberOfLines={1}>
-                    {taskLabel}
-                  </Text>
-                </View>
-              </View>
               <Image source={{ uri: photoUri }} style={styles.previewImage} />
               <View style={styles.previewActions}>
-                <CandyButton
-                  label="Retake"
-                  icon="refresh"
-                  variant="secondary"
-                  onPress={handleRetake}
-                  style={styles.actionButton}
-                />
-                <CandyButton
-                  label="Complete Task"
-                  icon="checkmark"
-                  onPress={handleProcess}
-                  style={styles.actionButton}
-                />
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => { setPhotoUri(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
+                  <Ionicons name="refresh" size={17} color={Palette.warmDim} />
+                  <Text style={styles.secondaryText}>Choose again</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.primaryButton} onPress={handleProcess} accessibilityRole="button" accessibilityLabel="Use photo and complete task">
+                  <Ionicons name="checkmark" size={18} color={Palette.onRed} />
+                  <Text style={styles.primaryText}>Use photo</Text>
+                </TouchableOpacity>
               </View>
             </>
           )}
 
           {step === 'processing' && (
-            <View style={styles.processingContainer}>
-              <View style={styles.processingIconWrap}>
-                <ActivityIndicator size="large" color={CandyColors.lavenderDeep} />
+            <View style={styles.processing}>
+              <View style={styles.processingVisual}>
+                {photoUri && <Image source={{ uri: photoUri }} style={styles.processingImage} />}
+                <View style={styles.processingBadge}><ActivityIndicator size="small" color={Palette.onRed} /></View>
               </View>
-              <Text style={styles.processingTitle}>Processing photo...</Text>
-              <Text style={styles.processingSubtitle}>
-                Verifying completion of &ldquo;{taskLabel}&rdquo;
-              </Text>
-              <View style={styles.progressBar}>
-                <Animated.View
-                  style={[
-                    styles.progressFill,
-                    { width: progressWidth },
-                  ]}
-                />
+              <Text style={styles.processingTitle}>Lighting your star</Text>
+              <Text style={styles.processingText}>Saving your photo and marking “{taskLabel}” complete.</Text>
+              <View style={styles.steps}>
+                <View style={styles.stepRow}><Ionicons name="checkmark-circle" size={17} color={Palette.red} /><Text style={styles.stepDone}>Photo added</Text></View>
+                <View style={styles.stepRow}><ActivityIndicator size="small" color={Palette.red} /><Text style={styles.stepActive}>Saving completion</Text></View>
+                <View style={styles.stepRow}><Ionicons name="ellipse-outline" size={17} color={Palette.gray} /><Text style={styles.stepPending}>Star ready to light</Text></View>
               </View>
+              <View style={styles.progressTrack}><Animated.View style={[styles.progressFill, { width: progressWidth }]} /></View>
             </View>
           )}
 
           {step === 'success' && (
-            <View style={styles.processingContainer}>
-              <View style={styles.successIconWrap}>
-                <Ionicons name="checkmark-circle" size={56} color={CandyColors.mint} />
-              </View>
-              <Text style={styles.successTitle}>Task Completed!</Text>
-              <Text style={styles.processingSubtitle}>
-                Well done on finishing &ldquo;{taskLabel}&rdquo;
-              </Text>
+            <View style={styles.success}>
+              <View style={styles.successIcon}><Ionicons name="star" size={34} color={Palette.onRed} /></View>
+              <Text style={styles.successTitle}>Star lit</Text>
+              <Text style={styles.processingText}>“{taskLabel}” is complete and now shines in your sky.</Text>
             </View>
           )}
         </Pressable>
@@ -308,172 +270,46 @@ export function PhotoCompletionModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(31, 41, 55, 0.42)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: CandySpacing.lg,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: 28,
-    backgroundColor: CandyColors.white,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 226, 122, 0.8)',
-    padding: CandySpacing.lg,
-    gap: CandySpacing.md,
-    shadowColor: CandyColors.ink,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: CandySpacing.sm,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    color: CandyColors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 25,
-  },
-  taskName: {
-    color: CandyColors.inkSoft,
-    fontSize: 14,
-    fontWeight: '800',
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  subtitle: {
-    color: CandyColors.inkSoft,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  optionRow: {
-    flexDirection: 'row',
-    gap: CandySpacing.sm,
-  },
-  optionButton: {
-    flex: 1,
-    alignItems: 'center',
-    gap: CandySpacing.xs,
-    backgroundColor: 'rgba(240, 233, 255, 0.64)',
-    borderWidth: 2,
-    borderColor: '#D8CAFF',
-    borderRadius: CandyRadii.lg,
-    padding: CandySpacing.md,
-    ...CandyShadow.card,
-  },
-  optionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: CandyColors.white,
-    borderWidth: 2,
-    borderColor: '#E9DCF9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionLabel: {
-    color: CandyColors.ink,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 19,
-  },
-  optionHint: {
-    color: CandyColors.inkSoft,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  skipButton: {
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  skipText: {
-    fontSize: 14,
-    color: CandyColors.inkMuted,
-    fontWeight: '800',
-  },
-  previewImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: CandyRadii.lg,
-    backgroundColor: CandyColors.creamDeep,
-    borderWidth: 2,
-    borderColor: '#D8CAFF',
-  },
-  previewActions: {
-    flexDirection: 'row',
-    gap: CandySpacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  processingContainer: {
-    alignItems: 'center',
-    gap: CandySpacing.md,
-    paddingVertical: CandySpacing.lg,
-  },
-  processingIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(167, 139, 250, 0.12)',
-    borderWidth: 2,
-    borderColor: 'rgba(167, 139, 250, 0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(52, 211, 153, 0.14)',
-    borderWidth: 2,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  processingTitle: {
-    color: CandyColors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 22,
-  },
-  successTitle: {
-    color: CandyColors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-    lineHeight: 25,
-  },
-  processingSubtitle: {
-    color: CandyColors.inkSoft,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  progressBar: {
-    width: '100%',
-    height: 10,
-    borderRadius: CandyRadii.pill,
-    backgroundColor: 'rgba(167, 139, 250, 0.14)',
-    overflow: 'hidden',
-    marginTop: CandySpacing.sm,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: CandyRadii.pill,
-    backgroundColor: CandyColors.lavenderDeep,
-  },
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18, backgroundColor: Palette.backdrop },
+  card: { width: '100%', maxWidth: 420, padding: 16, gap: 13, borderRadius: R.lg, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgRaised, shadowColor: '#171717', shadowOpacity: 0.12, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redSoft },
+  headerCopy: { flex: 1, minWidth: 0 },
+  eyebrow: { color: Palette.warmMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  title: { color: Palette.warmWhite, fontSize: 18, lineHeight: 22, fontWeight: '800' },
+  taskName: { color: Palette.warmDim, fontSize: 11, fontWeight: '600', marginTop: 1 },
+  closeButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.graySoft },
+  description: { color: Palette.warmDim, fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  cameraButton: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, backgroundColor: Palette.red },
+  cameraIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: 'rgba(255,255,255,0.16)' },
+  sourceCopy: { flex: 1, minWidth: 0 },
+  cameraLabel: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
+  cameraHint: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '600', marginTop: 1 },
+  galleryButton: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
+  galleryIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redSoft },
+  galleryLabel: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
+  galleryHint: { color: Palette.warmMuted, fontSize: 10, fontWeight: '600', marginTop: 1 },
+  privacyNote: { color: Palette.warmMuted, fontSize: 9, lineHeight: 13, fontWeight: '600', textAlign: 'center' },
+  previewImage: { width: '100%', aspectRatio: 4 / 3, borderRadius: R.md, backgroundColor: Palette.graySoft },
+  previewActions: { flexDirection: 'row', gap: 8 },
+  secondaryButton: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
+  secondaryText: { color: Palette.warmDim, fontSize: 12, fontWeight: '800' },
+  primaryButton: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: R.sm, backgroundColor: Palette.red },
+  primaryText: { color: Palette.onRed, fontSize: 12, fontWeight: '800' },
+  processing: { alignItems: 'center', paddingVertical: 8, gap: 10 },
+  processingVisual: { width: 88, height: 88, position: 'relative' },
+  processingImage: { width: 88, height: 88, borderRadius: R.md, backgroundColor: Palette.graySoft },
+  processingBadge: { position: 'absolute', right: -7, bottom: -7, width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: Palette.red, borderWidth: 3, borderColor: Palette.bgRaised },
+  processingTitle: { color: Palette.warmWhite, fontSize: 18, fontWeight: '800', marginTop: 3 },
+  processingText: { maxWidth: 310, color: Palette.warmDim, fontSize: 12, lineHeight: 17, fontWeight: '600', textAlign: 'center' },
+  steps: { width: '100%', gap: 7, paddingHorizontal: 8, marginTop: 3 },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepDone: { color: Palette.warmDim, fontSize: 11, fontWeight: '700' },
+  stepActive: { color: Palette.warmWhite, fontSize: 11, fontWeight: '800' },
+  stepPending: { color: Palette.warmMuted, fontSize: 11, fontWeight: '600' },
+  progressTrack: { width: '100%', height: 5, marginTop: 6, overflow: 'hidden', borderRadius: 3, backgroundColor: Palette.graySoft },
+  progressFill: { height: 5, borderRadius: 3, backgroundColor: Palette.red },
+  success: { alignItems: 'center', gap: 10, paddingVertical: 20 },
+  successIcon: { width: 68, height: 68, alignItems: 'center', justifyContent: 'center', borderRadius: 34, backgroundColor: Palette.red },
+  successTitle: { color: Palette.warmWhite, fontSize: 20, fontWeight: '800' },
 });

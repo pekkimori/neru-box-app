@@ -1,24 +1,19 @@
 // features/dreams/observatory/use-weekly-plans.ts
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { BlockType, DailyPlan } from '../../../types/dreams';
+import type { DailyPlan } from '../../../types/dreams';
+import { getWeekDateKeys, parseLocalDate } from '../../../utils/time';
 import type { WeekDay } from '../types';
+import { createEmptyPlan, PLAN_BLOCKS } from '../plan-model';
+import { loadPlansForDates } from '../plan-repository';
 
 export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
   const weekDayLabels = useMemo((): string[] => {
-    const days: string[] = [];
-    const base = new Date(liveToday + 'T00:00:00');
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i);
-      days.push(d.toISOString().split('T')[0]);
-    }
-    return days;
+    return getWeekDateKeys(parseLocalDate(liveToday) ?? new Date());
   }, [liveToday]);
 
   const weekDays = useMemo((): WeekDay[] => {
     return weekDayLabels.map((date) => {
-      const base = new Date(date + 'T00:00:00');
+      const base = parseLocalDate(date) ?? new Date();
       return {
         date,
         label: base.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -36,20 +31,7 @@ export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
   useEffect(() => {
     let cancelled = false;
     const loadWeek = async () => {
-      const keys = weekDayLabels.map((d) => `@neru/plans/${d}`);
-      const pairs = await AsyncStorage.multiGet(keys);
-      const plans: Record<string, DailyPlan> = {};
-      for (const [key, raw] of pairs) {
-        if (cancelled) return;
-        const date = key.split('/').pop() ?? '';
-        try {
-          plans[date] = raw
-            ? JSON.parse(raw)
-            : { date, blocks: { morning: [], afternoon: [], evening: [] }, reflections: {} };
-        } catch {
-          plans[date] = { date, blocks: { morning: [], afternoon: [], evening: [] }, reflections: {} };
-        }
-      }
+      const plans = await loadPlansForDates(weekDayLabels);
       if (!cancelled) setWeekPlans(plans);
     };
     loadWeek();
@@ -62,12 +44,8 @@ export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
     for (const date of weekDayLabels) {
       const p = date === liveToday
         ? livePlan
-        : (weekPlans[date] ?? {
-            date,
-            blocks: { morning: [], afternoon: [], evening: [] },
-            reflections: {},
-          });
-      for (const block of ['morning', 'afternoon', 'evening'] as BlockType[]) {
+        : (weekPlans[date] ?? createEmptyPlan(date));
+      for (const block of PLAN_BLOCKS) {
         const tasks = p.blocks[block] ?? [];
         lit += tasks.filter((t) => t.status === 'lit').length;
         total += tasks.length;
@@ -76,5 +54,27 @@ export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
     return { lit, total };
   }, [weekDayLabels, liveToday, livePlan, weekPlans]);
 
-  return { weekDayLabels, weekDays, weekPlans, weekProgress, reload };
+  const domainProgress = useMemo(() => {
+    const progress = new Map<string, { plannedDays: number; completedDays: number }>();
+    for (const date of weekDayLabels) {
+      const currentPlan = date === liveToday
+        ? livePlan
+        : weekPlans[date];
+      if (!currentPlan) continue;
+      const tasks = PLAN_BLOCKS
+        .flatMap((block) => currentPlan.blocks[block] ?? []);
+      const domainIds = new Set(tasks.map((task) => task.constellationId));
+      for (const domainId of domainIds) {
+        const domainTasks = tasks.filter((task) => task.constellationId === domainId);
+        const previous = progress.get(domainId) ?? { plannedDays: 0, completedDays: 0 };
+        progress.set(domainId, {
+          plannedDays: previous.plannedDays + 1,
+          completedDays: previous.completedDays + (domainTasks.some((task) => task.status === 'lit') ? 1 : 0),
+        });
+      }
+    }
+    return progress;
+  }, [weekDayLabels, liveToday, livePlan, weekPlans]);
+
+  return { weekDayLabels, weekDays, weekPlans, weekProgress, domainProgress, reload };
 }

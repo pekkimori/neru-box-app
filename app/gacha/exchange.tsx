@@ -22,12 +22,8 @@ import {
   CandySpacing,
 } from '@/constants/candy-theme';
 import { NeruColors } from '@/constants/neru-theme';
-import { useNeru } from '@/context/NeruContext';
-import {
-  GachaCreature,
-  GACHA_CREATURES,
-  RARITY_COLORS,
-} from '@/constants/gacha';
+import { useGachaCollection } from '@/features/gacha/use-gacha-collection';
+import { RARITY_COLORS, RARITY_LABELS } from '@/constants/gacha';
 import type { Rarity } from '@/constants/gacha';
 
 // ---------- types ----------
@@ -36,7 +32,7 @@ type ExchangeOffer = {
   id: string;
   friend: string;
   avatar: string;
-  offering: GachaCreature;
+  offering: { emoji: string; name: string; rarity: Rarity };
   wants: string;
 };
 
@@ -109,7 +105,7 @@ function AcceptButton({
 // ---------- component ----------
 
 export default function ExchangeScreen() {
-  const { gachaResults, addGachaResult } = useNeru();
+  const { gachaResults, addGachaResult } = useGachaCollection();
 
   const [offers, setOffers] = useState(INITIAL_OFFERS);
 
@@ -129,15 +125,15 @@ export default function ExchangeScreen() {
     return Object.entries(ownedCounts)
       .filter(([, count]) => count > 1)
       .map(([name, count]) => {
-        const creature = GACHA_CREATURES.find((item) => item.name === name);
+        const result = gachaResults.find((item) => item.name === name);
         return {
           name,
           count,
-          emoji: creature?.emoji ?? '?',
-          rarity: creature?.rarity ?? ('common' as Rarity),
+          emoji: result?.emoji ?? '◉',
+          rarity: (result?.rarity as Rarity | undefined) ?? 'common',
         };
       });
-  }, [ownedCounts]);
+  }, [gachaResults, ownedCounts]);
 
   const dismissOffer = (offerId: string) => {
     setOffers((current) => current.filter((offer) => offer.id !== offerId));
@@ -290,7 +286,7 @@ export default function ExchangeScreen() {
                 >
                   {item.name}
                 </Text>
-                <Text style={styles.inventoryRarity}>{item.rarity}</Text>
+                <Text style={styles.inventoryRarity}>{RARITY_LABELS[item.rarity]}</Text>
               </View>
               <View style={styles.inventoryBadge}>
                 <Text style={styles.inventoryCount}>×{item.count}</Text>

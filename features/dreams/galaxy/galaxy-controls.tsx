@@ -5,9 +5,10 @@
 
 import { useState, useCallback } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
-import { Palette, R } from '../tokens';
-import type { GalaxyStar, GalaxyNebula, ViewBox } from './galaxy-geometry';
+import Svg, { Circle, Line } from 'react-native-svg';
+import { R } from '../tokens';
+import { GalaxyPalette } from './galaxy-theme';
+import type { GalaxyStar, ViewBox } from './galaxy-geometry';
 
 const TARGET = 44;
 
@@ -15,23 +16,16 @@ interface Props {
   fullExtent: ViewBox;
   viewBox: ViewBox;
   stars: GalaxyStar[];
-  nebulas: GalaxyNebula[];
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
   onCenterViewBox: (x: number, y: number, w: number, h: number) => void;
 }
 
-function nebulaAbbr(icon: string, name: string): string {
-  if (icon.length > 0 && icon !== '\u2728') return icon;
-  return name.slice(0, 2).toUpperCase();
-}
-
 export function GalaxyControls({
   fullExtent,
   viewBox,
   stars,
-  nebulas,
   onZoomIn,
   onZoomOut,
   onResetView,
@@ -68,9 +62,9 @@ export function GalaxyControls({
           accessibilityLabel="Zoom in"
         >
           <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={12} y1={7} x2={12} y2={17} stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={7} y1={12} x2={17} y2={12} stroke={Palette.warmWhite} strokeWidth={2} />
+            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={12} y1={7} x2={12} y2={17} stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={7} y1={12} x2={17} y2={12} stroke={GalaxyPalette.text} strokeWidth={2} />
           </Svg>
         </Pressable>
 
@@ -81,8 +75,8 @@ export function GalaxyControls({
           accessibilityLabel="Zoom out"
         >
           <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={7} y1={12} x2={17} y2={12} stroke={Palette.warmWhite} strokeWidth={2} />
+            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={7} y1={12} x2={17} y2={12} stroke={GalaxyPalette.text} strokeWidth={2} />
           </Svg>
         </Pressable>
 
@@ -93,10 +87,10 @@ export function GalaxyControls({
           accessibilityLabel="Reset galaxy view"
         >
           <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={12} y1={5} x2={12} y2={10} stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={8} y1={7} x2={12} y2={5} stroke={Palette.warmWhite} strokeWidth={2} />
-            <Line x1={16} y1={7} x2={12} y2={5} stroke={Palette.warmWhite} strokeWidth={2} />
+            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={12} y1={5} x2={12} y2={10} stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={8} y1={7} x2={12} y2={5} stroke={GalaxyPalette.text} strokeWidth={2} />
+            <Line x1={16} y1={7} x2={12} y2={5} stroke={GalaxyPalette.text} strokeWidth={2} />
           </Svg>
         </Pressable>
       </View>
@@ -119,28 +113,14 @@ export function GalaxyControls({
                   cx={s.x}
                   cy={s.y}
                   r={2}
-                  fill={Palette.warmWhite}
-                  opacity={0.5}
+                  fill={s.domainColor}
+                  opacity={0.8}
                 />
               ))}
-              {nebulas.map((n) => (
-                <SvgText
-                  key={`mmn-${n.constellationId}`}
-                  x={n.cx}
-                  y={n.cy}
-                  fill={Palette.warmDim}
-                  fontSize={7}
-                  fontWeight="800"
-                  textAnchor="middle"
-                  opacity={0.7}
-                >
-                  {nebulaAbbr(n.icon, n.name)}
-                </SvgText>
-              ))}
-              <Line x1={viewBox.x} y1={viewBox.y} x2={viewBox.x + viewBox.w} y2={viewBox.y} stroke={Palette.red} strokeWidth={2} opacity={0.6} />
-              <Line x1={viewBox.x} y1={viewBox.y} x2={viewBox.x} y2={viewBox.y + viewBox.h} stroke={Palette.red} strokeWidth={2} opacity={0.6} />
-              <Line x1={viewBox.x + viewBox.w} y1={viewBox.y} x2={viewBox.x + viewBox.w} y2={viewBox.y + viewBox.h} stroke={Palette.red} strokeWidth={2} opacity={0.6} />
-              <Line x1={viewBox.x} y1={viewBox.y + viewBox.h} x2={viewBox.x + viewBox.w} y2={viewBox.y + viewBox.h} stroke={Palette.red} strokeWidth={2} opacity={0.6} />
+              <Line x1={viewBox.x} y1={viewBox.y} x2={viewBox.x + viewBox.w} y2={viewBox.y} stroke={GalaxyPalette.minimapViewport} strokeWidth={2} />
+              <Line x1={viewBox.x} y1={viewBox.y} x2={viewBox.x} y2={viewBox.y + viewBox.h} stroke={GalaxyPalette.minimapViewport} strokeWidth={2} />
+              <Line x1={viewBox.x + viewBox.w} y1={viewBox.y} x2={viewBox.x + viewBox.w} y2={viewBox.y + viewBox.h} stroke={GalaxyPalette.minimapViewport} strokeWidth={2} />
+              <Line x1={viewBox.x} y1={viewBox.y + viewBox.h} x2={viewBox.x + viewBox.w} y2={viewBox.y + viewBox.h} stroke={GalaxyPalette.minimapViewport} strokeWidth={2} />
             </Svg>
           </Pressable>
           <Pressable
@@ -152,8 +132,8 @@ export function GalaxyControls({
           >
             <View style={styles.dismissX}>
               <Svg width={10} height={10} viewBox="0 0 10 10">
-                <Line x1={1} y1={1} x2={9} y2={9} stroke={Palette.warmDim} strokeWidth={1.5} />
-                <Line x1={9} y1={1} x2={1} y2={9} stroke={Palette.warmDim} strokeWidth={1.5} />
+                <Line x1={1} y1={1} x2={9} y2={9} stroke={GalaxyPalette.textDim} strokeWidth={1.5} />
+                <Line x1={9} y1={1} x2={1} y2={9} stroke={GalaxyPalette.textDim} strokeWidth={1.5} />
               </Svg>
             </View>
           </Pressable>
@@ -168,9 +148,9 @@ const styles = StyleSheet.create({
     width: TARGET,
     height: TARGET,
     borderRadius: R.full,
-    backgroundColor: Palette.bgRaised,
+    backgroundColor: GalaxyPalette.surfaceRaised,
     borderWidth: 1,
-    borderColor: Palette.gray,
+    borderColor: GalaxyPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -185,10 +165,10 @@ const styles = StyleSheet.create({
     bottom: 24,
     right: 16,
     width: 84,
-    backgroundColor: Palette.minimapBg,
+    backgroundColor: GalaxyPalette.surface,
     borderRadius: R.sm,
     borderWidth: 1,
-    borderColor: Palette.gray,
+    borderColor: GalaxyPalette.border,
     padding: 2,
   },
   dismissBtn: {
@@ -200,7 +180,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: R.full,
-    backgroundColor: Palette.bgRaised,
+    backgroundColor: GalaxyPalette.surfaceRaised,
   },
   dismissX: {
     width: 10,

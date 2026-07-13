@@ -13,10 +13,11 @@ interface Props {
   selectedNebulaId: string | null;
   onSelect: (id: string | null) => void;
   onDelete?: (id: string, name: string) => void;
+  domainProgress?: Map<string, { plannedDays: number; completedDays: number }>;
 }
 
 export function NebulaDeck({
-  constellations, stars, plan, editMode, selectedNebulaId, onSelect, onDelete,
+  constellations, stars, plan, editMode, selectedNebulaId, onSelect, onDelete, domainProgress,
 }: Props) {
   const allTasks = useMemo(
     () => [
@@ -44,6 +45,9 @@ export function NebulaDeck({
 
   const totalLit = allTasks.filter((t) => t.status === 'lit').length;
   const totalAll = allTasks.length;
+  const domainsAtGoal = constellations.filter(
+    (constellation) => (domainProgress?.get(constellation.id)?.completedDays ?? 0) >= 3,
+  ).length;
 
   if (constellations.length === 0) return null;
 
@@ -52,7 +56,7 @@ export function NebulaDeck({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scroll}
-      snapToInterval={144}
+      snapToInterval={124}
       decelerationRate="fast"
     >
       {/* "All nebulas" aggregate card */}
@@ -63,18 +67,19 @@ export function NebulaDeck({
         accessibilityState={{ selected: !selectedNebulaId }}
         accessibilityLabel="All nebulas, show all stars"
       >
-        <Ionicons name="globe-outline" size={22} color={Palette.warmWhite} />
+        <Ionicons name="globe-outline" size={17} color={Palette.warmWhite} />
         <Text style={styles.cardName} numberOfLines={1}>
           All nebulas
         </Text>
         <Text style={styles.cardCount}>
-          {totalLit}/{totalAll}
+          {domainProgress ? `${domainsAtGoal}/${constellations.length}` : `${totalLit}/${totalAll}`}
         </Text>
       </TouchableOpacity>
 
       {constellations.map((c) => {
         const stats = nebulaStats.get(c.id) ?? { lit: 0, total: 0 };
         const isSelected = selectedNebulaId === c.id;
+        const weekly = domainProgress?.get(c.id);
         return (
           <TouchableOpacity
             key={c.id}
@@ -82,14 +87,16 @@ export function NebulaDeck({
             onPress={() => onSelect(c.id)}
             accessibilityRole="button"
             accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={`${c.name}, ${stats.lit} of ${stats.total} stars lit`}
+            accessibilityLabel={domainProgress
+              ? `${c.name}, ${weekly?.completedDays ?? 0} of 3 active days complete this week`
+              : `${c.name}, ${stats.lit} of ${stats.total} stars lit`}
           >
             <Text style={styles.cardIcon}>{c.icon}</Text>
             <Text style={styles.cardName} numberOfLines={1}>
               {c.name}
             </Text>
             <Text style={styles.cardCount}>
-              {stats.lit}/{stats.total}
+              {domainProgress ? `${Math.min(weekly?.completedDays ?? 0, 3)}/3` : `${stats.lit}/${stats.total}`}
             </Text>
             {editMode && onDelete && (
               <TouchableOpacity
@@ -112,15 +119,16 @@ export function NebulaDeck({
 const styles = StyleSheet.create({
   scroll: { gap: Sp.sm, paddingRight: Sp.lg },
   card: {
-    width: 136, padding: Sp.md, borderRadius: R.md, borderWidth: 1,
+    minWidth: 116, height: 40, paddingHorizontal: 10, borderRadius: R.sm, borderWidth: 1,
     borderColor: Palette.gray, backgroundColor: Palette.bgElevated,
-    gap: Sp.xs, alignItems: 'center', position: 'relative',
+    gap: 6, alignItems: 'center', justifyContent: 'center', position: 'relative',
+    flexDirection: 'row',
   },
   cardSelected: {
     borderColor: Palette.red, backgroundColor: Palette.redSoft,
   },
-  cardIcon: { fontSize: 22 },
-  cardName: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
+  cardIcon: { fontSize: 16 },
+  cardName: { color: Palette.warmWhite, fontSize: 13, fontWeight: '800', maxWidth: 72 },
   cardCount: { color: Palette.warmDim, fontSize: 12, fontWeight: '600' },
-  cardDelete: { position: 'absolute', top: 6, right: 6, padding: 4 },
+  cardDelete: { marginLeft: 2, padding: 2 },
 });

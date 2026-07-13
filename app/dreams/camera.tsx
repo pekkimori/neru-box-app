@@ -6,13 +6,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyButton, CandyScreen } from '@/components/candy';
 import { CandyColors } from '@/constants/candy-theme';
+import { todayString } from '../../features/dreams/time-helpers';
 import { useDailyPlan } from '../../hooks/useDailyPlan';
 import { useCoins } from '../../hooks/useCoins';
 import type { BlockType } from '../../types/dreams';
-
-function todayString(): string {
-  return new Date().toISOString().split('T')[0];
-}
 
 export default function CameraScreen() {
   const { starId, block, mode } = useLocalSearchParams<{

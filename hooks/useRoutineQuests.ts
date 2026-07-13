@@ -1,9 +1,9 @@
 // hooks/useRoutineQuests.ts
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import * as Crypto from 'expo-crypto';
 import { useStorage } from './useStorage';
 import { DEFAULT_ROUTINES } from '../constants/default-routines';
-import type { RoutineQuest, DailyRoutineStatus, BlockType } from '../types/dreams';
+import type { RoutineQuest, DailyRoutineStatus, BlockType, RoutineBlock } from '../types/dreams';
 
 export function useRoutineQuests(date: string) {
   const { value: quests, save: saveQuests, loaded: questsLoaded } =
@@ -13,8 +13,20 @@ export function useRoutineQuests(date: string) {
 
   const loaded = questsLoaded && statusLoaded;
 
+  // Existing installs predate Sleep routines, so add them once without
+  // replacing any routines the user already has.
+  useEffect(() => {
+    if (!questsLoaded || quests.some((quest) => quest.block === 'sleep')) return;
+    const sleepDefaults = DEFAULT_ROUTINES.filter((quest) => quest.block === 'sleep');
+    saveQuests((current) =>
+      current.some((quest) => quest.block === 'sleep')
+        ? current
+        : [...current, ...sleepDefaults],
+    );
+  }, [quests, questsLoaded, saveQuests]);
+
   const getQuestsForBlock = useCallback(
-    (block: BlockType) => quests.filter((q) => q.block === block),
+    (block: RoutineBlock) => quests.filter((q) => q.block === block),
     [quests]
   );
 
@@ -37,7 +49,7 @@ export function useRoutineQuests(date: string) {
   );
 
   const areBlockRoutinesDone = useCallback(
-    (block: BlockType) => {
+    (block: RoutineBlock) => {
       const blockQuests = quests.filter((q) => q.block === block);
       return blockQuests.length > 0 && blockQuests.every((q) => !!status.completed[q.id]);
     },

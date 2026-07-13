@@ -7,13 +7,10 @@ import { useDailyPlan } from '../../../hooks/useDailyPlan';
 import { useRoutineQuests } from '../../../hooks/useRoutineQuests';
 import { useSleepSchedule } from '../sleep-schedule';
 import { todayString, getActivePeriod, parseTimeMinutes } from '../time-helpers';
+import { getMinuteOfDay, isMinuteInRange } from '../../../utils/time';
 import type { DisplayPeriod, PeriodConfig, PeriodState } from '../types';
+import { useProductivityStreak } from './use-productivity-streak';
 import { useWeeklyPlans } from './use-weekly-plans';
-
-function inWindow(now: number, start: number, end: number): boolean {
-  if (start <= end) return now >= start && now < end;
-  return now >= start || now < end;
-}
 
 function hasPassed(now: number, start: number, end: number): boolean {
   if (start <= end) return now >= end;
@@ -22,11 +19,11 @@ function hasPassed(now: number, start: number, end: number): boolean {
 
 export type CanCompleteResult =
   | { can: true }
-  | { can: false; reason: 'future' | 'sleep_window' };
+  | { can: false; reason: 'future' | 'sleep_mode' };
 
 export function useObservatoryData() {
   const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowMin = getMinuteOfDay(now);
   const today = todayString();
 
   const {
@@ -37,21 +34,28 @@ export function useObservatoryData() {
   const { coins, addCoins, loaded: coinsLoaded } = useCoins();
   const { plan, assignTask, updateTaskStatus, awardCoins, removeTask, loaded: planLoaded } =
     useDailyPlan(today);
+  const { streak: productivityStreak, loaded: streakLoaded } =
+    useProductivityStreak(plan, today);
   const { getQuestsForBlock, isQuestComplete, toggleQuestComplete: rawToggle, loaded: questsLoaded } =
     useRoutineQuests(today);
   const { constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation, loaded: consLoaded } =
     useConstellations();
 
-  const loaded = consLoaded && questsLoaded && planLoaded && coinsLoaded && sleepLoaded;
+  const loaded = consLoaded && questsLoaded && planLoaded && coinsLoaded
+    && sleepLoaded && streakLoaded;
 
-  const trueActivePeriod = useMemo(() => getActivePeriod(activeSleep), [activeSleep]);
+  const trueActivePeriod = getActivePeriod(activeSleep, now);
   const [selectedPeriod, setSelectedPeriod] = useState<DisplayPeriod>(trueActivePeriod);
   const [selectedNebulaId, setSelectedNebulaId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
 
   const periods = useMemo((): PeriodConfig[] => {
-    const wakeMin = activeSleep ? parseTimeMinutes(activeSleep.wakeTime) : 5 * 60;
-    const bedtimeMin = activeSleep ? parseTimeMinutes(activeSleep.bedtime) : 23 * 60;
+    const wakeMin = activeSleep
+      ? (parseTimeMinutes(activeSleep.wakeTime) ?? 5 * 60)
+      : 5 * 60;
+    const bedtimeMin = activeSleep
+      ? (parseTimeMinutes(activeSleep.bedtime) ?? 23 * 60)
+      : 23 * 60;
     const base: PeriodConfig[] = [
       { key: 'morning', label: 'Morning', icon: 'sunny', block: 'morning',
         getStartMin: () => 5 * 60, getEndMin: () => 12 * 60 },
@@ -72,9 +76,9 @@ export function useObservatoryData() {
     for (const p of periods) {
       const s = p.getStartMin();
       const e = p.getEndMin();
-      if (inWindow(nowMin, s, e)) { map[p.key] = 'active'; }
+      if (isMinuteInRange(nowMin, s, e)) { map[p.key] = 'active'; }
       else if (hasPassed(nowMin, s, e)) {
-        const r = p.block ? getQuestsForBlock(p.block) : getQuestsForBlock('evening');
+        const r = getQuestsForBlock(p.block ?? 'sleep');
         const allDone = r.every((q) => isQuestComplete(q.id));
         map[p.key] = r.length === 0 || allDone ? 'complete' : 'locked';
       } else { map[p.key] = 'upcoming'; }
@@ -99,15 +103,21 @@ export function useObservatoryData() {
     () => (selectedBlock ? getQuestsForBlock(selectedBlock) : []),
     [getQuestsForBlock, selectedBlock],
   );
-  const windDownRoutines = getQuestsForBlock('evening');
-  const displayRoutines = selectedPeriod === 'sleep' ? windDownRoutines : selectedRoutines;
+  const sleepRoutines = useMemo(
+    () => getQuestsForBlock('sleep'),
+    [getQuestsForBlock],
+  );
+  const displayRoutines = selectedPeriod === 'sleep' ? sleepRoutines : selectedRoutines;
+
+  const sleepModeActive = isSleepWindow || sleepReady;
+  const sleepBlocked = sleepModeActive && selectedPeriod !== 'sleep';
 
   const tasksUnlocked =
-    selectedPeriod !== 'sleep' && !isSelectedFuture &&
+    selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
     (displayRoutines.length === 0 || displayRoutines.every((r) => isQuestComplete(r.id)));
 
-  const sleepBlocked = isSleepWindow && selectedPeriod !== 'sleep';
-  const routinesReadOnly = isSelectedFuture || sleepBlocked;
+  const routinesReadOnly =
+    (selectedPeriod !== 'sleep' && isSelectedFuture) || sleepBlocked;
 
   const toggleQuestComplete = useCallback(
     (questId: string) => { if (!routinesReadOnly) rawToggle(questId); },
@@ -118,10 +128,10 @@ export function useObservatoryData() {
     (block: BlockType): CanCompleteResult => {
       const bp = periods.find((p) => p.block === block);
       if (!bp || periodStateMap[bp.key] === 'upcoming') return { can: false, reason: 'future' };
-      if (isSleepWindow) return { can: false, reason: 'sleep_window' };
+      if (sleepModeActive) return { can: false, reason: 'sleep_mode' };
       return { can: true };
     },
-    [periods, periodStateMap, isSleepWindow],
+    [periods, periodStateMap, sleepModeActive],
   );
 
   const plannedByStar = useMemo(() => {
@@ -131,6 +141,20 @@ export function useObservatoryData() {
     }
     return map;
   }, [plan.blocks]);
+
+  const dailyVisorTasks = useMemo(() => (
+    (['morning', 'afternoon', 'evening'] as BlockType[]).flatMap((block) => {
+      const gateOpen = canCompleteBlock(block).can;
+      const routines = getQuestsForBlock(block);
+      const routinesComplete = routines.length === 0
+        || routines.every((routine) => isQuestComplete(routine.id));
+      return plan.blocks[block].map((task) => ({
+        block,
+        task,
+        available: gateOpen && routinesComplete,
+      }));
+    })
+  ), [plan.blocks, canCompleteBlock, getQuestsForBlock, isQuestComplete]);
 
   const todayTasks = useMemo(() => {
     if (!selectedBlock) return [];
@@ -142,27 +166,27 @@ export function useObservatoryData() {
     return todayTasks.filter(({ task }) => task.constellationId === selectedNebulaId);
   }, [todayTasks, selectedNebulaId]);
 
-  const { weekDays, weekProgress, reload: reloadWeekly } = useWeeklyPlans(plan, today);
+  const { weekDays, weekProgress, domainProgress, reload: reloadWeekly } = useWeeklyPlans(plan, today);
 
   useEffect(() => {
     if (
-      isSleepWindow && !sleepReady &&
-      windDownRoutines.length > 0 &&
-      windDownRoutines.every((r) => isQuestComplete(r.id))
+      selectedPeriod === 'sleep' && !sleepReady &&
+      sleepRoutines.length > 0 &&
+      sleepRoutines.every((r) => isQuestComplete(r.id))
     ) { markSleepReady(); }
-  }, [isSleepWindow, sleepReady, windDownRoutines, isQuestComplete, markSleepReady]);
+  }, [selectedPeriod, sleepReady, sleepRoutines, isQuestComplete, markSleepReady]);
 
   return {
-    loaded, today, coins, addCoins,
+    loaded, today, coins, addCoins, productivityStreak,
     constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation,
     plan, assignTask, updateTaskStatus, awardCoins, removeTask,
     getQuestsForBlock, isQuestComplete, toggleQuestComplete,
-    schedule, activeSleep, isSleepWindow, sleepReady, markSleepReady, resetSleepReady,
+    schedule, activeSleep, isSleepWindow, sleepReady, sleepModeActive, markSleepReady, resetSleepReady,
     periods, selectedPeriod, setSelectedPeriod, selectedBlock,
     trueActivePeriod, periodStateMap,
     isSelectedFuture, sleepBlocked, routinesReadOnly, canCompleteBlock,
     selectedNebulaId, setSelectedNebulaId, editMode, setEditMode,
-    displayRoutines, tasksUnlocked, plannedByStar, todayTasks, filteredTodayTasks,
-    weekDays, weekProgress, reloadWeekly,
+    displayRoutines, tasksUnlocked, plannedByStar, todayTasks, filteredTodayTasks, dailyVisorTasks,
+    weekDays, weekProgress, domainProgress, reloadWeekly,
   } as const;
 }

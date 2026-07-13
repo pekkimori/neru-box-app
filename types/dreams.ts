@@ -1,4 +1,5 @@
 export type BlockType = 'morning' | 'afternoon' | 'evening';
+export type RoutineBlock = BlockType | 'sleep';
 
 export type Constellation = {
   id: string;
@@ -21,7 +22,26 @@ export type PlannedTask = {
   status: TaskStatus;
   setupPhotoUri?: string;
   completionPhotoUri?: string;
+  completedAt?: string;
   coinsEarned: number;
+};
+
+export type DiaryStickerPlacement = {
+  pokemonKey: string;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  anchor?: 'center';
+};
+
+export type DiaryPageStickerPlacement = {
+  id: string;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  anchor?: 'center';
 };
 
 export type DailyPlan = {
@@ -36,14 +56,17 @@ export type DailyPlan = {
     afternoon?: string;
     evening?: string;
   };
+  diaryNote?: string;
   moodSticker?: string;
+  diaryStickers?: DiaryStickerPlacement[];
+  diaryPageLayout?: DiaryPageStickerPlacement[];
 };
 
 export type RoutineQuest = {
   id: string;
   label: string;
   icon: string;
-  block: BlockType;
+  block: RoutineBlock;
   isDefault: boolean;
 };
 

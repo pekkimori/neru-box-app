@@ -50,7 +50,7 @@ const S = StyleSheet.create({
     backgroundColor: Palette.red, borderRadius: R.md,
     paddingVertical: 10, minHeight: 44,
   },
-  btnPrimaryText: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
+  btnPrimaryText: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
   btnDisabled: { opacity: 0.45 },
   btnSecondary: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -190,7 +190,7 @@ export function AddStarModal({
               onPress={handleSubmit}
               disabled={!label.trim() || !constellationId || submitting}
             >
-              <Ionicons name="add" size={16} color={Palette.warmWhite} />
+              <Ionicons name="add" size={16} color={Palette.onRed} />
               <Text style={S.btnPrimaryText}>Add</Text>
             </TouchableOpacity>
           </View>
@@ -249,7 +249,7 @@ export function AddConstellationModal({
               style={[S.btnPrimary, !name.trim() && S.btnDisabled]}
               onPress={handleSubmit} disabled={!name.trim()}
             >
-              <Ionicons name="add-circle" size={16} color={Palette.warmWhite} />
+              <Ionicons name="add-circle" size={16} color={Palette.onRed} />
               <Text style={S.btnPrimaryText}>Create</Text>
             </TouchableOpacity>
           </View>

@@ -1,35 +1,33 @@
 // hooks/useSleepSchedule.ts
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DEFAULT_SLEEP_SCHEDULE,
+  getRelevantSleepSchedule,
   isSharedSleepSchedule,
   normalizeSleepSchedule,
   type SharedSleepSchedule,
   type SleepScheduleEntry,
 } from '../features/dreams/sleep-schedule-migration';
+import {
+  formatLocalDate,
+  getMinuteOfDay,
+  isMinuteInRange,
+  parseTimeMinutes,
+} from '../utils/time';
 import { useStorage } from './useStorage';
 
 export type { SharedSleepSchedule, SleepScheduleEntry };
 
-function parseMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function isTimeInWindow(
-  nowMin: number,
-  bedtimeMin: number,
-  wakeMin: number,
-): boolean {
-  if (bedtimeMin > wakeMin) return nowMin >= bedtimeMin || nowMin < wakeMin;
-  return nowMin >= bedtimeMin && nowMin < wakeMin;
-}
+type SleepIntent = {
+  sessionKey: string;
+  ready: boolean;
+};
 
 export function useSleepSchedule() {
   const {
     value: storedSchedule,
     save: saveStoredSchedule,
-    loaded,
+    loaded: scheduleLoaded,
   } = useStorage<unknown>('@neru/sleep-schedule', DEFAULT_SLEEP_SCHEDULE);
 
   const schedule = useMemo(
@@ -52,10 +50,10 @@ export function useSleepSchedule() {
   );
 
   useEffect(() => {
-    if (loaded && !isSharedSleepSchedule(storedSchedule)) {
+    if (scheduleLoaded && !isSharedSleepSchedule(storedSchedule)) {
       saveStoredSchedule(schedule);
     }
-  }, [loaded, saveStoredSchedule, schedule, storedSchedule]);
+  }, [scheduleLoaded, saveStoredSchedule, schedule, storedSchedule]);
 
   // Clock tick: re-evaluate activeSleep/isSleepWindow while the app is open
   const [now, setNow] = useState(() => new Date());
@@ -66,40 +64,62 @@ export function useSleepSchedule() {
     return () => clearTimeout(id);
   }, [now]);
 
-  const [sleepReady, setSleepReady] = useState(false);
-
-  // Reset sleepReady when the calendar date changes (including across midnight)
-  const dateRef = useRef(now.toDateString());
-  useEffect(() => {
-    if (now.toDateString() !== dateRef.current) {
-      dateRef.current = now.toDateString();
-      setSleepReady(false);
-    }
-  }, [now]);
-
   const activeSleep = useMemo<SleepScheduleEntry | null>(() => {
-    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
-    const entry = schedule.find((s) => s.id === (isWeekend ? 'weekend' : 'weekdays'));
-    return entry?.enabled ? entry : null;
+    return getRelevantSleepSchedule(schedule, now);
   }, [schedule, now]);
 
   const isSleepWindow = useMemo(() => {
     if (!activeSleep) return false;
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    return isTimeInWindow(
-      nowMin,
-      parseMinutes(activeSleep.bedtime),
-      parseMinutes(activeSleep.wakeTime),
-    );
+    const bedtimeMin = parseTimeMinutes(activeSleep.bedtime);
+    const wakeMin = parseTimeMinutes(activeSleep.wakeTime);
+    if (bedtimeMin === null || wakeMin === null) return false;
+    return isMinuteInRange(getMinuteOfDay(now), bedtimeMin, wakeMin);
   }, [activeSleep, now]);
 
-  const markSleepReady = useCallback(() => setSleepReady(true), []);
-  const resetSleepReady = useCallback(() => setSleepReady(false), []);
+  // The intent is stored for the bedtime session, rather than only in memory.
+  // Overnight sessions retain the same key across midnight and naturally reset
+  // after the configured wake time.
+  const sleepSessionKey = useMemo(() => {
+    const sessionDate = new Date(now);
+    if (activeSleep) {
+      const bedtimeMin = parseTimeMinutes(activeSleep.bedtime);
+      const wakeMin = parseTimeMinutes(activeSleep.wakeTime);
+      if (bedtimeMin !== null && wakeMin !== null) {
+        const nowMin = getMinuteOfDay(now);
+        if (bedtimeMin > wakeMin && nowMin < wakeMin) {
+          sessionDate.setDate(sessionDate.getDate() - 1);
+        } else if (bedtimeMin < wakeMin && nowMin >= wakeMin) {
+          sessionDate.setDate(sessionDate.getDate() + 1);
+        }
+      }
+    }
+    return formatLocalDate(sessionDate);
+  }, [activeSleep, now]);
+
+  const {
+    value: sleepIntent,
+    save: saveSleepIntent,
+    loaded: intentLoaded,
+  } = useStorage<SleepIntent>('@neru/sleep-intent', {
+    sessionKey: sleepSessionKey,
+    ready: false,
+  });
+
+  const sleepReady =
+    sleepIntent.sessionKey === sleepSessionKey && sleepIntent.ready;
+  const markSleepReady = useCallback(
+    () => saveSleepIntent({ sessionKey: sleepSessionKey, ready: true }),
+    [saveSleepIntent, sleepSessionKey],
+  );
+  const resetSleepReady = useCallback(
+    () => saveSleepIntent({ sessionKey: sleepSessionKey, ready: false }),
+    [saveSleepIntent, sleepSessionKey],
+  );
 
   return {
     schedule,
     saveSchedule,
-    loaded,
+    loaded: scheduleLoaded && intentLoaded,
     activeSleep,
     isSleepWindow,
     sleepReady,

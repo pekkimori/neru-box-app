@@ -1,59 +1,85 @@
-// features/dreams/galaxy/galaxy-canvas.tsx
-// SVG spatial canvas: particles, nebula boundaries, star nodes with proximity
-// clustering, week labels, constellation lines, viewport-culled starfield.
-// Pan/zoom via useGalaxyPanZoom. Overlay controls via GalaxyControls.
+// Obsidian-inspired completed-task graph with semantic edges only.
 
-import { useMemo, useState, useCallback, useRef } from 'react';
-import { View, LayoutChangeEvent, StyleSheet } from 'react-native';
-import Svg, { Circle, Text as SvgText, G } from 'react-native-svg';
-import { Palette } from '../tokens';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  generateParticles,
+  LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Svg from 'react-native-svg';
+import {
+  computeGalaxyPositions,
+  type GalaxyDomain,
   type GalaxyStar,
-  type GalaxyNebula,
-  type GalaxyCluster,
   type ViewBox,
 } from './galaxy-geometry';
-import { clusterProximity, capClusters } from './galaxy-clustering';
+import { buildGalaxyEdges } from './galaxy-edges';
+import { GalaxyPalette } from './galaxy-theme';
 import { useGalaxyPanZoom } from './use-galaxy-pan-zoom';
 import { GalaxyControls } from './galaxy-controls';
-import { ConstellationLines, WeekLabels, ClusterNodes } from './galaxy-renderers';
+import { NetworkEdges, NetworkNodes } from './galaxy-renderers';
+import { GalaxyHoverTarget } from './galaxy-hover-target';
+import { GalaxyHoverStyles } from './galaxy-hover-styles';
+import { TwinkleBackground } from './twinkle-background';
 
-const CULL_MARGIN = 0.3;
+const CULL_MARGIN = 0.25;
 const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
-const MAX_VISIBLE_STARS = 200;
-const CLUSTER_THRESHOLD = 60;
-const DOUBLE_TAP_ZOOM = 1.5;
-const TAP_RADIUS_SCREEN = 24;
+const DOUBLE_TAP_ZOOM = 1.8;
+const TAP_RADIUS_SCREEN = 28;
 
 interface Props {
   stars: GalaxyStar[];
-  nebulas: GalaxyNebula[];
+  domains: GalaxyDomain[];
   onStarSelect: (star: GalaxyStar) => void;
 }
 
 function extentFromStars(stars: GalaxyStar[], pad: number): ViewBox {
   if (stars.length === 0) return { x: 0, y: 0, w: 800, h: 800 };
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const s of stars) {
-    if (s.x < minX) minX = s.x;
-    if (s.y < minY) minY = s.y;
-    if (s.x > maxX) maxX = s.x;
-    if (s.y > maxY) maxY = s.y;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const star of stars) {
+    minX = Math.min(minX, star.x);
+    minY = Math.min(minY, star.y);
+    maxX = Math.max(maxX, star.x);
+    maxY = Math.max(maxY, star.y);
   }
-  const w = Math.max(maxX - minX + pad * 2, 400);
-  const h = Math.max(maxY - minY + pad * 2, 400);
-  return { x: minX - pad, y: minY - pad, w, h };
+  return {
+    x: minX - pad,
+    y: minY - pad,
+    w: Math.max(maxX - minX + pad * 2, 440),
+    h: Math.max(maxY - minY + pad * 2, 360),
+  };
 }
 
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.min(Math.max(v, lo), hi);
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(Math.max(value, low), high);
 }
 
-function svgTapRadius(viewBox: ViewBox, canvasW: number): number {
-  return TAP_RADIUS_SCREEN * (viewBox.w / canvasW);
+function backgroundParallax(
+  viewBox: ViewBox,
+  fullExtent: ViewBox,
+  canvasW: number,
+  canvasH: number,
+): { x: number; y: number } {
+  const cameraX = viewBox.x + viewBox.w / 2;
+  const cameraY = viewBox.y + viewBox.h / 2;
+  const originX = fullExtent.x + fullExtent.w / 2;
+  const originY = fullExtent.y + fullExtent.h / 2;
+  const screenScale = Math.min(
+    canvasW / Math.max(viewBox.w, 1),
+    canvasH / Math.max(viewBox.h, 1),
+  );
+  return {
+    x: clamp(-(cameraX - originX) * screenScale * 0.04, -22, 22),
+    y: clamp(-(cameraY - originY) * screenScale * 0.04, -18, 18),
+  };
 }
 
 function nearestStar(
@@ -63,198 +89,261 @@ function nearestStar(
   radius: number,
 ): GalaxyStar | null {
   let closest: GalaxyStar | null = null;
-  let closestDist = Infinity;
-  for (const s of stars) {
-    const dx = s.x - svgX;
-    const dy = s.y - svgY;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d < radius && d < closestDist) { closest = s; closestDist = d; }
+  let closestDistance = Infinity;
+  for (const star of stars) {
+    const distance = Math.hypot(star.x - svgX, star.y - svgY);
+    if (distance < radius && distance < closestDistance) {
+      closest = star;
+      closestDistance = distance;
+    }
   }
   return closest;
 }
 
-function nearestCluster(
-  clusters: GalaxyCluster[],
-  svgX: number,
-  svgY: number,
-  radius: number,
-): GalaxyCluster | null {
-  let closest: GalaxyCluster | null = null;
-  let closestDist = Infinity;
-  for (const c of clusters) {
-    const dx = c.x - svgX;
-    const dy = c.y - svgY;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d < radius && d < closestDist) { closest = c; closestDist = d; }
-  }
-  return closest;
+function starKey(star: GalaxyStar): string {
+  return `${star.starId}:${star.completionDate}:${star.completionOrder}`;
 }
 
-export function GalaxyCanvas({ stars, nebulas, onStarSelect }: Props) {
+function svgToScreen(
+  star: GalaxyStar,
+  viewBox: ViewBox,
+  canvasW: number,
+  canvasH: number,
+): { x: number; y: number } {
+  const scale = Math.min(canvasW / viewBox.w, canvasH / viewBox.h);
+  const offsetX = (canvasW - viewBox.w * scale) / 2;
+  const offsetY = (canvasH - viewBox.h * scale) / 2;
+  return {
+    x: offsetX + (star.x - viewBox.x) * scale,
+    y: offsetY + (star.y - viewBox.y) * scale,
+  };
+}
+
+export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
   const [canvasW, setCanvasW] = useState(0);
   const [canvasH, setCanvasH] = useState(0);
-  const expandedClusterRef = useRef<string | null>(null);
-
-  const fullExtent = useMemo(() => extentFromStars(stars, 120), [stars]);
-
-  const [viewBox, setViewBox] = useState<ViewBox>({
-    x: fullExtent.x, y: fullExtent.y, w: fullExtent.w, h: fullExtent.h,
-  });
-
-  const particles = useMemo(
-    () => generateParticles('galaxy-bg', 160, fullExtent.w, fullExtent.h),
-    [fullExtent.w, fullExtent.h],
+  const [highlightedDomainId, setHighlightedDomainId] = useState<string | null>(null);
+  const sourceEdges = useMemo(() => buildGalaxyEdges(stars), [stars]);
+  const layout = useMemo(
+    () => computeGalaxyPositions(stars, sourceEdges),
+    [stars, sourceEdges],
   );
+  const graphStars = layout.positioned;
+  const edges = useMemo(() => buildGalaxyEdges(graphStars), [graphStars]);
+  const fullExtent = useMemo(() => extentFromStars(graphStars, 120), [graphStars]);
+  const [viewBox, setViewBox] = useState<ViewBox>(fullExtent);
+  const parallax = backgroundParallax(viewBox, fullExtent, canvasW, canvasH);
 
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    if (width > 0 && height > 0) { setCanvasW(width); setCanvasH(height); }
+  useEffect(() => {
+    if (
+      highlightedDomainId !== null
+      && !domains.some((domain) => domain.constellationId === highlightedDomainId)
+    ) {
+      setHighlightedDomainId(null);
+    }
+  }, [domains, highlightedDomainId]);
+
+  const onLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (width > 0 && height > 0) {
+      setCanvasW(width);
+      setCanvasH(height);
+    }
   }, []);
 
-  const marginW = viewBox.w * CULL_MARGIN;
-  const marginH = viewBox.h * CULL_MARGIN;
-  const allVisible = useMemo(
-    () => stars.filter(
-      (s) => s.x > viewBox.x - marginW && s.x < viewBox.x + viewBox.w + marginW &&
-             s.y > viewBox.y - marginH && s.y < viewBox.y + viewBox.h + marginH,
-    ),
-    [stars, viewBox.x, viewBox.y, viewBox.w, viewBox.h, marginW, marginH],
+  const visibleStars = useMemo(() => {
+    const marginW = viewBox.w * CULL_MARGIN;
+    const marginH = viewBox.h * CULL_MARGIN;
+    return graphStars.filter((star) => (
+      star.x > viewBox.x - marginW
+      && star.x < viewBox.x + viewBox.w + marginW
+      && star.y > viewBox.y - marginH
+      && star.y < viewBox.y + viewBox.h + marginH
+    ));
+  }, [graphStars, viewBox]);
+  const hoverTargets = useMemo(
+    () => visibleStars.map((star) => ({
+      star,
+      key: starKey(star),
+      ...svgToScreen(star, viewBox, canvasW, canvasH),
+    })),
+    [visibleStars, viewBox, canvasW, canvasH],
   );
 
-  const clustered = useMemo((): {
-    nodes: GalaxyCluster[];
-    showAsClusters: boolean;
-  } => {
-    if (allVisible.length <= MAX_VISIBLE_STARS) {
-      return { nodes: [], showAsClusters: false };
-    }
-    const raw = clusterProximity(allVisible, CLUSTER_THRESHOLD);
-    const capped = capClusters(raw, MAX_VISIBLE_STARS);
-    return { nodes: capped, showAsClusters: true };
-  }, [allVisible]);
-
   const applyZoom = useCallback((factor: number) => {
-    setViewBox((prev) => {
-      const minW = fullExtent.w * MIN_ZOOM;
-      const maxW = fullExtent.w * MAX_ZOOM;
-      const nextW = clamp(prev.w * factor, minW, maxW);
-      const nextH = nextW * (prev.h / prev.w);
-      const cx = prev.x + prev.w / 2;
-      const cy = prev.y + prev.h / 2;
+    setViewBox((previous) => {
+      const nextW = clamp(
+        previous.w * factor,
+        fullExtent.w * MIN_ZOOM,
+        fullExtent.w * MAX_ZOOM,
+      );
+      const nextH = nextW * (previous.h / previous.w);
+      const centerX = previous.x + previous.w / 2;
+      const centerY = previous.y + previous.h / 2;
       return {
-        x: cx - (cx - prev.x) * (nextW / prev.w),
-        y: cy - (cy - prev.y) * (nextH / prev.h),
-        w: nextW, h: nextH,
+        x: centerX - nextW / 2,
+        y: centerY - nextH / 2,
+        w: nextW,
+        h: nextH,
       };
     });
   }, [fullExtent.w]);
 
-  const zoomIn = useCallback(() => applyZoom(1 / (1 + ZOOM_STEP)), [applyZoom]);
-  const zoomOut = useCallback(() => applyZoom(1 + ZOOM_STEP), [applyZoom]);
   const resetView = useCallback(() => {
-    expandedClusterRef.current = null;
-    setViewBox({ x: fullExtent.x, y: fullExtent.y, w: fullExtent.w, h: fullExtent.h });
+    setViewBox(fullExtent);
   }, [fullExtent]);
 
-  const centerOn = useCallback((svx: number, svy: number, zoomLevel: number) => {
-    setViewBox((prev) => {
-      const nextW = Math.min(
-        Math.max(fullExtent.w * MIN_ZOOM, fullExtent.w / zoomLevel),
-        fullExtent.w * MAX_ZOOM,
-      );
-      const nextH = nextW * (prev.h / prev.w);
-      return { x: svx - nextW / 2, y: svy - nextH / 2, w: nextW, h: nextH };
+  const centerOn = useCallback((x: number, y: number) => {
+    setViewBox((previous) => {
+      const nextW = Math.max(fullExtent.w * MIN_ZOOM, fullExtent.w / DOUBLE_TAP_ZOOM);
+      const nextH = nextW * (previous.h / previous.w);
+      return { x: x - nextW / 2, y: y - nextH / 2, w: nextW, h: nextH };
     });
   }, [fullExtent.w]);
 
-  const handleTapStar = useCallback((svgX: number, svgY: number) => {
+  const handleTap = useCallback((svgX: number, svgY: number) => {
     if (canvasW <= 0) return;
-    const radius = svgTapRadius(viewBox, canvasW);
-    if (clustered.showAsClusters) {
-      const c = nearestCluster(clustered.nodes, svgX, svgY, radius);
-      if (c) {
-        expandedClusterRef.current = c.clusterId;
-        centerOn(c.x, c.y, DOUBLE_TAP_ZOOM * 1.5);
-        return;
-      }
+    const radius = TAP_RADIUS_SCREEN * (viewBox.w / canvasW);
+    const star = nearestStar(graphStars, svgX, svgY, radius);
+    if (star) {
+      onStarSelect(star);
     }
-    const s = nearestStar(stars, svgX, svgY, radius);
-    if (s) onStarSelect(s);
-  }, [stars, onStarSelect, viewBox, canvasW, clustered, centerOn]);
+  }, [canvasW, graphStars, onStarSelect, viewBox.w]);
 
   const handleDoubleTap = useCallback((svgX: number, svgY: number) => {
     if (canvasW <= 0) return;
-    const radius = svgTapRadius(viewBox, canvasW);
-    const s = nearestStar(stars, svgX, svgY, radius);
-    if (s) {
-      centerOn(s.x, s.y, DOUBLE_TAP_ZOOM);
-      expandedClusterRef.current = null;
-    } else {
-      resetView();
-    }
-  }, [stars, centerOn, resetView, viewBox, canvasW]);
+    const radius = TAP_RADIUS_SCREEN * (viewBox.w / canvasW);
+    const star = nearestStar(graphStars, svgX, svgY, radius);
+    if (star) centerOn(star.x, star.y);
+    else resetView();
+  }, [canvasW, centerOn, graphStars, resetView, viewBox.w]);
 
   const panResponder = useGalaxyPanZoom({
-    fullExtent, viewBox, setViewBox,
-    onTapStar: handleTapStar,
+    fullExtent,
+    viewBox,
+    setViewBox,
+    onTapStar: handleTap,
     onDoubleTap: handleDoubleTap,
-    screenW: canvasW, screenH: canvasH,
+    screenW: canvasW,
+    screenH: canvasH,
   });
 
-  const totalWeeks = useMemo(() => new Set(stars.map((s) => s.isoWeek)).size, [stars]);
-  const a11yLabel = `Infinite Galaxy: ${stars.length} stars across ${nebulas.length} nebulas, ${totalWeeks} weeks. Pinch to zoom, drag to pan. Toggle list view for accessible browsing.`;
-
-  if (stars.length === 0) return null;
+  const a11yLabel = `Task network with ${graphStars.length} completed tasks across ${domains.length} color-coded domains. Each week is a separate completion-flow structure with daily sequence, repeated-domain, and next-day bridge connections.`;
 
   return (
-    <View style={styles.container} onLayout={onLayout} {...panResponder.panHandlers}>
-      <Svg
-        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-        style={styles.svg}
-        accessibilityLabel={a11yLabel}
-        accessibilityRole="image"
-      >
-        {particles.map((p, i) => (
-          <Circle key={`p-${i}`} cx={p.x} cy={p.y} r={p.r} fill={Palette.warmDim} opacity={0.15} />
-        ))}
-        {nebulas.map((n) => (
-          <G key={`n-${n.constellationId}`}>
-            <Circle cx={n.cx} cy={n.cy} r={120} stroke={Palette.galaxyBoundary} strokeWidth={1} strokeDasharray="6,8" fill="none" />
-            <SvgText x={n.cx} y={n.cy - 130} fill={Palette.warmDim} fontSize={13} fontWeight="800" textAnchor="middle">
-              {n.icon} {n.name}
-            </SvgText>
-          </G>
-        ))}
-        {clustered.showAsClusters ? (
-          <ClusterNodes clusters={clustered.nodes} />
-        ) : (
-          <>
-            <ConstellationLines stars={allVisible} />
-            {allVisible.map((s) => (
-              <G key={`s-${s.starId}-${s.completionDate}`}>
-                <Circle cx={s.x} cy={s.y} r={10} fill={Palette.starGlow} />
-                <Circle cx={s.x} cy={s.y} r={6} fill={Palette.warmWhite} />
-              </G>
-            ))}
-          </>
-        )}
-        <WeekLabels
-          stars={clustered.showAsClusters
-            ? clustered.nodes.flatMap((c) => c.members)
-            : allVisible}
-        />
-      </Svg>
+    <View style={styles.container}>
+      <View style={styles.legend}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.legendContent}
+          accessibilityLabel="Domain color legend"
+        >
+          {domains.map((domain) => (
+            <Pressable
+              key={domain.constellationId}
+              style={[
+                styles.legendItem,
+                highlightedDomainId === domain.constellationId && {
+                  borderColor: domain.color,
+                  backgroundColor: GalaxyPalette.surfaceRaised,
+                },
+              ]}
+              onPress={() => setHighlightedDomainId((current) => (
+                current === domain.constellationId ? null : domain.constellationId
+              ))}
+              accessibilityRole="button"
+              accessibilityLabel={`${highlightedDomainId === domain.constellationId ? 'Clear' : 'Highlight'} ${domain.name} nodes`}
+              accessibilityState={{ selected: highlightedDomainId === domain.constellationId }}
+            >
+              <View style={[styles.legendDot, { backgroundColor: domain.color }]} />
+              <Text
+                style={[
+                  styles.legendText,
+                  highlightedDomainId === domain.constellationId && styles.legendTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {domain.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
-      <GalaxyControls
-        fullExtent={fullExtent} viewBox={viewBox} stars={stars} nebulas={nebulas}
-        onZoomIn={zoomIn} onZoomOut={zoomOut} onResetView={resetView}
-        onCenterViewBox={(x, y, w, h) => setViewBox({ x, y, w, h })}
-      />
+      <View style={styles.graph} onLayout={onLayout} {...panResponder.panHandlers}>
+        <TwinkleBackground
+          width={canvasW}
+          height={canvasH}
+          offsetX={parallax.x}
+          offsetY={parallax.y}
+        />
+        <Svg
+          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+          style={styles.svg}
+          accessibilityLabel={a11yLabel}
+          accessibilityRole="image"
+        >
+          <NetworkEdges edges={edges} highlightedDomainId={highlightedDomainId} />
+          <NetworkNodes stars={visibleStars} highlightedDomainId={highlightedDomainId} />
+        </Svg>
+
+        <GalaxyHoverStyles />
+        {hoverTargets.map((target) => (
+          <GalaxyHoverTarget
+            key={`hover:${target.key}`}
+            targetKey={target.key}
+            star={target.star}
+            x={target.x}
+            y={target.y}
+            canvasW={canvasW}
+            canvasH={canvasH}
+            onSelect={() => onStarSelect(target.star)}
+          />
+        ))}
+
+        <GalaxyControls
+          fullExtent={fullExtent}
+          viewBox={viewBox}
+          stars={graphStars}
+          onZoomIn={() => applyZoom(1 / (1 + ZOOM_STEP))}
+          onZoomOut={() => applyZoom(1 + ZOOM_STEP)}
+          onResetView={resetView}
+          onCenterViewBox={(x, y, w, h) => setViewBox({ x, y, w, h })}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Palette.bg },
+  container: { flex: 1, backgroundColor: GalaxyPalette.bg },
+  legend: {
+    minHeight: 46,
+    borderBottomWidth: 1,
+    borderBottomColor: GalaxyPalette.border,
+    backgroundColor: GalaxyPalette.bg,
+  },
+  legendContent: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: GalaxyPalette.surface,
+    borderWidth: 1,
+    borderColor: GalaxyPalette.border,
+  },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { color: GalaxyPalette.textDim, fontSize: 11, fontWeight: '700' },
+  legendTextActive: { color: GalaxyPalette.text },
+  graph: { flex: 1, overflow: 'hidden' },
   svg: { flex: 1 },
 });

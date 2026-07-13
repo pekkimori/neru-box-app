@@ -1,20 +1,24 @@
 // hooks/useDailyPlan.ts
 import { useCallback } from 'react';
 import { useStorage } from './useStorage';
-import type { DailyPlan, PlannedTask, BlockType, TaskStatus } from '../types/dreams';
-
-function emptyPlan(date: string): DailyPlan {
-  return {
-    date,
-    blocks: { morning: [], afternoon: [], evening: [] },
-    reflections: {},
-  };
-}
+import type {
+  BlockType,
+  DailyPlan,
+  DiaryPageStickerPlacement,
+  DiaryStickerPlacement,
+  PlannedTask,
+  TaskStatus,
+} from '../types/dreams';
+import {
+  PLAN_BLOCKS,
+  createEmptyPlan,
+  planStorageKey,
+} from '../features/dreams/plan-model';
 
 export function useDailyPlan(date: string) {
   const { value: plan, save: savePlan, loaded } = useStorage<DailyPlan>(
-    `@neru/plans/${date}`,
-    emptyPlan(date)
+    planStorageKey(date),
+    createEmptyPlan(date),
   );
 
   const assignTask = useCallback(
@@ -50,6 +54,26 @@ export function useDailyPlan(date: string) {
     [savePlan]
   );
 
+  const moveTask = useCallback(
+    (starId: string, constellationId: string, targetBlock: BlockType) => {
+      savePlan((prev) => {
+        const existing = PLAN_BLOCKS
+          .flatMap((block) => prev.blocks[block])
+          .find((task) => task.starId === starId);
+        if (!existing || prev.blocks[targetBlock].some((task) => task.starId === starId)) return prev;
+        if (prev.blocks[targetBlock].length >= 4) return prev;
+        const blocks = {
+          morning: prev.blocks.morning.filter((task) => task.starId !== starId),
+          afternoon: prev.blocks.afternoon.filter((task) => task.starId !== starId),
+          evening: prev.blocks.evening.filter((task) => task.starId !== starId),
+        };
+        blocks[targetBlock] = [...blocks[targetBlock], { ...existing, constellationId }];
+        return { ...prev, blocks };
+      });
+    },
+    [savePlan],
+  );
+
   const updateTaskStatus = useCallback(
     (starId: string, block: BlockType, status: TaskStatus, photoUri?: string) => {
       savePlan((prev) => ({
@@ -64,6 +88,9 @@ export function useDailyPlan(date: string) {
             }
             if (status === 'lit' && photoUri) {
               updated.completionPhotoUri = photoUri;
+            }
+            if (status === 'lit' && !updated.completedAt) {
+              updated.completedAt = new Date().toISOString();
             }
             return updated;
           }),
@@ -105,6 +132,27 @@ export function useDailyPlan(date: string) {
     [savePlan]
   );
 
+  const saveDiaryNote = useCallback(
+    (text: string) => {
+      savePlan((prev) => ({ ...prev, diaryNote: text }));
+    },
+    [savePlan]
+  );
+
+  const saveDiaryStickers = useCallback(
+    (stickers: DiaryStickerPlacement[]) => {
+      savePlan((prev) => ({ ...prev, diaryStickers: stickers.slice(0, 4) }));
+    },
+    [savePlan],
+  );
+
+  const saveDiaryPageLayout = useCallback(
+    (layout: DiaryPageStickerPlacement[]) => {
+      savePlan((prev) => ({ ...prev, diaryPageLayout: layout.slice(0, 32) }));
+    },
+    [savePlan],
+  );
+
   const allTasksForBlock = useCallback(
     (block: BlockType) => plan.blocks[block],
     [plan]
@@ -123,9 +171,13 @@ export function useDailyPlan(date: string) {
     loaded,
     assignTask,
     removeTask,
+    moveTask,
     updateTaskStatus,
     awardCoins,
     saveReflection,
+    saveDiaryNote,
+    saveDiaryPageLayout,
+    saveDiaryStickers,
     setMoodSticker,
     allTasksForBlock,
     isBlockComplete,

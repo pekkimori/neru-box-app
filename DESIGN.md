@@ -4,7 +4,7 @@
 
 ### 0.1 Chosen Visual Identity
 
-The application uses an **editorial console** aesthetic as its primary shell: white-dominant canvases, charcoal typography, restrained gray rules, and a saturated red (`#E21D2F`) as the sole accent and action color. The Dreams tab bridges this shell into a dark spatial observatory while preserving the red accent and typographic discipline.
+The application uses an **editorial console** aesthetic as its primary shell: white-dominant canvases, charcoal typography, restrained gray rules, and a saturated red (`#E21D2F`) as the sole accent and action color. The Dreams tab uses the same light shell while retaining constellation mapping as a restrained spatial motif.
 
 This direction replaced the earlier candy-card aesthetic (pastel gradients, lavender/gold palettes, rounded cards with soft shadows) for the main tab screens. Legacy candy components remain on non-primary screens (Gacha, Social, Diary).
 
@@ -186,31 +186,31 @@ fullWidth (no horizontal margin)
 
 Ionicons is the project's icon library. All icons are SVG vector assets. No emojis are used as UI chrome icons. User-created content (constellation icons, routine labels) may contain emoji characters; these are rendered as inherited text data, not UI affordances.
 
-## 4. Dreams Observatory Exception
+## 4. Dreams Dashboard
 
-The Dreams tab overrides the editorial shell with a dark spatial observatory design system. All shell tokens remain the application default; observatory tokens apply only inside `app/(tabs)/index.tsx` and its child components.
+The Dreams tab is a light, single-viewport Today dashboard. The page itself does not scroll: the header, period switcher, routine gate, current task list, and star map remain simultaneously reachable. Content that may grow uses bounded local scrolling instead of pushing task completion below the fold.
 
-### 4.1 Bridge Principle
+### 4.1 Interaction Principle
 
-The editorial red accent (`#E21D2F`) is the bridge token: it remains the primary action and active-state color inside the observatory. All other colors shift into a dark navy-black cosmic palette. Typography discipline (compact, weight-driven hierarchy, no custom fonts) is preserved. Spacing scale is preserved with the addition of a larger bottom clearance for the white dock contrast.
+Today is execution-only. Users choose a period, finish its horizontal routine checklist, press an explicit Complete action beside a task, and see that star light in place. Task and nebula creation, deletion, and period arrangement live exclusively in Weekly Studio. Empty periods provide one contextual Plan shortcut; the completed-star archive sits beside the sky it affects.
 
 ### 4.2 Observatory Palette
 
 | Token | Hex | Maps From | Usage |
 |---|---|---|---|
-| `obs-bg` | `#0A0B14` | (new) | Canvas background |
-| `obs-bg-elevated` | `#111320` | (new) | Cards, panels, rail background |
-| `obs-bg-raised` | `#181A2E` | (new) | Modal surfaces, active/hover states |
+| `obs-bg` | `#F6F6F4` | `shell-surface` | Canvas background |
+| `obs-bg-elevated` | `#FFFFFF` | `shell-white` | Cards, panels, rail background |
+| `obs-bg-raised` | `#FFFFFF` | `shell-white` | Modal surfaces, active/hover states |
 | `obs-red` | `#E21D2F` | `shell-red` | Active period indicator, primary actions, star core |
-| `obs-red-soft` | `#3D1524` | `shell-red-soft` (reinterpreted) | Selected nebula card background |
-| `obs-violet` | `#7C6FF7` | (new) | Orbit lines, star connections, secondary accents |
-| `obs-violet-dim` | `#3D3780` | (new) | Locked star borders, inactive period rail items |
-| `obs-warm-white` | `#F5F0E8` | `shell-white` (reinterpreted) | Primary text, lit star glow |
-| `obs-warm-dim` | `#8A8580` | `shell-secondary` (reinterpreted) | Secondary text, metadata, completed states |
-| `obs-warm-muted` | `#5C5853` | `shell-muted` (reinterpreted) | Tertiary text, placeholder |
-| `obs-gray` | `#2A2D3E` | `shell-line` (reinterpreted) | Dividers, borders, rail separators |
-| `obs-gray-soft` | `#1A1C28` | `shell-surface` (reinterpreted) | Disabled surfaces, skeleton placeholders |
-| `obs-backdrop` | `rgba(10, 11, 20, 0.65)` | `shell-backdrop` (reinterpreted) | Modal backdrop |
+| `obs-red-soft` | `#FFF0F1` | `shell-red-soft` | Selected nebula card background |
+| `obs-violet` | `#6E5FD2` | (secondary) | Orbit lines and star connections |
+| `obs-violet-dim` | `#B8B1E8` | (secondary) | Locked star borders |
+| `obs-warm-white` | `#171717` | `shell-ink` | Primary text |
+| `obs-warm-dim` | `#666666` | `shell-secondary` | Secondary text and metadata |
+| `obs-warm-muted` | `#929292` | `shell-muted` | Tertiary text and placeholders |
+| `obs-gray` | `#E3E3E0` | `shell-line` | Dividers, borders, rail separators |
+| `obs-gray-soft` | `#F0F0ED` | `shell-surface` | Disabled surfaces and progress tracks |
+| `obs-backdrop` | `rgba(31, 41, 55, 0.34)` | `shell-backdrop` | Modal backdrop |
 
 #### 4.2.1 Infinite Galaxy Palette Additions
 
@@ -218,17 +218,17 @@ The Infinite Galaxy surface (`/dreams/galaxy`) extends the observatory palette w
 
 | Token | Hex | Usage |
 |---|---|---|
-| `galaxy-star-glow` | `rgba(245, 240, 232, 0.3)` | Completed star radial glow spread |
-| `galaxy-cluster` | `#B8B0A0` | Cluster node ("+N") label color |
-| `galaxy-line` | `rgba(124, 111, 247, 0.15)` | Inter-star constellation lines in galaxy |
-| `galaxy-boundary` | `rgba(124, 111, 247, 0.25)` | Nebula region boundary arcs |
-| `galaxy-minimap-bg` | `rgba(17, 19, 32, 0.85)` | Mini-map background |
+| `galaxy-star-glow` | `rgba(226, 29, 47, 0.18)` | Completed star radial glow spread |
+| `galaxy-cluster` | `#666666` | Cluster node ("+N") label color |
+| `galaxy-line` | `rgba(110, 95, 210, 0.18)` | Inter-star constellation lines in galaxy |
+| `galaxy-boundary` | `rgba(110, 95, 210, 0.28)` | Nebula region boundary arcs |
+| `galaxy-minimap-bg` | `rgba(255, 255, 255, 0.92)` | Mini-map background |
 | `galaxy-minimap-viewport` | `rgba(226, 29, 47, 0.3)` | Mini-map viewport rectangle |
-| `galaxy-week-label` | `#6E6880` | Week cluster label color |
+| `galaxy-week-label` | `#777777` | Week cluster label color |
 
 ### 4.3 Observatory Typography Override
 
-The observatory uses the same typographic scale as the shell but with warm-white text on dark backgrounds. No size, weight, or line-height changes from Section 1.2 except as noted:
+The dashboard uses the same typographic scale and contrast hierarchy as the editorial shell. The legacy `obs-warm-*` semantic token names now map to ink and gray text values.
 
 | Role | Size | Weight | Color |
 |---|---|---|---|
@@ -247,8 +247,8 @@ All shell spacing tokens apply. Observatory adds:
 
 | Token | Value | Usage |
 |---|---|---|
-| `obs-space-bottom` | 100px | Scroll bottom padding to clear floating white dock |
-| `obs-canvas-height` | 320-380px | Constellation canvas viewport height |
+| `obs-space-bottom` | 86px | Fixed dashboard clearance for the floating dock |
+| `obs-canvas-height` | 118-275px | Responsive constellation canvas height |
 
 ### 4.5 Observatory Border Radii
 
@@ -442,14 +442,24 @@ accessibilityRole="button", accessibilityLabel="Switch to list view" / "Switch t
 - See `docs/superpowers/specs/2026-07-11-protect-control-center-design.md` for full specification.
 
 ### 5.3 Dreams (Observatory)
-- Dominant canvas: `obs-bg` (full override)
-- Five zones: header, period rail, routine gate, constellation canvas, nebula deck
-- Vertical scroll, conventional layout
+- Dominant canvas: light `obs-bg`, with white bounded panels
+- Five always-reachable zones: daily header, period rail, routine gate, explicit completion list, and constellation sky
+- No planning or destructive controls appear on Today; Weekly Studio owns creation and organization
+- No page-level vertical scroll; routines and tasks scroll only inside bounded regions when necessary
 - See `docs/superpowers/specs/2026-07-11-dreams-cosmos-redesign-design.md` for full specification.
 
-### 5.3.1 Infinite Galaxy (Completed Task Archive)
+### 5.3.1 Weekly Planner
+- Route: `/dreams/plan`, with its own light editorial header rather than the native stack title.
+- Fixed week navigation and seven-day selector remain visible above the planning content.
+- The planner is domain-first: every nebula owns one task slot for each selected day of the week.
+- Creating a daily task happens inside its nebula card and includes Morning, Afternoon, or Evening assignment in the same sheet.
+- Existing daily tasks keep period controls beside them, allowing arrangement without leaving the domain context.
+- Every nebula has a weekly incentive target of three distinct completed days. Planned days are shown as outlined progress; completed days are solid red; reaching three unlocks a weekly glow state.
+- Past days are explicitly read-only, while nebula creation remains available inside the same Weekly Studio route.
+
+### 5.3.2 Infinite Galaxy (Completed Task Archive)
 - Route: `/dreams/galaxy` (new screen `app/dreams/galaxy.tsx`).
-- Full-screen dark spatial canvas, no tab dock, no SafeAreaView insets.
+- Full-screen light spatial canvas, no tab dock, no SafeAreaView insets.
 - Pan (one-finger drag) and zoom (two-finger pinch, 0.3x to 3x range).
 - Stars grouped by nebula and ISO week, positioned deterministically.
 - Info card on star tap: label, nebula, date, coins, photo privacy indicator.
@@ -457,11 +467,27 @@ accessibilityRole="button", accessibilityLabel="Switch to list view" / "Switch t
 - No task management: read-only archive. No editing, completing, or deleting.
 - See `docs/superpowers/specs/2026-07-11-dreams-cosmos-redesign-design.md` Section 8.8 for full specification.
 
-### 5.4 Tab Dock
+### 5.4 Gacha Research Lab
+
+- Dominant canvas: `shell-white`, with a charcoal active-banner hero and restrained banner-specific accent fields.
+- Primary tab combines banner selection, pull controls, collection progress, and an embedded three-column recent-collection preview. The preview shows up to nine unique owned Pokémon in reverse acquisition order; catalog browsing and locked species remain exclusive to the full Pokédex.
+- Five live Pokémon pools map to Generations I–V and their regions: Kanto, Johto, Hoenn, Sinnoh, and Unova. Together they contain all 649 species introduced across those generations; every banner contains Common, Rare, Epic, and Legendary+ NERU gacha tiers.
+- Pulls use shared Dreams coins: one pull costs 20; ten pulls cost 180. The weighted rates are Common 84%, Rare 10%, Epic 5%, and Legendary+ 1%. Results and duplicate counts persist locally at `@neru/gacha-results`.
+- Rarity is derived from PokéAPI Pokémon Species metadata rather than ID heuristics: Legendary or Mythical flags map to the top tier and share the visible Legendary+ label; otherwise capture rates 3–45 map to Epic, 46–120 to Rare, and 121–255 to Common. The underlying Legendary and Mythical flags remain intact for data fidelity.
+- Locked Pokédex entries retain faint artwork for spatial recognition but hide names and field notes until collected.
+- Full route `/gacha/pokedex` uses a compact responsive virtualized list: four columns on phones, five on medium widths, and six on wide layouts. Artwork scales to the computed card width to avoid unused internal side space. The route also adds name/number search, generation/owned/rarity filters, collection metrics, and species detail sheets.
+- The catalog is assembled from the five PokéAPI generation endpoints, validated for 649 unique IDs and complete flavor text, and cached locally at `@neru/pokeapi-catalog-gen-1-5-v4`. Pokémon artwork is loaded from the PokeAPI official-artwork sprite repository and is treated as content, not UI chrome.
+- The compact Species index is generated by `npm run sync:pokemon-rarity`, which queries all 649 `/pokemon-species/{id}` endpoints and stores `capture_rate`, `is_legendary`, `is_mythical`, and the latest English `flavor_text_entries` value. Flavor text control characters and repeated whitespace are normalized before storage. This prevents 649 requests during ordinary app startup while keeping the data reproducible from PokéAPI.
+- Pull reveals and owned Pokédex detail sheets lazily query `/pokemon/{id}` for `sprites.front_default`, `sprites.back_default`, and `cries.latest` (falling back to `cries.legacy`). Media records are cached per Pokémon at `@neru/pokemon-media/{id}`.
+- New encounters run four perspective half-turns, swapping between front and back battle sprites at each edge. Native platforms play the cry automatically; web runs the same animation immediately and exposes an explicit `Tap for cry` action to comply with browser autoplay policies. Tapping the sprite replays both the cry and flip sequence.
+- Buying a pull opens a text-free, interactive Poké Ball catch sequence before the result sheet. The entire modal is the tap target, so the user can tap anywhere immediately and as quickly as they like; every tap is counted and immediately nudges the ball with a capture-style shake and haptic beat. The first two pulses stay neutral, and the third tap reveals the result tier color. Common and Rare encounters open on tap three, while Epic encounters expand the hidden three-step meter to five taps. Legendary+ encounters initially present exactly like Epic—including showing only five progress steps—on taps three and four. On tap five, the signal upgrades to the true Legendary+ color and the meter unexpectedly expands to seven before the ball physically opens with a final flash. Ten-pulls use a distinct batch-containment treatment with ten orbiting signal nodes and three additional taps per tier. Their Legendary+ sequence masquerades as an eight-tap Epic pull, then upgrades and expands to ten on tap eight. Pokémon media loads in parallel, and the reveal waits for both that interaction and media preparation to finish.
+- Cry playback is normalized to 32% volume. The featured cry is primed during the catch sequence and played when the reveal begins; owned-entry taps use the same cached player path.
+
+### 5.5 Tab Dock
 - Floating, absolute-positioned
 - White background with gray top border
 - Renders above all screen content
-- Dreams screen must clear 100px minimum below last content element
+- Dreams fixed dashboard reserves 86px for the dock
 - Other screens clear dock through standard safe-area + content padding
 
 ## 6. Motion & Interaction
@@ -506,9 +532,9 @@ When `prefers-reduced-motion` is active (via `AccessibilityInfo` on React Native
 
 | Range | Label | Layout |
 |---|---|---|
-| 320-374px | Narrow | Single column. Period rail and nebula deck scroll horizontally. Canvas at `min(320px, 100vw - 32px)`. |
-| 375-767px | Standard | Single column. Canvas at 340-360px. Rail may still scroll. |
-| 768px+ | Wide | Content max-width 640px, centered. Canvas at 440px max. Rail fits without scroll. Side padding increases. |
+| 320-374px | Narrow | Single viewport. Periods, routines, and nebulas scroll horizontally; tasks scroll inside an 84px panel; canvas is at least 118px tall. |
+| 375-767px | Standard | Single viewport. Canvas grows with available height up to 275px; task panel grows to 108px. |
+| 768px+ | Wide | Same fixed hierarchy with additional breathing room; local rails remain bounded and preserve nearby actions. |
 
 ### 7.2 Safe Area
 
@@ -565,13 +591,13 @@ Icons inside a 44pt target may be smaller (e.g., 21-24px icons inside a 44pt fra
 
 ## 9. Accepted Design Debt
 
-### 9.1 Legacy Candy Screens
+### 9.1 Remaining Legacy Candy Screen
 
-The Gacha, Social, and Diary screens still use the candy theme (`CandyColors`, `CandyScreen`, `CandyCard`, `CandyButton`). They are not part of the editorial shell. A future pass may convert them or establish a distinct visual identity per screen. The candy theme constants are preserved and not modified.
+Diary and the secondary Friend Exchange route still use the candy theme (`CandyColors`, `CandyScreen`, `CandyCard`, `CandyButton`). The primary Gacha tab and Pokédex now use the editorial shell. A future pass may convert the remaining legacy surfaces. The candy theme constants are preserved and not modified.
 
 ### 9.2 PhotoCompletionModal
 
-This modal is a shared candy component used by the Dreams tab. After the Dreams observatory redesign, it will render with candy styling inside a dark observatory context, creating visual inconsistency. The modal's functional behavior is correct; restyling is deferred.
+The shared completion modal now follows the light editorial Dreams shell. Camera and Photo Library are explicit, separate sources: Camera requests camera access and immediately launches image capture, while Photo Library requests library access and opens the image picker. Processing communicates local saving and star-lighting progress without claiming automated photo verification.
 
 ### 9.3 Observatory Modular Architecture
 
@@ -587,9 +613,9 @@ The project has no dedicated test runner. Verification relies on linting, TypeSc
 
 Existing user data (constellation icons, routine labels) contains emoji characters (`✨`, `💧`, `🛏️`, etc.). These are rendered as inherited text data and are not considered UI chrome. New UI affordances must use Ionicons vector icons, not emojis. A future pass may offer emoji-to-icon migration for stored data.
 
-### 9.6 Dreams Observatory Is Always Dark
+### 9.6 Dreams Uses a Fixed Light Theme
 
-The Dreams tab renders its dark observatory palette regardless of system light/dark mode preference. Other tabs follow system preference (currently only light mode is styled). A system dark mode pass for the editorial shell tabs is deferred.
+The Dreams tab renders its light editorial palette regardless of system light/dark mode preference. A system dark mode pass for the editorial shell tabs is deferred.
 
 ### 9.7 Single Source of Truth for Colors
 
@@ -623,3 +649,4 @@ The spatial canvas uses `react-native-svg` which may degrade with thousands of s
 |---|---|
 | 2026-07-11 | Initial creation. Documented editorial shell tokens from existing companion and Protect implementations. Added Dreams observatory exception with concrete palette, typography, spacing, component, and motion tokens. Defined shell state conventions, responsive behavior, accessibility constraints, and accepted design debt. |
 | 2026-07-11 | Added Infinite Galaxy Mode: palette additions (galaxy-star-glow, galaxy-cluster, galaxy-line, galaxy-boundary, galaxy-minimap tokens), component primitives (galaxy canvas, completed star, cluster node, nebula boundary, week label, info card, mini-map, zoom controls, list view toggle), screen layout rules (route `/dreams/galaxy`, full-screen canvas, pan/zoom, no task management), accessibility provisions (list view alternative, screen reader labels, reduced-motion auto-switch), and accepted debt items (storage scan performance, SVG rendering, duplicated list-view logic). |
+| 2026-07-12 | Replaced the legacy Gacha capsule arcade with the editorial Pokémon Research Lab, then expanded it to five PokéAPI-backed Generation I–V banners, all 649 species, persistent weighted pulls, embedded collection tracking, and a virtualized searchable Pokédex. |

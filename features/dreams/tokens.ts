@@ -1,31 +1,33 @@
 // features/dreams/tokens.ts
-// Shared design tokens for Focused Observatory + Infinite Galaxy.
-// Mirrors DESIGN.md Sections 4.2, 4.2.1, 4.4, 4.5.
-// Imported by all observatory and galaxy modules. No React dependency.
+// Shared Dreams tokens. The main Dreams dashboard uses the editorial light
+// shell; the galaxy keeps the same semantic names so both surfaces remain
+// legible without duplicating component styles.
+
+import { EditorialColors } from '../../constants/editorial-theme';
 
 export const Palette = {
-  // Observatory primary (DESIGN.md 4.2)
-  bg: '#0A0B14',
-  bgElevated: '#111320',
-  bgRaised: '#181A2E',
-  red: '#E21D2F',
-  redSoft: '#3D1524',
-  violet: '#7C6FF7',
-  violetDim: '#3D3780',
-  warmWhite: '#F5F0E8',
-  warmDim: '#8A8580',
-  warmMuted: '#5C5853',
-  gray: '#2A2D3E',
-  graySoft: '#1A1C28',
-  backdrop: 'rgba(10, 11, 20, 0.65)',
+  bg: EditorialColors.white,
+  bgElevated: EditorialColors.white,
+  bgRaised: EditorialColors.white,
+  red: EditorialColors.red,
+  redSoft: EditorialColors.redSoft,
+  onRed: EditorialColors.white,
+  violet: EditorialColors.red,
+  violetDim: '#C7C7C7',
+  warmWhite: EditorialColors.ink,
+  warmDim: EditorialColors.secondary,
+  warmMuted: EditorialColors.muted,
+  gray: EditorialColors.line,
+  graySoft: EditorialColors.surface,
+  backdrop: 'rgba(31, 41, 55, 0.34)',
   // Galaxy additions (DESIGN.md 4.2.1)
-  starGlow: 'rgba(245, 240, 232, 0.3)',
-  clusterLabel: '#B8B0A0',
-  galaxyLine: 'rgba(124, 111, 247, 0.15)',
-  galaxyBoundary: 'rgba(124, 111, 247, 0.25)',
-  minimapBg: 'rgba(17, 19, 32, 0.85)',
+  starGlow: 'rgba(226, 29, 47, 0.18)',
+  clusterLabel: '#666666',
+  galaxyLine: 'rgba(110, 95, 210, 0.18)',
+  galaxyBoundary: 'rgba(110, 95, 210, 0.28)',
+  minimapBg: 'rgba(255, 255, 255, 0.92)',
   minimapViewport: 'rgba(226, 29, 47, 0.3)',
-  weekLabel: '#6E6880',
+  weekLabel: '#777777',
 } as const;
 
 export const Sp = {
@@ -34,8 +36,8 @@ export const Sp = {
   md: 14,
   lg: 20,
   xl: 28,
-  bottom: 100, // scroll clearance for floating tab dock
-  canvas: 340, // constellation canvas default height
+  bottom: 86,
+  canvas: 180,
 } as const;
 
 export const R = {

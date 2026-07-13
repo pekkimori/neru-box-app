@@ -34,9 +34,14 @@ function screenToSvg(
   vb: ViewBox, sx: number, sy: number, sw: number, sh: number,
 ): { x: number; y: number } {
   if (sw <= 0 || sh <= 0) return { x: vb.x, y: vb.y };
+  const scale = Math.min(sw / vb.w, sh / vb.h);
+  const renderedW = vb.w * scale;
+  const renderedH = vb.h * scale;
+  const offsetX = (sw - renderedW) / 2;
+  const offsetY = (sh - renderedH) / 2;
   return {
-    x: vb.x + (sx / sw) * vb.w,
-    y: vb.y + (sy / sh) * vb.h,
+    x: vb.x + (sx - offsetX) / scale,
+    y: vb.y + (sy - offsetY) / scale,
   };
 }
 
@@ -124,13 +129,16 @@ export function useGalaxyPanZoom({
           } else if (panStart.current && screenW > 0 && screenH > 0) {
             const dx = panStart.current.x - evt.nativeEvent.pageX;
             const dy = panStart.current.y - evt.nativeEvent.pageY;
-            const scaleX = viewBoxRef.current.w / screenW;
-            const scaleY = viewBoxRef.current.h / screenH;
+            const startView = panStart.current.vb;
+            const scale = Math.min(
+              screenW / startView.w,
+              screenH / startView.h,
+            );
             setViewBox({
-              x: panStart.current.vb.x + dx * scaleX,
-              y: panStart.current.vb.y + dy * scaleY,
-              w: panStart.current.vb.w,
-              h: panStart.current.vb.h,
+              x: startView.x + dx / scale,
+              y: startView.y + dy / scale,
+              w: startView.w,
+              h: startView.h,
             });
           }
         },

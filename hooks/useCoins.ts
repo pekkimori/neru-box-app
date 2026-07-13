@@ -1,9 +1,18 @@
 // hooks/useCoins.ts
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useStorage } from './useStorage';
+
+const DEV_TEST_BALANCE = 1000;
 
 export function useCoins() {
   const { value: coins, save: saveCoins, loaded } = useStorage<number>('@neru/coins', 120);
+  const appliedDevTopUpRef = useRef(false);
+
+  useEffect(() => {
+    if (!__DEV__ || !loaded || appliedDevTopUpRef.current) return;
+    appliedDevTopUpRef.current = true;
+    saveCoins((current) => Math.max(current, DEV_TEST_BALANCE));
+  }, [loaded, saveCoins]);
 
   const addCoins = useCallback(
     (amount: number) => {

@@ -4,8 +4,10 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { EditorialColors } from '@/constants/editorial-theme';
+import { Type } from '@/constants/typography';
 
-const TAB_RED = '#E21D2F';
+const TAB_RED = EditorialColors.red;
 const TAB_INK = '#6F6F6F';
 
 type TabIconProps = {
@@ -39,7 +41,7 @@ export default function TabLayout() {
           height: Platform.OS === 'ios' ? 66 : 58,
           paddingTop: 5,
           paddingBottom: Platform.OS === 'ios' ? 12 : 6,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: EditorialColors.white,
           borderTopWidth: 0,
           borderRadius: 18,
           borderWidth: 1,
@@ -50,14 +52,8 @@ export default function TabLayout() {
           shadowRadius: 18,
           elevation: 7,
         },
-        tabBarItemStyle: {
-          paddingTop: 1,
-        },
         tabBarLabelStyle: {
-          fontSize: 8,
-          fontWeight: '800',
-          letterSpacing: 0.9,
-          textTransform: 'uppercase',
+          ...Type.microLabel,
         },
       }}
     >
@@ -98,7 +94,6 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="book" inactive="book-outline" />,
         }}
       />
-      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }
@@ -108,7 +103,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 28,
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   activeRule: {
     position: 'absolute',

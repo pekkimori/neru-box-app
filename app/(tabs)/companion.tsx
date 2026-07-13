@@ -16,140 +16,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type PersonalityId = 'warm' | 'direct' | 'curious';
-type ResponseIntent = 'plan' | 'hello' | 'focus' | 'tired' | 'study' | 'help';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'neru' | 'user';
-  timestamp: Date;
-}
-
-interface Personality {
-  id: PersonalityId;
-  label: string;
-  description: string;
-  greeting: string;
-}
-
-interface MemoryItem {
-  id: string;
-  text: string;
-}
+import { EditorialColors, editorialOverlay } from '@/constants/editorial-theme';
+import { Type } from '@/constants/typography';
+import {
+  PERSONALITIES,
+  SUGGESTIONS,
+  type CompanionMessage,
+  type MemoryItem,
+  type Personality,
+  type PersonalityId,
+} from '@/features/companion/preview-model';
+import { useCompanionPreview } from '@/features/companion/use-companion-preview';
 
 const Palette = {
-  red: '#E21D2F',
-  redDark: '#B81020',
-  ink: '#171717',
-  secondary: '#666666',
-  muted: '#929292',
-  line: '#E5E5E5',
-  surface: '#F5F5F3',
-  white: '#FFFFFF',
-  overlay: 'rgba(17, 17, 17, 0.45)',
+  ...EditorialColors,
+  overlay: editorialOverlay(0.45),
 };
-
-const PERSONALITIES: Personality[] = [
-  {
-    id: 'warm',
-    label: 'Warm',
-    description: 'Encouraging, gentle, and on your side.',
-    greeting: "Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?",
-  },
-  {
-    id: 'direct',
-    label: 'Direct',
-    description: 'Clear, concise, and focused on action.',
-    greeting: "I'm NERU. Tell me what needs attention and we'll turn it into a clear next step.",
-  },
-  {
-    id: 'curious',
-    label: 'Curious',
-    description: 'Reflective, open, and ready to explore.',
-    greeting: "I'm NERU. What have you been thinking about lately, and where should we begin?",
-  },
-];
-
-const KEYWORD_INTENTS: { keywords: string[]; intent: ResponseIntent }[] = [
-  { keywords: ['break down', 'week', 'plan'], intent: 'plan' },
-  { keywords: ['hello', 'hi', 'hey'], intent: 'hello' },
-  { keywords: ['focus', 'distracted'], intent: 'focus' },
-  { keywords: ['tired', 'break', 'exhausted'], intent: 'tired' },
-  { keywords: ['study', 'learn', 'exam'], intent: 'study' },
-  { keywords: ['help', 'stuck'], intent: 'help' },
-];
-
-const RESPONSES: Record<ResponseIntent, Record<PersonalityId, string>> = {
-  plan: {
-    warm: "Absolutely. Let's keep the week realistic: choose one important outcome, give it two focused sessions, and leave breathing room between them. What matters most?",
-    direct: 'Start with one weekly outcome. Break it into three tasks, schedule the hardest first, and reserve one catch-up block. Name the outcome.',
-    curious: 'If this week went well, what would be different by Sunday? We can work backward from that answer and build the plan together.',
-  },
-  hello: {
-    warm: "Hi. It's good to see you. How are you feeling today?",
-    direct: 'Hi. What do you want to work through?',
-    curious: "Hello. What's taking up the most space in your mind right now?",
-  },
-  focus: {
-    warm: "Let's make focus easier, not stricter. Pick one small task, silence distractions, and give it 20 minutes. I'll be here when you're done.",
-    direct: 'Choose one task. Put the phone away. Set 25 minutes. Start with the first visible action.',
-    curious: 'What usually pulls your attention away? If we name the strongest distraction, we can design a focus block around it.',
-  },
-  tired: {
-    warm: "That sounds heavy. Take ten quiet minutes, drink some water, and decide whether your body needs rest or a gentler task. Rest still counts.",
-    direct: 'Pause for ten minutes. Hydrate. Then choose: stop for proper rest or complete one low-effort task.',
-    curious: 'Does this feel more like physical tiredness, mental overload, or loss of motivation? The answer changes what will actually help.',
-  },
-  study: {
-    warm: "We can make studying feel manageable. Choose one topic, test what you already know, then review only the gaps. What subject are we tackling?",
-    direct: 'Pick one topic. Do ten minutes of active recall, check errors, then repeat. Which topic?',
-    curious: 'What would prove that you understand the material: recalling it, solving a problem, or explaining it? Let us build the session around that.',
-  },
-  help: {
-    warm: 'Of course. I can help you plan, focus, study, or simply sort through what you are feeling. Where should we start?',
-    direct: 'I can help with planning, focus, study, or reflection. Choose one.',
-    curious: 'What kind of help would feel most useful right now: an answer, a plan, or space to think aloud?',
-  },
-};
-
-const FALLBACK_RESPONSES: Record<PersonalityId, string[]> = {
-  warm: [
-    "I hear you. Tell me a little more and we'll take it one step at a time.",
-    'That makes sense. What part of it feels most important right now?',
-  ],
-  direct: [
-    'Understood. What outcome do you want from this?',
-    'Give me the main constraint and the next decision you need to make.',
-  ],
-  curious: [
-    'What do you think is underneath that?',
-    'If you looked at this from a different angle, what might you notice?',
-  ],
-};
-
-const SEEDED_MEMORIES: MemoryItem[] = [
-  { id: 'study-time', text: 'I focus best in the evening' },
-  { id: 'current-goal', text: 'I am building a consistent study routine' },
-];
-
-const SUGGESTIONS = [
-  { label: 'Plan my week', value: 'Help me plan my week' },
-  { label: 'Find my focus', value: 'Help me focus on my work' },
-  { label: 'I need a break', value: "I'm feeling tired and need a break" },
-];
-
-function getNeruResponse(input: string, personality: PersonalityId): string {
-  const lower = input.toLowerCase();
-  const matched = KEYWORD_INTENTS.find(({ keywords }) =>
-    keywords.some((keyword) => lower.includes(keyword))
-  );
-
-  if (matched) return RESPONSES[matched.intent][personality];
-
-  const fallbacks = FALLBACK_RESPONSES[personality];
-  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
-}
 
 function NeruAvatar({ size = 36, inverted = false }: { size?: number; inverted?: boolean }) {
   const color = inverted ? Palette.white : Palette.red;
@@ -262,76 +144,30 @@ function formatTime(date: Date) {
 }
 
 export default function CompanionScreen() {
-  const [selectedPersonality, setSelectedPersonality] = useState<PersonalityId>('warm');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'initial',
-      text: PERSONALITIES[0].greeting,
-      sender: 'neru',
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>(SEEDED_MEMORIES);
-  const [memoryDraft, setMemoryDraft] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const flatListRef = useRef<FlatList<Message>>(null);
-  const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const selectedPersonalityData = PERSONALITIES.find(({ id }) => id === selectedPersonality)!;
-
-  useEffect(() => {
-    return () => {
-      if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
-    };
-  }, []);
+  const flatListRef = useRef<FlatList<CompanionMessage>>(null);
 
   const scrollToEnd = useCallback(() => {
     requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
   }, []);
 
-  const sendMessage = useCallback(() => {
-    const trimmed = inputText.trim();
-    if (!trimmed || isTyping) return;
+  const {
+    selectedPersonality,
+    selectedPersonalityData,
+    setSelectedPersonality,
+    messages,
+    inputText,
+    setInputText,
+    isTyping,
+    memoryItems,
+    memoryDraft,
+    setMemoryDraft,
+    sendMessage,
+    addMemory,
+    removeMemory,
+  } = useCompanionPreview(scrollToEnd);
 
-    const personalityForReply = selectedPersonality;
-    setMessages((current) => [
-      ...current,
-      { id: `${Date.now()}-user`, text: trimmed, sender: 'user', timestamp: new Date() },
-    ]);
-    setInputText('');
-    setIsTyping(true);
-    scrollToEnd();
-
-    replyTimerRef.current = setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        {
-          id: `${Date.now()}-neru`,
-          text: getNeruResponse(trimmed, personalityForReply),
-          sender: 'neru',
-          timestamp: new Date(),
-        },
-      ]);
-      setIsTyping(false);
-      replyTimerRef.current = null;
-      scrollToEnd();
-    }, 850);
-  }, [inputText, isTyping, scrollToEnd, selectedPersonality]);
-
-  const addMemory = useCallback(() => {
-    const text = memoryDraft.trim();
-    if (!text) return;
-    setMemoryItems((current) => [...current, { id: `${Date.now()}`, text }]);
-    setMemoryDraft('');
-  }, [memoryDraft]);
-
-  const removeMemory = useCallback((id: string) => {
-    setMemoryItems((current) => current.filter((item) => item.id !== id));
-  }, []);
-
-  const renderMessage = useCallback(({ item }: { item: Message }) => {
+  const renderMessage = useCallback(({ item }: { item: CompanionMessage }) => {
     const isUser = item.sender === 'user';
     return (
       <View style={[styles.messageBlock, isUser && styles.messageBlockUser]}>
@@ -554,7 +390,7 @@ const styles = StyleSheet.create({
     maxWidth: 760,
     alignSelf: 'center',
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 82 : 70,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 78,
   },
   header: {
     minHeight: 72,
@@ -567,10 +403,10 @@ const styles = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center' },
   identityCopy: { marginLeft: 12 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
-  name: { color: Palette.ink, fontSize: 19, fontWeight: '900', letterSpacing: 1.6 },
+  name: { ...Type.pageTitle, color: Palette.ink },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Palette.red, marginLeft: 11 },
-  status: { color: Palette.secondary, fontSize: 9, fontWeight: '800', letterSpacing: 1.4, marginLeft: 5 },
-  personalityLabel: { color: Palette.secondary, fontSize: 12, marginTop: 3 },
+  status: { ...Type.label, color: Palette.secondary, marginLeft: 5 },
+  personalityLabel: { ...Type.bodySmall, color: Palette.secondary, marginTop: 3 },
   settingsButton: {
     width: 44,
     height: 44,
@@ -583,14 +419,14 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.62 },
   sectionRule: { flexDirection: 'row', alignItems: 'center', paddingTop: 18, paddingBottom: 8 },
-  sectionRuleText: { fontSize: 9, fontWeight: '800', letterSpacing: 1.5, color: Palette.muted },
+  sectionRuleText: { ...Type.label, color: Palette.muted },
   ruleLine: { flex: 1, height: 1, backgroundColor: Palette.line, marginLeft: 12 },
   chat: { flex: 1 },
   chatContent: { flexGrow: 1, justifyContent: 'flex-end', paddingTop: 16, paddingBottom: 2 },
   messageBlock: { maxWidth: '84%', alignSelf: 'flex-start', marginBottom: 23 },
   messageBlockUser: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   messageMeta: { flexDirection: 'row', alignItems: 'center', marginBottom: 7, gap: 7 },
-  messageAuthor: { fontSize: 9, fontWeight: '800', letterSpacing: 1.1, color: Palette.muted },
+  messageAuthor: { ...Type.label, color: Palette.muted },
   messageAuthorUser: { color: Palette.secondary },
   messageBubble: { paddingHorizontal: 16, paddingVertical: 13 },
   neruBubble: {
@@ -601,7 +437,7 @@ const styles = StyleSheet.create({
     borderLeftColor: Palette.red,
   },
   userBubble: { backgroundColor: Palette.red, borderRadius: 4, borderTopRightRadius: 0 },
-  messageText: { color: Palette.ink, fontSize: 15, lineHeight: 22 },
+  messageText: { ...Type.body, color: Palette.ink },
   userMessageText: { color: Palette.white },
   typingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
   typingBubble: {
@@ -627,7 +463,7 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: Palette.white,
   },
-  suggestionText: { color: Palette.secondary, fontSize: 12, fontWeight: '600' },
+  suggestionText: { ...Type.bodySmall, color: Palette.secondary },
   composer: {
     minHeight: 58,
     maxHeight: 122,
@@ -646,7 +482,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 4,
   },
-  textInput: { flex: 1, maxHeight: 96, minHeight: 42, paddingVertical: 10, color: Palette.ink, fontSize: 14 },
+  textInput: { ...Type.body, flex: 1, maxHeight: 96, minHeight: 42, paddingVertical: 10, color: Palette.ink },
   sendButton: {
     width: 44,
     height: 44,
@@ -657,7 +493,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   sendButtonDisabled: { backgroundColor: '#C7C7C7' },
-  localNote: { color: Palette.muted, fontSize: 8, fontWeight: '800', letterSpacing: 1.25, textAlign: 'center', marginTop: 8 },
+  localNote: {
+    ...Type.microLabel,
+    color: Palette.muted,
+    textAlign: 'center',
+    marginTop: 6,
+  },
   avatar: { borderWidth: 2, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   avatarSignal: { borderRadius: 4, transform: [{ rotate: '18deg' }] },
   avatarEye: { position: 'absolute', width: 4, height: 4, borderRadius: 2, top: '31%' },
@@ -675,8 +516,8 @@ const styles = StyleSheet.create({
   },
   sheetHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: '#D2D2D2', alignSelf: 'center', marginTop: 9 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 17, paddingBottom: 22 },
-  sheetEyebrow: { color: Palette.red, fontSize: 9, fontWeight: '900', letterSpacing: 1.6, marginBottom: 5 },
-  sheetTitle: { color: Palette.ink, fontSize: 27, fontWeight: '800', letterSpacing: -0.7 },
+  sheetEyebrow: { ...Type.label, color: Palette.red, marginBottom: 5 },
+  sheetTitle: { ...Type.heroTitle, color: Palette.ink },
   closeButton: {
     width: 44,
     height: 44,
@@ -686,8 +527,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sheetSectionNumber: { color: Palette.red, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  sheetSectionTitle: { color: Palette.ink, fontSize: 13, fontWeight: '900', letterSpacing: 1.35, marginTop: 4, marginBottom: 13 },
+  sheetSectionNumber: { ...Type.label, color: Palette.red },
+  sheetSectionTitle: { ...Type.bodyStrong, color: Palette.ink, marginTop: 4, marginBottom: 13 },
   personalityList: { gap: 8 },
   personalityOption: {
     minHeight: 68,
@@ -704,23 +545,23 @@ const styles = StyleSheet.create({
   radioSelected: { borderColor: Palette.red },
   radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: Palette.red },
   optionCopy: { flex: 1, paddingHorizontal: 12 },
-  optionTitle: { color: Palette.ink, fontSize: 14, fontWeight: '800' },
-  optionDescription: { color: Palette.secondary, fontSize: 11, marginTop: 3 },
-  optionSample: { color: Palette.muted, fontSize: 15, fontWeight: '700' },
+  optionTitle: { ...Type.bodyStrong, color: Palette.ink },
+  optionDescription: { ...Type.caption, color: Palette.secondary, marginTop: 3 },
+  optionSample: { ...Type.bodyStrong, color: Palette.muted },
   sheetDivider: { height: 1, backgroundColor: Palette.line, marginVertical: 24 },
-  memoryIntro: { color: Palette.secondary, fontSize: 13, lineHeight: 19, marginBottom: 12 },
+  memoryIntro: { ...Type.body, color: Palette.secondary, marginBottom: 12 },
   previewNotice: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFF3F4', paddingHorizontal: 11, paddingVertical: 9, marginBottom: 11 },
-  previewNoticeText: { color: Palette.redDark, fontSize: 11, fontWeight: '700' },
+  previewNoticeText: { ...Type.captionStrong, color: Palette.redDark },
   memoryList: { gap: 7 },
   memoryRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Palette.line },
   memoryMarker: { width: 5, height: 5, borderRadius: 3, backgroundColor: Palette.red, marginRight: 11 },
-  memoryText: { flex: 1, color: Palette.ink, fontSize: 13, lineHeight: 18 },
+  memoryText: { ...Type.bodySmall, flex: 1, color: Palette.ink },
   memoryRemove: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   memoryEmpty: { padding: 17, backgroundColor: Palette.surface, borderLeftWidth: 2, borderLeftColor: Palette.red },
-  memoryEmptyTitle: { color: Palette.ink, fontSize: 13, fontWeight: '800' },
-  memoryEmptyText: { color: Palette.secondary, fontSize: 12, marginTop: 3 },
+  memoryEmptyTitle: { ...Type.bodyStrong, color: Palette.ink },
+  memoryEmptyText: { ...Type.bodySmall, color: Palette.secondary, marginTop: 3 },
   memoryComposer: { flexDirection: 'row', alignItems: 'center', marginTop: 13, borderWidth: 1, borderColor: Palette.line, borderRadius: 7, paddingLeft: 12, paddingRight: 4, paddingVertical: 4 },
-  memoryInput: { flex: 1, minHeight: 40, color: Palette.ink, fontSize: 13 },
+  memoryInput: { ...Type.body, flex: 1, minHeight: 40, color: Palette.ink },
   addMemoryButton: { width: 40, height: 40, borderRadius: 5, backgroundColor: Palette.red, alignItems: 'center', justifyContent: 'center' },
   addMemoryButtonDisabled: { backgroundColor: '#C7C7C7' },
   sheetBottomSpace: { height: Platform.OS === 'ios' ? 34 : 22 },

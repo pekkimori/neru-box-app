@@ -17,4 +17,9 @@ export const DEFAULT_ROUTINES: RoutineQuest[] = [
   { id: 'default-evening-2', label: 'Tidy up', icon: '✨', block: 'evening', isDefault: true },
   { id: 'default-evening-3', label: 'Prepare tomorrow', icon: '📋', block: 'evening', isDefault: true },
   { id: 'default-evening-4', label: 'Wind down', icon: '🌙', block: 'evening', isDefault: true },
+  // Sleep
+  { id: 'default-sleep-1', label: 'Turn on Do Not Disturb', icon: '🔕', block: 'sleep', isDefault: true },
+  { id: 'default-sleep-2', label: 'Brush your teeth', icon: '🦷', block: 'sleep', isDefault: true },
+  { id: 'default-sleep-3', label: 'Dim the lights', icon: '🌙', block: 'sleep', isDefault: true },
+  { id: 'default-sleep-4', label: 'Get into bed', icon: '🛏️', block: 'sleep', isDefault: true },
 ];

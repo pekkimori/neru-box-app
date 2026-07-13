@@ -1,38 +1,182 @@
-import { NeruColors } from './neru-theme';
+import speciesRarityRecords from './pokemon-species-rarity.json';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
-export type GachaCreature = {
-  emoji: string;
-  name: string;
-  rarity: Rarity;
+export type PokemonSpeciesRarity = {
+  id: number;
+  captureRate: number;
+  isLegendary: boolean;
+  isMythical: boolean;
+  flavorText: string;
 };
 
+export type GachaCreature = {
+  id: number;
+  name: string;
+  rarity: Rarity;
+  captureRate: number;
+  isLegendary: boolean;
+  isMythical: boolean;
+  generation: number;
+  types: string[];
+  image: string;
+  bannerIds: string[];
+  description: string;
+};
+
+export type GachaBanner = {
+  id: string;
+  code: string;
+  title: string;
+  subtitle: string;
+  accent: string;
+  generation: number;
+  featuredIds: number[];
+};
+
+export const POKEAPI_GENERATIONS = [1, 2, 3, 4, 5] as const;
+export const POKEMON_GENERATIONS_1_TO_5_TOTAL = 649;
+
+export const GENERATION_NAMES: Record<number, string> = {
+  1: 'Kanto',
+  2: 'Johto',
+  3: 'Hoenn',
+  4: 'Sinnoh',
+  5: 'Unova',
+};
+
+export const GENERATION_ROMAN: Record<number, string> = {
+  1: 'I',
+  2: 'II',
+  3: 'III',
+  4: 'IV',
+  5: 'V',
+};
+
+export function getPokemonArtworkUrl(id: number) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+}
+
+const speciesRarityById = new Map(
+  (speciesRarityRecords as PokemonSpeciesRarity[]).map((record) => [record.id, record]),
+);
+
+export function getSpeciesRarityData(id: number): PokemonSpeciesRarity {
+  return speciesRarityById.get(id) ?? {
+    id,
+    captureRate: 255,
+    isLegendary: false,
+    isMythical: false,
+    flavorText: '',
+  };
+}
+
+export function getGachaRarity(id: number): Rarity {
+  const species = getSpeciesRarityData(id);
+  if (species.isLegendary || species.isMythical) return 'legendary';
+  if (species.captureRate <= 45) return 'epic';
+  if (species.captureRate <= 120) return 'rare';
+  return 'common';
+}
+
+function fallbackPokemon(id: number, name: string, generation: number): GachaCreature {
+  const speciesRarity = getSpeciesRarityData(id);
+  return {
+    id,
+    name,
+    generation,
+    rarity: getGachaRarity(id),
+    captureRate: speciesRarity.captureRate,
+    isLegendary: speciesRarity.isLegendary,
+    isMythical: speciesRarity.isMythical,
+    types: [],
+    image: getPokemonArtworkUrl(id),
+    bannerIds: [`generation-${generation}`],
+    description: speciesRarity.flavorText || `A Generation ${GENERATION_ROMAN[generation]} Pokémon from the ${GENERATION_NAMES[generation]} region.`,
+  };
+}
+
+// Featured fallback records keep banner artwork available before the API catalog
+// finishes loading. The complete 649-species collection comes from PokéAPI.
 export const GACHA_CREATURES: GachaCreature[] = [
-  { emoji: '🍄', name: 'Mushroom Cap', rarity: 'common' },
-  { emoji: '👾', name: 'Pixel Ghost', rarity: 'rare' },
-  { emoji: '🏆', name: 'Gold Trophy', rarity: 'epic' },
-  { emoji: '💎', name: 'Dream Crystal', rarity: 'legendary' },
-  { emoji: '👑', name: 'Royal Crown', rarity: 'legendary' },
-  { emoji: '🦄', name: 'Star Unicorn', rarity: 'epic' },
-  { emoji: '🌸', name: 'Sakura Petal', rarity: 'common' },
-  { emoji: '🍕', name: 'Power Pizza', rarity: 'common' },
-  { emoji: '🎸', name: 'Thunder Axe', rarity: 'rare' },
-  { emoji: '🚀', name: 'Star Rocket', rarity: 'epic' },
-  { emoji: '🔮', name: 'Mystic Orb', rarity: 'rare' },
-  { emoji: '⚡', name: 'Bolt Shard', rarity: 'common' },
+  fallbackPokemon(3, 'Venusaur', 1),
+  fallbackPokemon(6, 'Charizard', 1),
+  fallbackPokemon(9, 'Blastoise', 1),
+  fallbackPokemon(154, 'Meganium', 2),
+  fallbackPokemon(157, 'Typhlosion', 2),
+  fallbackPokemon(160, 'Feraligatr', 2),
+  fallbackPokemon(254, 'Sceptile', 3),
+  fallbackPokemon(257, 'Blaziken', 3),
+  fallbackPokemon(260, 'Swampert', 3),
+  fallbackPokemon(389, 'Torterra', 4),
+  fallbackPokemon(392, 'Infernape', 4),
+  fallbackPokemon(395, 'Empoleon', 4),
+  fallbackPokemon(497, 'Serperior', 5),
+  fallbackPokemon(500, 'Emboar', 5),
+  fallbackPokemon(503, 'Samurott', 5),
+];
+
+export const GACHA_BANNERS: GachaBanner[] = [
+  { id: 'generation-1', code: 'GEN I', title: 'Kanto Origins', subtitle: 'Generation I · 151 species', accent: '#E21D2F', generation: 1, featuredIds: [6, 9, 3] },
+  { id: 'generation-2', code: 'GEN II', title: 'Johto Journeys', subtitle: 'Generation II · 100 species', accent: '#B66A08', generation: 2, featuredIds: [157, 160, 154] },
+  { id: 'generation-3', code: 'GEN III', title: 'Hoenn Horizons', subtitle: 'Generation III · 135 species', accent: '#315B87', generation: 3, featuredIds: [257, 260, 254] },
+  { id: 'generation-4', code: 'GEN IV', title: 'Sinnoh Myths', subtitle: 'Generation IV · 107 species', accent: '#7655A6', generation: 4, featuredIds: [392, 395, 389] },
+  { id: 'generation-5', code: 'GEN V', title: 'Unova Frontiers', subtitle: 'Generation V · 156 species', accent: '#39725B', generation: 5, featuredIds: [500, 503, 497] },
 ];
 
 export const RARITY_COLORS: Record<Rarity, string> = {
-  common: '#a1a1aa',
-  rare: NeruColors.sky,
-  epic: NeruColors.violet,
-  legendary: NeruColors.amber,
+  common: '#777777',
+  rare: '#315B87',
+  epic: '#7655A6',
+  legendary: '#B66A08',
 };
 
-export const RARITY_WEIGHTS: Record<Rarity, number> = {
-  common: 50,
-  rare: 30,
-  epic: 15,
-  legendary: 5,
+export const RARITY_LABELS: Record<Rarity, string> = {
+  common: 'Common',
+  rare: 'Rare',
+  epic: 'Epic',
+  legendary: 'Legendary+',
 };
+
+export function getPokemonRarityLabel(pokemon: Pick<GachaCreature, 'rarity' | 'isLegendary' | 'isMythical'>) {
+  if (pokemon.isLegendary || pokemon.isMythical) return 'Legendary+';
+  return RARITY_LABELS[pokemon.rarity];
+}
+
+export const RARITY_WEIGHTS: Record<Rarity, number> = {
+  common: 84,
+  rare: 10,
+  epic: 5,
+  legendary: 1,
+};
+
+export const SINGLE_PULL_COST = 20;
+export const TEN_PULL_COST = 180;
+
+export function getPokemonById(id: number, catalog: GachaCreature[] = GACHA_CREATURES) {
+  return catalog.find((pokemon) => pokemon.id === id);
+}
+
+export function getBannerPool(banner: GachaBanner, catalog: GachaCreature[] = GACHA_CREATURES) {
+  return catalog.filter((pokemon) => pokemon.generation === banner.generation);
+}
+
+export function rollFromBanner(banner: GachaBanner, catalog: GachaCreature[], random = Math.random): GachaCreature {
+  const roll = random() * 100;
+  let cumulative = 0;
+  let selectedRarity: Rarity = 'common';
+
+  for (const rarity of Object.keys(RARITY_WEIGHTS) as Rarity[]) {
+    cumulative += RARITY_WEIGHTS[rarity];
+    if (roll < cumulative) {
+      selectedRarity = rarity;
+      break;
+    }
+  }
+
+  const pool = getBannerPool(banner, catalog);
+  const rarityPool = pool.filter((pokemon) => pokemon.rarity === selectedRarity);
+  const candidates = rarityPool.length > 0 ? rarityPool : pool;
+  if (candidates.length === 0) throw new Error(`No Pokémon loaded for Generation ${banner.generation}`);
+  return candidates[Math.floor(random() * candidates.length)];
+}

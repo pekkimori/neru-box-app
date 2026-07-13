@@ -1,6 +1,7 @@
 // features/dreams/observatory/routine-gate.tsx
-import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Type } from '@/constants/typography';
 import { Palette, Sp, R } from '../tokens';
 import type { RoutineQuest } from '../../../types/dreams';
 
@@ -8,7 +9,7 @@ interface Props {
   routines: RoutineQuest[];
   isComplete: (id: string) => boolean;
   tasksUnlocked: boolean;
-  isSleepWindow: boolean;
+  isSleepPeriod: boolean;
   sleepReady: boolean;
   readOnly: boolean;
   sleepBlocked: boolean;
@@ -17,7 +18,7 @@ interface Props {
 
 export function RoutineGate({
   routines, isComplete, tasksUnlocked,
-  isSleepWindow, sleepReady, readOnly, sleepBlocked, onToggle,
+  isSleepPeriod, sleepReady, readOnly, sleepBlocked, onToggle,
 }: Props) {
   const completedCount = routines.filter((r) => isComplete(r.id)).length;
   const allDone = routines.length === 0 || completedCount === routines.length;
@@ -45,23 +46,25 @@ export function RoutineGate({
         {routines.length === 0 ? (
           <Text style={styles.lockMessage}>No routines assigned.</Text>
         ) : (
-          routines.map((quest) => (
-            <View key={quest.id} style={styles.row}>
-              <Ionicons name="ellipse-outline" size={21} color={Palette.warmMuted} />
-              <Text style={[styles.rowText, { color: Palette.warmMuted }]}>
-                {quest.label}
-              </Text>
-            </View>
-          ))
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routineRow}>
+            {routines.map((quest) => (
+              <View key={quest.id} style={styles.row}>
+                <Ionicons name="ellipse-outline" size={17} color={Palette.warmMuted} />
+                <Text style={[styles.rowText, { color: Palette.warmMuted }]} numberOfLines={1}>
+                  {quest.label}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
         )}
       </View>
     );
   }
 
-  if (allDone && tasksUnlocked && !isSleepWindow && !sleepReady) {
+  if (allDone && tasksUnlocked && !isSleepPeriod && !sleepReady) {
     return (
       <View style={styles.open}>
-        <Ionicons name="checkmark-circle" size={18} color={Palette.violet} />
+        <Ionicons name="checkmark-circle" size={18} color={Palette.red} />
         <Text style={styles.openText}>
           {routines.length === 0 ? 'Orbit open. No routines needed.' : 'Orbit open.'}
         </Text>
@@ -69,11 +72,14 @@ export function RoutineGate({
     );
   }
 
-  if (isSleepWindow && sleepReady) {
+  if (isSleepPeriod && sleepReady) {
     return (
       <View style={styles.sleepReady}>
-        <Ionicons name="moon" size={22} color={Palette.violet} />
-        <Text style={styles.sleepReadyText}>Ready for sleep</Text>
+        <Ionicons name="moon" size={22} color={Palette.red} />
+        <View style={styles.sleepReadyCopy}>
+          <Text style={styles.sleepReadyText}>Ready for sleep</Text>
+          <Text style={styles.sleepReadyHint}>Sleep intent saved. Regular tasks are paused.</Text>
+        </View>
       </View>
     );
   }
@@ -82,7 +88,7 @@ export function RoutineGate({
     <View style={styles.gate}>
       <View style={styles.gateHeader}>
         <Text style={styles.gateLabel}>
-          {isSleepWindow ? 'Wind down' : 'Routine gate'}
+          {isSleepPeriod ? 'Sleep routine' : 'Routine gate'}
         </Text>
         <Text style={styles.gateProgress}>
           {completedCount}/{routines.length}
@@ -90,20 +96,22 @@ export function RoutineGate({
       </View>
       {!tasksUnlocked && (
         <Text style={styles.lockMessage}>
-          {isSleepWindow
-            ? 'Wind down first. The rest of your sky is paused.'
+          {isSleepPeriod
+            ? 'Finish these wind-down steps to signal that you are going to sleep.'
             : 'Complete all routines to unlock your stars.'}
         </Text>
       )}
-      {routines.map((quest) => {
-        const done = isComplete(quest.id);
-        return (
-          <RoutineRow
-            key={quest.id} label={quest.label} done={done}
-            onToggle={() => onToggle(quest.id)}
-          />
-        );
-      })}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routineRow}>
+        {routines.map((quest) => {
+          const done = isComplete(quest.id);
+          return (
+            <RoutineRow
+              key={quest.id} label={quest.label} done={done}
+              onToggle={() => onToggle(quest.id)}
+            />
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -122,8 +130,8 @@ function RoutineRow({
     >
       <Ionicons
         name={done ? 'checkmark-circle' : 'ellipse-outline'}
-        size={21}
-        color={done ? Palette.warmDim : Palette.violetDim}
+        size={17}
+        color={done ? Palette.warmDim : Palette.warmMuted}
       />
       <Text style={[styles.rowText, done && styles.rowTextDone]}>{label}</Text>
     </TouchableOpacity>
@@ -132,28 +140,36 @@ function RoutineRow({
 
 const styles = StyleSheet.create({
   gate: {
-    backgroundColor: Palette.bgElevated, borderRadius: R.md,
-    borderWidth: 1, borderColor: Palette.gray, padding: Sp.md, gap: Sp.sm,
+    backgroundColor: Palette.bgElevated, borderRadius: R.sm,
+    borderWidth: 1, borderColor: Palette.gray, paddingHorizontal: 14, paddingVertical: 13, gap: 10,
   },
   gateHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  gateLabel: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
-  gateProgress: { color: Palette.warmMuted, fontSize: 12, fontWeight: '700' },
-  lockMessage: { color: Palette.warmDim, fontSize: 13, fontWeight: '600', lineHeight: 18 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Sp.sm, minHeight: 44 },
-  rowText: { color: Palette.warmWhite, fontSize: 14, fontWeight: '600', flex: 1 },
+  gateLabel: { ...Type.bodyStrong, color: Palette.warmWhite },
+  gateProgress: { ...Type.captionStrong, color: Palette.warmMuted },
+  lockMessage: { ...Type.bodySmall, color: Palette.warmDim },
+  routineRow: { gap: 8, paddingRight: 10 },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, height: 40,
+    paddingHorizontal: 12, borderRadius: R.full, borderWidth: 1,
+    borderColor: Palette.gray, backgroundColor: Palette.bg,
+  },
+  rowText: { ...Type.bodySmall, color: Palette.warmWhite, fontWeight: '700', maxWidth: 170 },
   rowTextDone: { color: Palette.warmDim, textDecorationLine: 'line-through', opacity: 0.7 },
   open: {
     flexDirection: 'row', alignItems: 'center', gap: Sp.sm,
-    paddingVertical: Sp.sm,
+    minHeight: 44, borderRadius: R.sm, borderWidth: 1,
+    borderColor: Palette.gray, backgroundColor: Palette.bgElevated, paddingHorizontal: 12,
   },
-  openText: { color: Palette.violet, fontSize: 13, fontWeight: '700' },
+  openText: { ...Type.button, color: Palette.red },
   sleepReady: {
     flexDirection: 'row', alignItems: 'center', gap: Sp.sm,
-    paddingVertical: Sp.sm,
-    backgroundColor: Palette.bgElevated, borderRadius: R.md,
-    borderWidth: 1, borderColor: Palette.violetDim, padding: Sp.md,
+    minHeight: 44,
+    backgroundColor: Palette.bgElevated, borderRadius: R.sm,
+    borderWidth: 1, borderColor: Palette.gray, padding: Sp.md,
   },
-  sleepReadyText: { color: Palette.violet, fontSize: 15, fontWeight: '800' },
+  sleepReadyCopy: { flex: 1, gap: 2 },
+  sleepReadyText: { ...Type.bodyStrong, color: Palette.red },
+  sleepReadyHint: { ...Type.bodySmall, color: Palette.warmDim },
 });

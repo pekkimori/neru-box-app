@@ -6,13 +6,10 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CandyButton, CandyCard, CandyScreen, StarToken, StatusPill } from '@/components/candy';
 import { CandyColors, CandySpacing } from '@/constants/candy-theme';
+import { todayString } from '../../../features/dreams/time-helpers';
 import { useDailyPlan } from '../../../hooks/useDailyPlan';
 import { useRoutineQuests } from '../../../hooks/useRoutineQuests';
 import type { BlockType } from '../../../types/dreams';
-
-function todayString(): string {
-  return new Date().toISOString().split('T')[0];
-}
 
 const BLOCK_LABELS: Record<BlockType, string> = {
   morning: 'Morning',

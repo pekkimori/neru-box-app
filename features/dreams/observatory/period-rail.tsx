@@ -1,8 +1,8 @@
-// features/dreams/observatory/period-rail.tsx
-import { useEffect, useRef } from 'react';
-import { ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Sp, R } from '../tokens';
+import { Type } from '@/constants/typography';
+import { Palette, R } from '../tokens';
 import type { DisplayPeriod, PeriodConfig, PeriodState } from '../types';
 
 interface Props {
@@ -13,26 +13,81 @@ interface Props {
   onSelect: (period: DisplayPeriod) => void;
 }
 
+type RegularPeriod = Exclude<DisplayPeriod, 'sleep'>;
+
 export function PeriodRail({
   periods, selectedPeriod, periodStateMap, trueActivePeriod, onSelect,
 }: Props) {
-  const scrollRef = useRef<ScrollView>(null);
-  const activeIdx = periods.findIndex((p) => p.key === trueActivePeriod);
+  const [sleepDismissed, setSleepDismissed] = useState(false);
+  const wasSleepTime = useRef(false);
+  const lastRegularPeriod = useRef<RegularPeriod>(
+    selectedPeriod === 'sleep'
+      ? new Date().getHours() < 12 ? 'morning' : 'evening'
+      : selectedPeriod,
+  );
+
+  const regularPeriods = periods.filter(
+    (period): period is PeriodConfig & { key: RegularPeriod } => period.key !== 'sleep',
+  );
+  const sleepPeriod = periods.find((period) => period.key === 'sleep');
+  const isSleepTime = trueActivePeriod === 'sleep' && Boolean(sleepPeriod);
 
   useEffect(() => {
-    if (scrollRef.current && activeIdx >= 0 && activeIdx < periods.length) {
-      scrollRef.current.scrollTo({ x: activeIdx * 90, animated: false });
+    if (selectedPeriod !== 'sleep') lastRegularPeriod.current = selectedPeriod;
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    if (isSleepTime && !wasSleepTime.current) {
+      setSleepDismissed(false);
+      onSelect('sleep');
+    } else if (!isSleepTime) {
+      setSleepDismissed(false);
+      if (wasSleepTime.current && selectedPeriod === 'sleep') {
+        onSelect(lastRegularPeriod.current);
+      }
     }
-  }, [activeIdx, periods.length]);
+    wasSleepTime.current = isSleepTime;
+  }, [isSleepTime, onSelect, selectedPeriod]);
+
+  const dismissSleep = () => {
+    setSleepDismissed(true);
+    if (selectedPeriod === 'sleep') onSelect(lastRegularPeriod.current);
+  };
+
+  if (isSleepTime && !sleepDismissed && sleepPeriod) {
+    return (
+      <View style={styles.sleepControl}>
+        <TouchableOpacity
+          style={styles.sleepMain}
+          onPress={() => onSelect('sleep')}
+          accessibilityRole="tab"
+          accessibilityLabel="Sleep time, active"
+          accessibilityState={{ selected: selectedPeriod === 'sleep' }}
+        >
+          <View style={styles.sleepIcon}>
+            <Ionicons name="bed" size={20} color={Palette.red} />
+          </View>
+          <View style={styles.sleepCopy}>
+            <Text style={styles.sleepLabel}>Sleep time</Text>
+            <Text style={styles.sleepHint}>Your regular periods are paused</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={dismissSleep}
+          accessibilityRole="button"
+          accessibilityLabel="Close sleep time and show regular periods"
+          hitSlop={8}
+        >
+          <Ionicons name="close" size={20} color={Palette.warmDim} />
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      horizontal showsHorizontalScrollIndicator={false}
-      ref={scrollRef}
-      contentContainerStyle={styles.scroll}
-      style={styles.rail}
-    >
-      {periods.map((period) => {
+    <View style={styles.rail} accessibilityRole="tablist">
+      {regularPeriods.map((period) => {
         const state = periodStateMap[period.key];
         const isSelected = period.key === selectedPeriod;
         return (
@@ -48,10 +103,7 @@ export function PeriodRail({
             onPress={() => onSelect(period.key)}
             accessibilityRole="tab"
             accessibilityLabel={`${period.label}, ${state}`}
-            accessibilityState={{
-              selected: isSelected,
-              disabled: false,
-            }}
+            accessibilityState={{ selected: isSelected }}
           >
             <Ionicons
               name={
@@ -63,26 +115,25 @@ export function PeriodRail({
                       ? 'time-outline'
                       : period.icon
               }
-              size={18}
+              size={19}
               color={
                 state === 'active'
                   ? Palette.red
-                  : state === 'locked'
-                    ? Palette.violetDim
-                    : state === 'upcoming'
-                      ? Palette.warmMuted
-                      : isSelected
-                        ? Palette.red
-                        : Palette.warmDim
+                  : state === 'locked' || state === 'upcoming'
+                    ? Palette.warmMuted
+                    : isSelected
+                      ? Palette.red
+                      : Palette.warmDim
               }
             />
             <Text
+              numberOfLines={1}
               style={[
                 styles.label,
                 state === 'active' && styles.labelActive,
-                state === 'locked' && styles.labelLocked,
-                state === 'upcoming' && styles.labelUpcoming,
-                isSelected && !state.match(/active|locked|upcoming/) && styles.labelActive,
+                state === 'locked' && styles.labelMuted,
+                state === 'upcoming' && styles.labelMuted,
+                isSelected && state === 'complete' && styles.labelActive,
               ]}
             >
               {period.label}
@@ -90,24 +141,72 @@ export function PeriodRail({
           </TouchableOpacity>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  rail: { maxHeight: 52 },
-  scroll: { gap: Sp.xs, paddingRight: Sp.lg },
+  rail: {
+    width: '100%',
+    height: 50,
+    flexDirection: 'row',
+    gap: 8,
+  },
   control: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: R.sm,
-    minHeight: 44, minWidth: 80, alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated,
+    flex: 1,
+    minWidth: 0,
+    height: 50,
+    paddingHorizontal: 4,
+    borderRadius: R.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    borderWidth: 1,
+    borderColor: Palette.gray,
+    backgroundColor: Palette.bgElevated,
   },
   controlSelected: { borderColor: Palette.warmWhite },
   controlActive: { borderColor: Palette.red },
-  controlLocked: { borderColor: Palette.violetDim },
+  controlLocked: { borderColor: Palette.gray },
   controlUpcoming: { opacity: 0.45 },
-  label: { color: Palette.warmDim, fontSize: 11, fontWeight: '700' },
+  label: { ...Type.captionStrong, color: Palette.warmDim },
   labelActive: { color: Palette.red },
-  labelLocked: { color: Palette.violetDim },
-  labelUpcoming: { color: Palette.warmMuted },
+  labelMuted: { color: Palette.warmMuted },
+  sleepControl: {
+    width: '100%',
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Palette.red,
+    borderRadius: R.sm,
+    backgroundColor: Palette.bgElevated,
+  },
+  sleepMain: {
+    flex: 1,
+    minWidth: 0,
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 12,
+  },
+  sleepIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: R.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Palette.redSoft,
+  },
+  sleepCopy: { flex: 1, minWidth: 0 },
+  sleepLabel: { ...Type.bodyStrong, color: Palette.red },
+  sleepHint: { ...Type.caption, color: Palette.warmDim, marginTop: 1 },
+  closeButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2,
+  },
 });

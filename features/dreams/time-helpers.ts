@@ -3,20 +3,21 @@
 
 import type { DisplayPeriod, PeriodState } from './types';
 import type { SleepScheduleEntry } from '../../hooks/useSleepSchedule';
+import {
+  formatLocalDate,
+  getMinuteOfDay,
+  isMinuteInRange,
+  parseTimeMinutes,
+  parseLocalDate,
+} from '../../utils/time';
 
-/** Parse "HH:MM" to total minutes. */
-export function parseTimeMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-}
-
-/** Local-calendar YYYY-MM-DD for a supplied Date. Never use UTC-based toISOString for calendar dates. */
-export function formatLocalDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+export {
+  addLocalDays,
+  formatLocalDate,
+  getWeekDateKeys,
+  parseLocalDate,
+  parseTimeMinutes,
+} from '../../utils/time';
 
 /** Local-calendar YYYY-MM-DD for today. Convenience alias for formatLocalDate(new Date()). */
 export function todayString(): string {
@@ -24,22 +25,13 @@ export function todayString(): string {
 }
 
 export function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = parseLocalDate(dateStr);
+  if (!d) return dateStr;
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
-}
-
-/** Return true when nowMin spans the overnight window bedtime→wake (inclusive start). */
-function isOvernightWindow(
-  nowMin: number,
-  bedtimeMin: number,
-  wakeMin: number,
-): boolean {
-  if (bedtimeMin > wakeMin) return nowMin >= bedtimeMin || nowMin < wakeMin;
-  return nowMin >= bedtimeMin && nowMin < wakeMin;
 }
 
 /**
@@ -48,9 +40,9 @@ function isOvernightWindow(
  */
 export function getActivePeriod(
   activeSleep: SleepScheduleEntry | null,
+  now = new Date(),
 ): DisplayPeriod {
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowMin = getMinuteOfDay(now);
 
   const morningEnd = 12 * 60;
   const afternoonEnd = 18 * 60;
@@ -64,8 +56,14 @@ export function getActivePeriod(
   const bedtimeMin = parseTimeMinutes(activeSleep.bedtime);
   const wakeMin = parseTimeMinutes(activeSleep.wakeTime);
 
+  if (bedtimeMin === null || wakeMin === null) {
+    if (nowMin >= 5 * 60 && nowMin < morningEnd) return 'morning';
+    if (nowMin >= morningEnd && nowMin < afternoonEnd) return 'afternoon';
+    return 'evening';
+  }
+
   // Sleep window checked first so pre-wake morning hours stay sleep
-  if (isOvernightWindow(nowMin, bedtimeMin, wakeMin)) return 'sleep';
+  if (isMinuteInRange(nowMin, bedtimeMin, wakeMin)) return 'sleep';
 
   if (nowMin >= wakeMin && nowMin < morningEnd) return 'morning';
   if (nowMin >= morningEnd && nowMin < afternoonEnd) return 'afternoon';

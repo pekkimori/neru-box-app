@@ -12,18 +12,21 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Palette, Sp, R } from '../../features/dreams/tokens';
-import { loadGalaxyStars } from '../../features/dreams/galaxy/galaxy-loader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Sp, R } from '../../features/dreams/tokens';
+import { hideGalaxyStar, loadGalaxyStars } from '../../features/dreams/galaxy/galaxy-loader';
 import { GalaxyCanvas } from '../../features/dreams/galaxy/galaxy-canvas';
 import { GalaxyListView } from '../../features/dreams/galaxy/galaxy-list-view';
 import { StarInfoCard } from '../../features/dreams/galaxy/star-info-card';
-import type { GalaxyStar, GalaxyNebula } from '../../features/dreams/galaxy/galaxy-geometry';
+import { GalaxyPalette } from '../../features/dreams/galaxy/galaxy-theme';
+import type { GalaxyStar, GalaxyDomain } from '../../features/dreams/galaxy/galaxy-geometry';
 
 export default function GalaxyScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [stars, setStars] = useState<GalaxyStar[]>([]);
-  const [nebulas, setNebulas] = useState<GalaxyNebula[]>([]);
+  const [domains, setDomains] = useState<GalaxyDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [partialError, setPartialError] = useState(false);
   const [listView, setListView] = useState(false);
@@ -42,7 +45,7 @@ export default function GalaxyScreen() {
     loadGalaxyStars().then((result) => {
       if (!cancelled) {
         setStars(result.stars);
-        setNebulas(result.nebulas);
+        setDomains(result.domains);
         setPartialError(result.partialError);
         setLoading(false);
       }
@@ -51,6 +54,14 @@ export default function GalaxyScreen() {
   }, []);
 
   const handleBack = useCallback(() => router.back(), [router]);
+  const handleDeleteStar = useCallback(async (star: GalaxyStar) => {
+    await hideGalaxyStar(star);
+    const result = await loadGalaxyStars();
+    setStars(result.stars);
+    setDomains(result.domains);
+    setPartialError(result.partialError);
+    setSelectedStar(null);
+  }, []);
 
   if (loading) {
     return (
@@ -75,7 +86,7 @@ export default function GalaxyScreen() {
           accessibilityRole="button"
           accessibilityLabel="Return to Observatory"
         >
-          <Ionicons name="arrow-back" size={16} color={Palette.warmDim} />
+          <Ionicons name="arrow-back" size={16} color={GalaxyPalette.textDim} />
           <Text style={styles.returnText}>Return to Observatory</Text>
         </TouchableOpacity>
       </View>
@@ -85,7 +96,7 @@ export default function GalaxyScreen() {
   return (
     <View style={styles.full}>
       {/* Top bar: back + toggle */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={handleBack}
@@ -93,19 +104,24 @@ export default function GalaxyScreen() {
           accessibilityLabel="Return to Observatory"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="arrow-back" size={22} color={Palette.warmDim} />
+          <Ionicons name="arrow-back" size={22} color={GalaxyPalette.textDim} />
         </TouchableOpacity>
+
+        <View style={styles.heading}>
+          <Text style={styles.eyebrow}>SKY OBSERVER</Text>
+          <Text style={styles.title}>Archive</Text>
+        </View>
 
         <View style={styles.toggle}>
           <TouchableOpacity
             style={[styles.toggleBtn, !listView && styles.toggleActive]}
             onPress={() => setListView(false)}
             accessibilityRole="button"
-            accessibilityLabel="Switch to galaxy view"
+            accessibilityLabel="Switch to network view"
             accessibilityState={{ selected: !listView }}
           >
-            <Ionicons name="grid-outline" size={16} color={!listView ? Palette.red : Palette.warmDim} />
-            <Text style={[styles.toggleText, !listView && { color: Palette.red }]}>Galaxy</Text>
+            <Ionicons name="git-network-outline" size={16} color={!listView ? GalaxyPalette.text : GalaxyPalette.textMuted} />
+            <Text style={[styles.toggleText, !listView && styles.toggleTextActive]}>Network</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -115,8 +131,8 @@ export default function GalaxyScreen() {
             accessibilityLabel="Switch to list view"
             accessibilityState={{ selected: listView }}
           >
-            <Ionicons name="list-outline" size={16} color={listView ? Palette.red : Palette.warmDim} />
-            <Text style={[styles.toggleText, listView && { color: Palette.red }]}>List</Text>
+            <Ionicons name="list-outline" size={16} color={listView ? GalaxyPalette.text : GalaxyPalette.textMuted} />
+            <Text style={[styles.toggleText, listView && styles.toggleTextActive]}>List</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -124,7 +140,7 @@ export default function GalaxyScreen() {
       {/* Partial error banner */}
       {partialError && (
         <View style={styles.banner}>
-          <Ionicons name="warning-outline" size={14} color={Palette.warmDim} />
+          <Ionicons name="warning-outline" size={14} color={GalaxyPalette.textDim} />
           <Text style={styles.bannerText}>Some older entries could not be loaded.</Text>
           <TouchableOpacity
             onPress={() => setPartialError(false)}
@@ -133,7 +149,7 @@ export default function GalaxyScreen() {
             accessibilityState={{ disabled: false }}
             style={styles.dismissBtn}
           >
-            <Ionicons name="close" size={16} color={Palette.warmDim} />
+            <Ionicons name="close" size={16} color={GalaxyPalette.textDim} />
           </TouchableOpacity>
         </View>
       )}
@@ -142,37 +158,45 @@ export default function GalaxyScreen() {
       {listView ? (
         <GalaxyListView stars={stars} onStarSelect={setSelectedStar} />
       ) : (
-        <GalaxyCanvas stars={stars} nebulas={nebulas} onStarSelect={setSelectedStar} />
+        <GalaxyCanvas stars={stars} domains={domains} onStarSelect={setSelectedStar} />
       )}
 
       {selectedStar !== null && (
-        <StarInfoCard star={selectedStar} onClose={() => setSelectedStar(null)} />
+        <StarInfoCard
+          star={selectedStar}
+          onClose={() => setSelectedStar(null)}
+          onDelete={handleDeleteStar}
+        />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  full: { flex: 1, backgroundColor: Palette.bg },
+  full: { flex: 1, backgroundColor: GalaxyPalette.bg },
 
-  loadingText: { color: Palette.warmDim, fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 260 },
+  loadingText: { color: GalaxyPalette.textDim, fontSize: 16, fontWeight: '600', textAlign: 'center', marginTop: 260 },
 
   emptyOrbit: { alignSelf: 'center', marginTop: 200, width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
-  emptyRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: Palette.violetDim },
-  emptyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.warmDim },
-  emptyTitle: { color: Palette.warmWhite, fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: Sp.lg },
-  emptyText: { color: Palette.warmDim, fontSize: 14, textAlign: 'center', marginTop: Sp.sm },
-  returnBtn: { flexDirection: 'row', alignItems: 'center', gap: Sp.xs, alignSelf: 'center', marginTop: Sp.lg, paddingHorizontal: 16, paddingVertical: 10, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, minHeight: 44 },
-  returnText: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
+  emptyRing: { position: 'absolute', width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: GalaxyPalette.border },
+  emptyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: GalaxyPalette.textDim },
+  emptyTitle: { color: GalaxyPalette.text, fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: Sp.lg },
+  emptyText: { color: GalaxyPalette.textDim, fontSize: 14, textAlign: 'center', marginTop: Sp.sm },
+  returnBtn: { flexDirection: 'row', alignItems: 'center', gap: Sp.xs, alignSelf: 'center', marginTop: Sp.lg, paddingHorizontal: 16, paddingVertical: 10, borderRadius: R.sm, borderWidth: 1, borderColor: GalaxyPalette.border, minHeight: 44 },
+  returnText: { color: GalaxyPalette.textDim, fontSize: 14, fontWeight: '800' },
 
-  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 56, paddingBottom: Sp.xs, gap: Sp.sm },
-  backBtn: { width: 44, height: 44, borderRadius: R.full, backgroundColor: Palette.bgRaised, borderWidth: 1, borderColor: Palette.gray, alignItems: 'center', justifyContent: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 10, gap: Sp.sm, borderBottomWidth: 1, borderBottomColor: GalaxyPalette.border },
+  backBtn: { width: 44, height: 44, borderRadius: R.full, backgroundColor: GalaxyPalette.surface, borderWidth: 1, borderColor: GalaxyPalette.border, alignItems: 'center', justifyContent: 'center' },
+  heading: { justifyContent: 'center', flexShrink: 1 },
+  eyebrow: { color: GalaxyPalette.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1.2 },
+  title: { color: GalaxyPalette.text, fontSize: 19, lineHeight: 22, fontWeight: '800' },
   toggle: { flexDirection: 'row', gap: Sp.xs, marginLeft: 'auto' },
-  toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated, minHeight: 44 },
-  toggleActive: { borderColor: Palette.red },
-  toggleText: { color: Palette.warmDim, fontSize: 13, fontWeight: '800' },
+  toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: R.sm, borderWidth: 1, borderColor: GalaxyPalette.border, backgroundColor: GalaxyPalette.surface, minHeight: 44 },
+  toggleActive: { borderColor: GalaxyPalette.textMuted, backgroundColor: GalaxyPalette.surfaceRaised },
+  toggleText: { color: GalaxyPalette.textMuted, fontSize: 12, fontWeight: '800' },
+  toggleTextActive: { color: GalaxyPalette.text },
 
-  banner: { flexDirection: 'row', alignItems: 'center', gap: Sp.xs, paddingHorizontal: Sp.sm, paddingVertical: Sp.xs, backgroundColor: Palette.bgElevated, borderBottomWidth: 1, borderBottomColor: Palette.gray, minHeight: 44 },
-  bannerText: { color: Palette.warmDim, fontSize: 12, fontWeight: '600', flex: 1 },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: Sp.xs, paddingHorizontal: Sp.sm, paddingVertical: Sp.xs, backgroundColor: GalaxyPalette.surface, borderBottomWidth: 1, borderBottomColor: GalaxyPalette.border, minHeight: 44 },
+  bannerText: { color: GalaxyPalette.textDim, fontSize: 12, fontWeight: '600', flex: 1 },
   dismissBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,232 +1,234 @@
-// app/(tabs)/index.tsx
-// Thin orchestration shell for the Focused Observatory.
-
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { PhotoCompletionModal } from '@/components/candy';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { BlockType, Star } from '../../types/dreams';
-import { removeStarRefsFromAllPlans } from '../../features/dreams/observatory/plans-cleanup';
-
-import { Palette, Sp } from '../../features/dreams/tokens';
-import { useObservatoryData } from '../../features/dreams/observatory/use-observatory-data';
+import { Type } from '@/constants/typography';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ConstellationCanvas } from '../../features/dreams/observatory/constellation-canvas';
 import { ObservatoryHeader } from '../../features/dreams/observatory/observatory-header';
 import { PeriodRail } from '../../features/dreams/observatory/period-rail';
 import { RoutineGate } from '../../features/dreams/observatory/routine-gate';
-import { ConstellationCanvas } from '../../features/dreams/observatory/constellation-canvas';
-import { NebulaDeck } from '../../features/dreams/observatory/nebula-deck';
-import { BottomToolbar } from '../../features/dreams/observatory/bottom-toolbar';
 import { StarTaskList } from '../../features/dreams/observatory/star-task-list';
-import { AddStarModal, AddConstellationModal } from '../../features/dreams/observatory/add-modals';
-import {
-  DeleteStarConfirmModal,
-  DeleteConstellationConfirmModal,
-} from '../../features/dreams/observatory/delete-modals';
+import { useObservatoryData } from '../../features/dreams/observatory/use-observatory-data';
+import { Palette, R, Sp } from '../../features/dreams/tokens';
+import type { BlockType, Star } from '../../types/dreams';
 
-export default function DreamsHub() {
+export default function DreamsToday() {
   const router = useRouter();
   const d = useObservatoryData();
+  const [photoVisible, setPhotoVisible] = useState(false);
+  const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
 
-  const [starOpen, setStarOpen] = useState(false);
-  const [consOpen, setConsOpen] = useState(false);
-  const [delStar, setDelStar] = useState<Star | null>(null);
-  const [delCons, setDelCons] = useState<{ id: string; name: string } | null>(null);
-  const [delConsBusy, setDelConsBusy] = useState(false);
-  const [photoVis, setPhotoVis] = useState(false);
-  const [pc, setPc] = useState<{ star: Star; block: BlockType } | null>(null);
+  const dailyProgress = useMemo(() => {
+    const tasks = (['morning', 'afternoon', 'evening'] as BlockType[])
+      .flatMap((block) => d.plan.blocks[block] ?? []);
+    return { lit: tasks.filter((task) => task.status === 'lit').length, total: tasks.length };
+  }, [d.plan.blocks]);
 
-  const openAddStar = () => {
-    if (d.constellations.length === 0) { setConsOpen(true); return; }
-    setStarOpen(true);
-  };
-
-  const handleAddStar = async (p: {
-    constellationId: string; label: string; block: BlockType; date: string | null;
-  }): Promise<boolean> => {
-    if (p.date === null) { d.addStar(p.constellationId, p.label); d.reloadWeekly(); return true; }
-    if (p.date !== d.today) {
-      const key = `@neru/plans/${p.date}`;
-      const raw = await AsyncStorage.getItem(key);
-      const tp = raw ? JSON.parse(raw)
-        : { date: p.date, blocks: { morning: [], afternoon: [], evening: [] }, reflections: {} };
-      if (tp.blocks[p.block].length >= 4) { Alert.alert('That block is full', 'Pick a different time block.'); return false; }
-      const id = d.addStar(p.constellationId, p.label);
-      tp.blocks[p.block].push({ starId: id, constellationId: p.constellationId, status: 'unlit', coinsEarned: 0 });
-      await AsyncStorage.setItem(key, JSON.stringify(tp));
-      d.reloadWeekly();
-      return true;
-    }
-    if (d.plan.blocks[p.block].length >= 4) { Alert.alert('That block is full', 'Pick a different time block.'); return false; }
-    const id = d.addStar(p.constellationId, p.label);
-    d.assignTask(id, p.constellationId, p.block);
-    d.reloadWeekly();
-    return true;
-  };
+  const selectedLabel = d.periods.find((period) => period.key === d.selectedPeriod)?.label ?? 'Today';
+  const selectedLit = d.filteredTodayTasks.filter(({ task }) => task.status === 'lit').length;
 
   const promptStarCompletion = (star: Star) => {
     const planned = d.plannedByStar.get(star.id);
-    if (!planned) {
-      Alert.alert('Plan first', 'Add this star to a time block before completing it.', [
-        { text: 'Not now' }, { text: 'Planning', onPress: () => router.push('/dreams/plan') },
-      ]);
-      return;
-    }
-    if (planned.status === 'lit') { Alert.alert('Already lit', `${star.label} is complete.`); return; }
+    if (!planned) return;
+    if (planned.status === 'lit') return;
 
     const gate = d.canCompleteBlock(planned.block);
     if (!gate.can) {
-      const msg = gate.reason === 'sleep_window'
-        ? 'Sleep window is active. Tasks are paused until morning.'
-        : "This period hasn't started yet.";
-      Alert.alert('Cannot complete', msg);
-      return;
-    }
-
-    const quests = d.getQuestsForBlock(planned.block);
-    const done = quests.length === 0 || quests.every((q) => d.isQuestComplete(q.id));
-    if (!done) {
-      const periodLabel = planned.block.charAt(0).toUpperCase() + planned.block.slice(1);
       Alert.alert(
-        `${periodLabel} routines not done`,
-        `Complete your ${planned.block} routines before lighting this star.`,
-        [
-          { text: 'Not now' },
-          { text: 'Go to routines', onPress: () => d.setSelectedPeriod(planned.block) },
-        ],
+        'Not available yet',
+        gate.reason === 'sleep_mode'
+          ? 'Sleep mode is active. Regular tasks will be available again after your sleep session.'
+          : 'This period has not started yet.',
       );
       return;
     }
-    setPc({ star, block: planned.block });
-    setPhotoVis(true);
+
+    const routines = d.getQuestsForBlock(planned.block);
+    const routinesDone = routines.length === 0 || routines.every((routine) => d.isQuestComplete(routine.id));
+    if (!routinesDone) {
+      Alert.alert('Finish routines first', `Complete the ${selectedLabel.toLowerCase()} routine checklist above to unlock this task.`);
+      return;
+    }
+
+    setPendingCompletion({ star, block: planned.block });
+    setPhotoVisible(true);
   };
 
   const handlePhotoComplete = (uri: string) => {
-    if (!pc) return;
-    d.updateTaskStatus(pc.star.id, pc.block, 'lit', uri);
-    d.awardCoins(pc.star.id, pc.block, 10);
+    if (!pendingCompletion) return;
+    d.updateTaskStatus(pendingCompletion.star.id, pendingCompletion.block, 'lit', uri);
+    d.awardCoins(pendingCompletion.star.id, pendingCompletion.block, 10);
     d.addCoins(10);
-    setPhotoVis(false);
-    setPc(null);
-  };
-
-  const deleteStarFromToday = (star: Star) => {
-    const planned = d.plannedByStar.get(star.id);
-    if (planned) d.removeTask(star.id, planned.block);
-    d.deleteStar(star.id);
-  };
-
-  const promptDeleteStar = (star: Star) => {
-    const planned = d.plannedByStar.get(star.id);
-    if (planned?.status === 'lit') { setDelStar(star); return; }
-    deleteStarFromToday(star);
-  };
-
-  const confirmDelStar = () => { if (delStar) { deleteStarFromToday(delStar); setDelStar(null); } };
-
-  const confirmDelCons = async () => {
-    if (!delCons || delConsBusy) return;
-    setDelConsBusy(true);
-    try {
-      const nebulaStars = d.stars.filter((s) => s.constellationId === delCons.id);
-      const starIds = new Set(nebulaStars.map((s) => s.id));
-      for (const star of nebulaStars) {
-        const p = d.plannedByStar.get(star.id);
-        if (p) d.removeTask(star.id, p.block);
-      }
-      await removeStarRefsFromAllPlans(starIds);
-      d.deleteConstellation(delCons.id);
-    } finally {
-      setDelCons(null);
-      setDelConsBusy(false);
-      d.reloadWeekly();
-    }
+    setPhotoVisible(false);
+    setPendingCompletion(null);
   };
 
   if (!d.loaded) {
     return (
-      <SafeAreaView style={S.safe} edges={['top', 'left', 'right']}>
-        <View style={S.skel}>
-          <View style={S.skB} /><View style={[S.skB, { height: 48 }]} />
-          <View style={[S.skB, { height: 90 }]} /><View style={[S.skB, { height: Sp.canvas }]} />
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <View style={styles.skeleton}>
+          <View style={styles.skeletonBlock} />
+          <View style={[styles.skeletonBlock, { height: 42 }]} />
+          <View style={[styles.skeletonBlock, { height: 84 }]} />
+          <View style={[styles.skeletonBlock, { height: 120 }]} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={S.safe} edges={['top', 'left', 'right']}>
-      <ScrollView style={S.scr} contentContainerStyle={S.scroll} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.dashboard}
+        showsVerticalScrollIndicator={false}
+      >
         <ObservatoryHeader
-          date={d.today} litCount={d.weekProgress.lit} totalPlanned={d.weekProgress.total}
-          coins={d.coins} starsCount={d.stars.length} onAddStar={openAddStar}
+          date={d.today}
+          litCount={dailyProgress.lit}
+          totalPlanned={dailyProgress.total}
+          coins={d.coins}
+          streakDays={d.productivityStreak}
         />
+
         <PeriodRail
-          periods={d.periods} selectedPeriod={d.selectedPeriod}
-          periodStateMap={d.periodStateMap} trueActivePeriod={d.trueActivePeriod}
+          periods={d.periods}
+          selectedPeriod={d.selectedPeriod}
+          periodStateMap={d.periodStateMap}
+          trueActivePeriod={d.trueActivePeriod}
           onSelect={d.setSelectedPeriod}
         />
+
         <RoutineGate
-          routines={d.displayRoutines} isComplete={d.isQuestComplete}
-          tasksUnlocked={d.tasksUnlocked} isSleepWindow={d.isSleepWindow}
-          sleepReady={d.sleepReady} readOnly={d.routinesReadOnly}
-          sleepBlocked={d.sleepBlocked} onToggle={d.toggleQuestComplete}
+          routines={d.displayRoutines}
+          isComplete={d.isQuestComplete}
+          tasksUnlocked={d.tasksUnlocked}
+          isSleepPeriod={d.selectedPeriod === 'sleep'}
+          sleepReady={d.sleepReady}
+          readOnly={d.routinesReadOnly}
+          sleepBlocked={d.sleepBlocked}
+          onToggle={d.toggleQuestComplete}
         />
+
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionCopy}>
+            <Text style={styles.sectionTitle}>
+              {d.selectedPeriod === 'sleep' ? 'Sleep mode' : `${selectedLabel} tasks`}
+            </Text>
+            <Text style={styles.sectionHint}>
+              {d.selectedPeriod === 'sleep'
+                ? 'Regular tasks are paused while you wind down'
+                : d.tasksUnlocked
+                  ? 'Ready when you are'
+                  : 'Complete the routine checklist to unlock'}
+            </Text>
+          </View>
+          {d.selectedPeriod !== 'sleep' && (
+            <View style={styles.countPill}>
+              <Text style={styles.countText}>{selectedLit}/{d.filteredTodayTasks.length}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.taskPanel}>
+          {d.selectedPeriod === 'sleep' ? (
+            <View style={styles.sleepTasksBlocked}>
+              <Ionicons name="bed-outline" size={23} color={Palette.red} />
+              <View style={styles.emptyCopy}>
+                <Text style={styles.emptyTitle}>Tasks are paused</Text>
+                <Text style={styles.emptyText}>
+                  {d.sleepReady
+                    ? 'Your sleep intent is saved for this session.'
+                    : 'Complete the sleep routine above when you are ready for bed.'}
+                </Text>
+              </View>
+            </View>
+          ) : d.filteredTodayTasks.length === 0 ? (
+            <View style={styles.emptyTasks}>
+              <Ionicons name="calendar-outline" size={20} color={Palette.warmMuted} />
+              <View style={styles.emptyCopy}>
+                <Text style={styles.emptyTitle}>Nothing planned for {selectedLabel.toLowerCase()}</Text>
+                <Text style={styles.emptyText}>Add tasks for any domain in Weekly Studio.</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.planButton}
+                onPress={() => router.push('/dreams/plan')}
+                accessibilityRole="button"
+                accessibilityLabel="Open Weekly Studio"
+              >
+                <Text style={styles.planButtonText}>Plan</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <StarTaskList
+              tasks={d.filteredTodayTasks}
+              stars={d.stars}
+              constellations={d.constellations}
+              tasksUnlocked={d.tasksUnlocked}
+              onStarPress={promptStarCompletion}
+            />
+          )}
+        </View>
+
+        <View style={styles.skyHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Your sky</Text>
+            <Text style={styles.sectionHint}>Completed tasks stay lit in place</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.archiveButton}
+            onPress={() => router.push('/dreams/galaxy')}
+            accessibilityRole="button"
+            accessibilityLabel="Open completed stars archive"
+          >
+            <Ionicons name="infinite" size={17} color={Palette.warmDim} />
+            <Text style={styles.archiveText}>Archive</Text>
+          </TouchableOpacity>
+        </View>
+
         <ConstellationCanvas
-          tasks={d.filteredTodayTasks.map(({ task }) => task)} stars={d.stars}
-          constellations={d.constellations} selectedNebulaId={d.selectedNebulaId}
-          tasksUnlocked={d.tasksUnlocked} onStarPress={promptStarCompletion} onAddStar={openAddStar}
-        />
-        <NebulaDeck
-          constellations={d.constellations} stars={d.stars} plan={d.plan}
-          editMode={d.editMode} selectedNebulaId={d.selectedNebulaId}
-          onSelect={d.setSelectedNebulaId} onDelete={(id, name) => setDelCons({ id, name })}
-        />
-        <BottomToolbar
-          editMode={d.editMode} onToggleEdit={() => d.setEditMode((v) => !v)}
-          onAddNebula={() => setConsOpen(true)}
-        />
-        <StarTaskList
-          tasks={d.filteredTodayTasks} stars={d.stars}
-          constellations={d.constellations} editMode={d.editMode}
-          onStarPress={promptStarCompletion} onDeleteStar={promptDeleteStar}
+          tasks={d.dailyVisorTasks}
+          stars={d.stars}
+          constellations={d.constellations}
+          selectedBlock={d.selectedBlock}
+          onStarPress={promptStarCompletion}
+          height={260}
         />
       </ScrollView>
 
-      <AddStarModal
-        visible={starOpen} constellations={d.constellations}
-        weekDays={d.weekDays} plan={{ blocks: d.plan.blocks }}
-        selectedBlock={d.selectedBlock} onClose={() => setStarOpen(false)}
-        onSubmit={handleAddStar}
-      />
-      <AddConstellationModal
-        visible={consOpen} onClose={() => setConsOpen(false)}
-        onSubmit={(name, icon) => { d.addConstellation(name, icon); return true; }}
-      />
-      <DeleteStarConfirmModal
-        visible={delStar !== null} starLabel={delStar?.label ?? ''}
-        onClose={() => setDelStar(null)} onConfirm={confirmDelStar}
-      />
-      <DeleteConstellationConfirmModal
-        visible={delCons !== null} name={delCons?.name ?? ''}
-        busy={delConsBusy}
-        onClose={() => { if (!delConsBusy) setDelCons(null); }}
-        onConfirm={confirmDelCons}
-      />
       <PhotoCompletionModal
-        visible={photoVis} taskLabel={pc?.star.label ?? ''}
+        visible={photoVisible}
+        taskLabel={pendingCompletion?.star.label ?? ''}
         onComplete={handlePhotoComplete}
-        onCancel={() => { setPhotoVis(false); setPc(null); }}
+        onCancel={() => { setPhotoVisible(false); setPendingCompletion(null); }}
       />
     </SafeAreaView>
   );
 }
 
-const S = StyleSheet.create({
+const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.bg },
-  scr: { flex: 1 },
-  scroll: { paddingHorizontal: Sp.lg, paddingTop: Sp.lg, paddingBottom: Sp.bottom, gap: Sp.lg },
-  skel: { gap: Sp.md, paddingHorizontal: Sp.lg, paddingTop: Sp.lg },
-  skB: { height: 56, backgroundColor: Palette.bgElevated, borderRadius: 8 },
+  scroll: { flex: 1 },
+  dashboard: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 104 : 92, gap: 14 },
+  sectionHeader: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  sectionCopy: { flex: 1, minWidth: 0 },
+  sectionTitle: { ...Type.sectionTitle, color: Palette.warmWhite },
+  sectionHint: { ...Type.bodySmall, color: Palette.warmMuted, marginTop: 3 },
+  countPill: { minWidth: 42, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: R.full, backgroundColor: Palette.redSoft },
+  countText: { ...Type.buttonSmall, color: Palette.red },
+  taskPanel: { minHeight: 96, justifyContent: 'center', backgroundColor: Palette.bgElevated, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, padding: 12 },
+  sleepTasksBlocked: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+  emptyTasks: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+  emptyCopy: { flex: 1, minWidth: 0 },
+  emptyTitle: { ...Type.bodyStrong, color: Palette.warmWhite },
+  emptyText: { ...Type.bodySmall, color: Palette.warmMuted, marginTop: 3 },
+  planButton: { height: 40, justifyContent: 'center', paddingHorizontal: 14, borderRadius: R.sm, backgroundColor: Palette.redSoft },
+  planButtonText: { ...Type.buttonSmall, color: Palette.red },
+  skyHeader: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  archiveButton: { flexDirection: 'row', alignItems: 'center', gap: 7, height: 40, paddingHorizontal: 13, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
+  archiveText: { ...Type.buttonSmall, color: Palette.warmDim },
+  skeleton: { gap: Sp.md, paddingHorizontal: Sp.lg, paddingTop: Sp.lg },
+  skeletonBlock: { height: 56, backgroundColor: Palette.bgElevated, borderRadius: R.sm },
 });

@@ -23,7 +23,7 @@ const S = StyleSheet.create({
     backgroundColor: Palette.red, borderRadius: R.md,
     paddingVertical: 10, minHeight: 44,
   },
-  btnPrimaryText: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
+  btnPrimaryText: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
   btnSecondary: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray,
@@ -56,7 +56,7 @@ export function DeleteStarConfirmModal({
               <Text style={S.btnSecondaryText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={S.btnPrimary} onPress={onConfirm}>
-              <Ionicons name="trash" size={16} color={Palette.warmWhite} />
+              <Ionicons name="trash" size={16} color={Palette.onRed} />
               <Text style={S.btnPrimaryText}>Delete</Text>
             </TouchableOpacity>
           </View>
@@ -93,7 +93,7 @@ export function DeleteConstellationConfirmModal({
               onPress={onConfirm}
               disabled={busy}
             >
-              <Ionicons name="trash" size={16} color={Palette.warmWhite} />
+              <Ionicons name="trash" size={16} color={Palette.onRed} />
               <Text style={S.btnPrimaryText}>{busy ? 'Deleting…' : 'Delete'}</Text>
             </TouchableOpacity>
           </View>

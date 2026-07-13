@@ -21,15 +21,12 @@ import {
     View,
 } from "react-native";
 import { NeruColors } from "../../../constants/neru-theme";
+import { todayString } from "../../../features/dreams/time-helpers";
 import { useCoins } from "../../../hooks/useCoins";
 import { useConstellations } from "../../../hooks/useConstellations";
 import { useDailyPlan } from "../../../hooks/useDailyPlan";
 import { useRoutineQuests } from "../../../hooks/useRoutineQuests";
 import type { BlockType, PlannedTask } from "../../../types/dreams";
-
-function todayString(): string {
-  return new Date().toISOString().split("T")[0];
-}
 
 const BLOCK_TITLES: Record<
   BlockType,

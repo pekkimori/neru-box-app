@@ -12,8 +12,10 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native';
-import { Palette, Sp, R } from '../tokens';
-import type { GalaxyStar } from './galaxy-geometry';
+import { Sp, R } from '../tokens';
+import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
+import { compareByCompletion } from './galaxy-edges';
+import { GalaxyPalette } from './galaxy-theme';
 
 interface Props {
   stars: GalaxyStar[];
@@ -36,6 +38,7 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
       (s) =>
         s.label.toLowerCase().includes(q) ||
         s.constellationName.toLowerCase().includes(q) ||
+        formatCompletionDate(s.completionDate).toLowerCase().includes(q) ||
         s.weekLabel.toLowerCase().includes(q) ||
         s.isoWeek.toLowerCase().includes(q),
     );
@@ -50,15 +53,19 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
       groups.set(key, g);
     }
     return [...groups.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
+      .sort((a, b) => (
+        b[1][0].isoWeek.localeCompare(a[1][0].isoWeek)
+        || a[1][0].constellationName.localeCompare(b[1][0].constellationName)
+      ))
       .map(([key, data]) => {
         const first = data[0];
         const sorted = [...data].sort(
-          (a, b) => b.completionDate.localeCompare(a.completionDate),
+          (a, b) => b.completionDate.localeCompare(a.completionDate)
+            || compareByCompletion(b, a),
         );
         return {
           key,
-          title: `${first.constellationIcon} ${first.constellationName}  ·  ${first.weekLabel}`,
+          title: `${first.constellationName}  ·  ${first.weekLabel}`,
           data: sorted,
         };
       });
@@ -70,17 +77,19 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={() => onStarSelect(item)}
         accessibilityRole="button"
-        accessibilityLabel={`${item.label}, ${item.constellationName}, completed ${item.completionDate}, ${item.coinsEarned} coins earned`}
+        accessibilityLabel={`${item.label}, ${item.constellationName}, completed ${formatCompletionDate(item.completionDate)}, ${item.coinsEarned} coins earned`}
       >
         <View style={styles.rowIcon}>
-          <View style={styles.starDot} />
+          <View style={[styles.starHalo, { backgroundColor: `${item.domainColor}26` }]}>
+            <View style={[styles.starDot, { backgroundColor: item.domainColor }]} />
+          </View>
         </View>
         <View style={styles.rowContent}>
           <Text style={styles.starLabel} numberOfLines={1}>
             {item.label}
           </Text>
           <Text style={styles.starMeta}>
-            {item.completionDate}
+            {formatCompletionDate(item.completionDate)}
           </Text>
         </View>
         <Text style={styles.coins}>{item.coinsEarned}</Text>
@@ -123,8 +132,8 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search by label, nebula, or week…"
-          placeholderTextColor={Palette.warmMuted}
+          placeholder="Search by task, domain, or date…"
+          placeholderTextColor={GalaxyPalette.textMuted}
           accessibilityLabel="Search stars"
           autoCorrect={false}
           autoCapitalize="none"
@@ -145,27 +154,27 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: GalaxyPalette.bg },
   searchBar: {
     paddingHorizontal: Sp.lg,
     paddingTop: Sp.sm,
     paddingBottom: Sp.xs,
   },
   searchInput: {
-    backgroundColor: Palette.bgElevated,
+    backgroundColor: GalaxyPalette.surface,
     borderWidth: 1,
-    borderColor: Palette.gray,
+    borderColor: GalaxyPalette.border,
     borderRadius: R.sm,
     paddingHorizontal: Sp.sm,
     paddingVertical: 10,
-    color: Palette.warmWhite,
+    color: GalaxyPalette.text,
     fontSize: 14,
     fontWeight: '600',
     minHeight: 44,
   },
   list: { paddingHorizontal: Sp.lg, paddingBottom: 120 },
   emptyText: {
-    color: Palette.warmDim,
+    color: GalaxyPalette.textDim,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
@@ -179,13 +188,13 @@ const styles = StyleSheet.create({
     paddingBottom: Sp.sm,
   },
   sectionTitle: {
-    color: Palette.warmWhite,
+    color: GalaxyPalette.text,
     fontSize: 13,
     fontWeight: '800',
     flex: 1,
   },
   sectionCount: {
-    color: Palette.warmDim,
+    color: GalaxyPalette.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -195,14 +204,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: Sp.sm,
     borderRadius: R.sm,
-    backgroundColor: Palette.bgElevated,
+    backgroundColor: GalaxyPalette.surface,
     borderWidth: 1,
-    borderColor: Palette.gray,
+    borderColor: GalaxyPalette.border,
     marginBottom: Sp.xs,
     minHeight: 52,
   },
   rowPressed: {
-    borderColor: Palette.red,
+    borderColor: GalaxyPalette.textMuted,
   },
   rowIcon: {
     width: 32,
@@ -211,26 +220,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: Sp.sm,
   },
+  starHalo: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   starDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Palette.warmWhite,
   },
   rowContent: { flex: 1 },
   starLabel: {
-    color: Palette.warmWhite,
+    color: GalaxyPalette.text,
     fontSize: 14,
     fontWeight: '700',
   },
   starMeta: {
-    color: Palette.warmDim,
+    color: GalaxyPalette.textDim,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 2,
   },
   coins: {
-    color: Palette.warmDim,
+    color: GalaxyPalette.textDim,
     fontSize: 13,
     fontWeight: '800',
     marginLeft: Sp.sm,

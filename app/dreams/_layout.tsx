@@ -15,7 +15,7 @@ export default function DreamsLayout() {
     >
       <Stack.Screen name="constellations" options={{ title: 'Constellations' }} />
       <Stack.Screen name="constellation/[id]" options={{ title: 'Constellation' }} />
-      <Stack.Screen name="plan" options={{ title: 'Plan Your Week' }} />
+      <Stack.Screen name="plan" options={{ headerShown: false }} />
       <Stack.Screen name="block/[blockId]" options={{ title: '' }} />
       <Stack.Screen name="camera" options={{ title: 'Take Photo', presentation: 'modal' }} />
       <Stack.Screen name="reflection/[blockId]" options={{ title: 'Reflection', headerBackVisible: false }} />

@@ -1,18 +1,18 @@
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { EditorialColors } from '@/constants/editorial-theme';
 
-import { NeruProvider } from '@/context/NeruContext';
-
-const NeruDarkTheme = {
-  ...DarkTheme,
+const NeruTheme = {
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
-    background: '#02020e',
-    card: '#06060f',
-    border: 'rgba(255,255,255,0.05)',
-    primary: '#a78bfa',
+    ...DefaultTheme.colors,
+    background: EditorialColors.white,
+    card: EditorialColors.white,
+    border: EditorialColors.line,
+    primary: EditorialColors.red,
+    text: EditorialColors.ink,
   },
 };
 
@@ -22,16 +22,13 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <NeruProvider>
-      <ThemeProvider value={NeruDarkTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="dreams" options={{ headerShown: false }} />
-          <Stack.Screen name="gacha" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
-    </NeruProvider>
+    <ThemeProvider value={NeruTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="dreams" options={{ headerShown: false }} />
+        <Stack.Screen name="gacha" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style="dark" />
+    </ThemeProvider>
   );
 }
