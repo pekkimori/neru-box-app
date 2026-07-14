@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import * as Crypto from 'expo-crypto';
 import { useStorage } from './useStorage';
-import type { Constellation, Star } from '../types/dreams';
+import type { Constellation, Star } from '../types/tasks';
 
 export function useConstellations() {
   const { value: constellations, save: saveConstellations, loaded: constellationsLoaded } =

@@ -1,6 +1,6 @@
 // app/gacha/_layout.tsx
 import { Stack } from 'expo-router';
-import { useAppTheme } from '@/features/settings/app-theme';
+import { useAppTheme } from '@/features/control/app-theme';
 
 export default function GachaLayout() {
   const { colors } = useAppTheme();
@@ -16,7 +16,6 @@ export default function GachaLayout() {
       }}
     >
       <Stack.Screen name="pokedex" options={{ headerShown: false }} />
-      <Stack.Screen name="exchange" options={{ title: 'Friend Exchange' }} />
     </Stack>
   );
 }

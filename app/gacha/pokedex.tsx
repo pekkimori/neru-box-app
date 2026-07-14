@@ -32,11 +32,11 @@ import {
   createEditorialStyles,
   editorialOverlay,
 } from '@/constants/editorial-theme';
-import { PokemonPresentation } from '@/features/gacha/PokemonPresentation';
+import { PokemonPresentation } from '@/features/gacha/pokemon-presentation';
 import { playPokemonCryOnWeb } from '@/features/gacha/pokemon-media';
 import { useGachaCollection } from '@/features/gacha/use-gacha-collection';
 import { usePokeApiCatalog } from '@/features/gacha/use-pokeapi-catalog';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
 import { useDraggableDrawer } from '@/hooks/useDraggableDrawer';
 
 const Palette = createEditorialPalette(() => ({

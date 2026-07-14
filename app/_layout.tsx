@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { AppLaunch } from '@/components/app-launch';
-import { AppThemeProvider, useAppTheme } from '@/features/settings/app-theme';
+import { AppThemeProvider, useAppTheme } from '@/features/control/app-theme';
 import { prepareInteractionFeedback } from '@/utils/interaction-feedback';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);

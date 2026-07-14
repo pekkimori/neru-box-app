@@ -20,13 +20,13 @@ import Animated, {
   FadeOut,
   ReduceMotion,
 } from 'react-native-reanimated';
-import { Sp, R } from '../../features/dreams/tokens';
-import { hideGalaxyStar, loadGalaxyStars } from '../../features/dreams/galaxy/galaxy-loader';
-import { GalaxyCanvas } from '../../features/dreams/galaxy/galaxy-canvas';
-import { GalaxyEntrance } from '../../features/dreams/galaxy/galaxy-entrance';
-import { GalaxyListView } from '../../features/dreams/galaxy/galaxy-list-view';
-import { GalaxyPalette } from '../../features/dreams/galaxy/galaxy-theme';
-import type { GalaxyDomain, GalaxyStar } from '../../features/dreams/galaxy/galaxy-geometry';
+import { Sp, R } from '../../features/tasks/tokens';
+import { hideGalaxyStar, loadGalaxyStars } from '../../features/tasks/galaxy/galaxy-loader';
+import { GalaxyCanvas } from '../../features/tasks/galaxy/galaxy-canvas';
+import { GalaxyEntrance } from '../../features/tasks/galaxy/galaxy-entrance';
+import { GalaxyListView } from '../../features/tasks/galaxy/galaxy-list-view';
+import { GalaxyPalette } from '../../features/tasks/galaxy/galaxy-theme';
+import type { GalaxyDomain, GalaxyStar } from '../../features/tasks/galaxy/galaxy-geometry';
 
 export default function GalaxyScreen() {
   const router = useRouter();

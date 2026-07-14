@@ -25,8 +25,7 @@ import {
 } from '@/constants/editorial-theme';
 import { DIARY_FONT_ASSETS, DiaryFonts } from '@/constants/diary-fonts';
 import { pageHeaderIconControlStyle } from '@/constants/page-header';
-import { Fonts } from '@/constants/theme';
-import { Type } from '@/constants/typography';
+import { Fonts, Type } from '@/constants/typography';
 import {
   DIARY_ARTBOARD_HEIGHT,
   DIARY_ARTBOARD_WIDTH,
@@ -39,8 +38,8 @@ import {
   type GachaResult,
   useGachaCollection,
 } from '@/features/gacha/use-gacha-collection';
-import { useProductivityStreak } from '@/features/dreams/observatory/use-productivity-streak';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+import { useProductivityStreak } from '@/features/tasks/observatory/use-productivity-streak';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
 import { useConstellations } from '@/hooks/useConstellations';
 import { useDailyPlan } from '@/hooks/useDailyPlan';
 import { useRoutineQuests } from '@/hooks/useRoutineQuests';
@@ -49,7 +48,7 @@ import type {
   DiaryPageStickerPlacement,
   DiaryStickerPlacement,
   PlannedTask,
-} from '@/types/dreams';
+} from '@/types/tasks';
 import { addLocalDays, formatLocalDate, parseLocalDate } from '@/utils/time';
 
 const diaryPaletteExtras = (colors: EditorialPalette) => {

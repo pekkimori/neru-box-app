@@ -42,14 +42,14 @@ import {
   pageHeaderLabelControlStyle,
 } from '@/constants/page-header';
 import { Type } from '@/constants/typography';
-import { CatchAnimationModal } from '@/features/gacha/CatchAnimationModal';
-import { PokemonPresentation } from '@/features/gacha/PokemonPresentation';
+import { CatchAnimationModal } from '@/features/gacha/catch-animation-modal';
+import { PokemonPresentation } from '@/features/gacha/pokemon-presentation';
 import { getFeaturedPokemon } from '@/features/gacha/gacha-pull';
 import { playPokemonCryOnWeb } from '@/features/gacha/pokemon-media';
 import { useGachaCollection } from '@/features/gacha/use-gacha-collection';
 import { useGachaPull } from '@/features/gacha/use-gacha-pull';
 import { usePokeApiCatalog } from '@/features/gacha/use-pokeapi-catalog';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
 import { useCoins } from '@/hooks/useCoins';
 import { PokedexScreen } from '@/app/gacha/pokedex';
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect } from 'react';
 import * as Crypto from 'expo-crypto';
 import { useStorage } from './useStorage';
 import { DEFAULT_ROUTINES } from '../constants/default-routines';
-import type { RoutineQuest, DailyRoutineStatus, BlockType, RoutineBlock } from '../types/dreams';
+import type { RoutineQuest, DailyRoutineStatus, BlockType, RoutineBlock } from '../types/tasks';
 
 export function useRoutineQuests(date: string) {
   const { value: quests, save: saveQuests, loaded: questsLoaded } =

@@ -8,12 +8,12 @@ import type {
   DiaryStickerPlacement,
   PlannedTask,
   TaskStatus,
-} from '../types/dreams';
+} from '../types/tasks';
 import {
   PLAN_BLOCKS,
   createEmptyPlan,
   planStorageKey,
-} from '../features/dreams/plan-model';
+} from '../features/tasks/plan-model';
 
 export function useDailyPlan(date: string) {
   const { value: plan, save: savePlan, loaded } = useStorage<DailyPlan>(
@@ -115,16 +115,6 @@ export function useDailyPlan(date: string) {
     [savePlan]
   );
 
-  const saveReflection = useCallback(
-    (block: BlockType, text: string) => {
-      savePlan((prev) => ({
-        ...prev,
-        reflections: { ...prev.reflections, [block]: text },
-      }));
-    },
-    [savePlan]
-  );
-
   const setMoodSticker = useCallback(
     (sticker: string) => {
       savePlan((prev) => ({ ...prev, moodSticker: sticker }));
@@ -153,19 +143,6 @@ export function useDailyPlan(date: string) {
     [savePlan],
   );
 
-  const allTasksForBlock = useCallback(
-    (block: BlockType) => plan.blocks[block],
-    [plan]
-  );
-
-  const isBlockComplete = useCallback(
-    (block: BlockType) => {
-      const tasks = plan.blocks[block];
-      return tasks.length > 0 && tasks.every((t) => t.status === 'lit');
-    },
-    [plan]
-  );
-
   return {
     plan,
     loaded,
@@ -174,12 +151,9 @@ export function useDailyPlan(date: string) {
     moveTask,
     updateTaskStatus,
     awardCoins,
-    saveReflection,
     saveDiaryNote,
     saveDiaryPageLayout,
     saveDiaryStickers,
     setMoodSticker,
-    allTasksForBlock,
-    isBlockComplete,
   };
 }

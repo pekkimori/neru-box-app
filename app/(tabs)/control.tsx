@@ -6,13 +6,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
 import { NeruRobot } from "@/components/neru-robot";
 import { APP_ACCENT_PRESETS } from "@/constants/editorial-theme";
-import { EditorModal, SectionLabel } from "@/features/protect/components";
+import { EditorModal, SectionLabel } from "@/features/control/components";
 import {
   AppsEditorContent,
   FocusEditorContent,
   ModeEditorContent,
   ScheduleEditorContent,
-} from "@/features/protect/editors";
+} from "@/features/control/editors";
 import {
   DEFAULT_EFFECTS,
   INSTALLED_APPS,
@@ -22,12 +22,12 @@ import {
   type FocusBlock,
   type Mode,
   type ModeEffects,
-  type ProtectEditor,
+  type ControlEditor,
   type SelectedApp,
-} from "@/features/protect/model";
-import { useFocusSession } from "@/features/protect/use-focus-session";
-import { protectStyles } from "@/features/protect/styles";
-import { useAppTheme, useThemedStyles } from "@/features/settings/app-theme";
+} from "@/features/control/model";
+import { useFocusSession } from "@/features/control/use-focus-session";
+import { controlStyles } from "@/features/control/styles";
+import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
 import {
   useSleepSchedule,
   type SleepScheduleEntry,
@@ -48,8 +48,8 @@ export default function ControlScreen() {
     setMode,
     setAccentId,
   } = useAppTheme();
-  const styles = useThemedStyles(protectStyles, appearance);
-  const [editor, setEditor] = useState<ProtectEditor>(null);
+  const styles = useThemedStyles(controlStyles, appearance);
+  const [editor, setEditor] = useState<ControlEditor>(null);
   const [selectedApps, setSelectedApps] = useState<SelectedApp[]>([
     { id: "instagram", limitMinutes: 30 },
     { id: "youtube", limitMinutes: 60 },
@@ -473,13 +473,13 @@ export default function ControlScreen() {
         <View style={styles.menuCard}>
           {[
             {
-              editor: "apps" as ProtectEditor,
+              editor: "apps" as ControlEditor,
               icon: "apps-outline" as const,
               title: "Apps & limits",
               detail: `${selectedApps.length} selected · shared daily limits`,
             },
             {
-              editor: "schedule" as ProtectEditor,
+              editor: "schedule" as ControlEditor,
               icon: "calendar-outline" as const,
               title: "Schedule",
               detail: `${validFocusBlocks.length} focus blocks · ${
@@ -489,7 +489,7 @@ export default function ControlScreen() {
               }`,
             },
             {
-              editor: "mode" as ProtectEditor,
+              editor: "mode" as ControlEditor,
               icon: "options-outline" as const,
               title: "Mode settings",
               detail: "Mute, filters, Pomodoro and access",

@@ -1,5 +1,5 @@
 // constants/default-routines.ts
-import type { RoutineQuest } from '../types/dreams';
+import type { RoutineQuest } from '../types/tasks';
 
 export const DEFAULT_ROUTINES: RoutineQuest[] = [
   // Morning

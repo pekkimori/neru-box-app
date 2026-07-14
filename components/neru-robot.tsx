@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import { useAppTheme } from '@/features/settings/app-theme';
+import { useAppTheme } from '@/features/control/app-theme';
 import { playTapFeedback } from '@/utils/interaction-feedback';
 import { subscribeToNeruButtonPress } from '@/utils/neru-reactions';
 

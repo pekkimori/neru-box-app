@@ -22,7 +22,7 @@ export type AppAccentId =
   | 'monokai'
   | 'ayu';
 
-export type AppAccentPreset = {
+type AppAccentPreset = {
   id: AppAccentId;
   label: string;
   description: string;
@@ -263,7 +263,7 @@ export function setActiveEditorialPalette(palette: EditorialPalette) {
   activeEditorialPalette = palette;
 }
 
-export function getActiveEditorialPalette() {
+function getActiveEditorialPalette() {
   return activeEditorialPalette;
 }
 
@@ -293,8 +293,6 @@ function dynamicPalette<Extra extends Record<string, unknown>>(
     }),
   });
 }
-
-export const EditorialColors = dynamicPalette();
 
 export function createEditorialPalette<Extra extends Record<string, unknown> = Record<never, never>>(
   extras?: Extra | ((palette: EditorialPalette) => Extra),
@@ -334,13 +332,6 @@ export function createEditorialStyles<T extends NamedStyles<T>>(
     }),
   });
 }
-
-export const EditorialRadii = {
-  small: 8,
-  medium: 12,
-  large: 16,
-  pill: 999,
-} as const;
 
 export function editorialOverlay(opacity = 0.5): string {
   return activeEditorialPalette.mode === 'dark'

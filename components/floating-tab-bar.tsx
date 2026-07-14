@@ -13,7 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createEditorialPalette, createEditorialStyles } from '@/constants/editorial-theme';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
 import { playTapFeedback } from '@/utils/interaction-feedback';
 import { emitNeruButtonPress } from '@/utils/neru-reactions';
 

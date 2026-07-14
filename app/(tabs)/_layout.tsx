@@ -5,7 +5,7 @@ import { Easing, Platform } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { FloatingTabBar } from '@/components/floating-tab-bar';
-import { useAppTheme } from '@/features/settings/app-theme';
+import { useAppTheme } from '@/features/control/app-theme';
 
 /**
  * A restrained card-deck transition: the old view drifts away while the next

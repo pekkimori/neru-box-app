@@ -7,7 +7,7 @@ import {
   normalizeSleepSchedule,
   type SharedSleepSchedule,
   type SleepScheduleEntry,
-} from '../features/dreams/sleep-schedule-migration';
+} from '../features/tasks/sleep-schedule-migration';
 import {
   formatLocalDate,
   getMinuteOfDay,

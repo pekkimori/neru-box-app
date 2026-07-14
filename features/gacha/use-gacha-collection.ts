@@ -54,14 +54,6 @@ export function useGachaCollection() {
     )));
   }, [gachaResults, loaded, setGachaResults]);
 
-  const addGachaResult = useCallback((result: GachaResult) => {
-    const acquired = new Date();
-    const acquisition = hasValidAcquisitionDate(result)
-      ? { acquiredAt: result.acquiredAt, acquiredDate: result.acquiredDate }
-      : { acquiredAt: acquired.toISOString(), acquiredDate: formatLocalDate(acquired) };
-    setGachaResults((current) => [...current, { ...result, ...acquisition }]);
-  }, [setGachaResults]);
-
   const addGachaResults = useCallback((results: GachaResult[]) => {
     const acquired = new Date();
     const acquiredAt = acquired.toISOString();
@@ -79,7 +71,6 @@ export function useGachaCollection() {
 
   return {
     gachaResults,
-    addGachaResult,
     addGachaResults,
     loaded,
     error,

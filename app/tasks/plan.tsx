@@ -17,26 +17,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
-import { AddConstellationModal } from '../../features/dreams/observatory/add-modals';
-import { DeleteConstellationConfirmModal } from '../../features/dreams/observatory/delete-modals';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
+import { AddConstellationModal } from '../../features/tasks/observatory/add-modals';
+import { DeleteConstellationConfirmModal } from '../../features/tasks/observatory/delete-modals';
 import {
   allPlanTasks,
   createEmptyPlan,
   type PlanTaskWithBlock,
-} from '../../features/dreams/plan-model';
-import { loadPlansForDates } from '../../features/dreams/plan-repository';
+} from '../../features/tasks/plan-model';
+import { loadPlansForDates } from '../../features/tasks/plan-repository';
 import {
   formatLocalDate,
   getWeekDateKeys,
   parseLocalDate,
-} from '../../features/dreams/time-helpers';
-import { Palette, R, useDreamsPalette } from '../../features/dreams/tokens';
-import { useWeeklyStudioDraft } from '../../features/dreams/weekly-studio/use-weekly-studio-draft';
+} from '../../features/tasks/time-helpers';
+import { Palette, R, useTasksPalette } from '../../features/tasks/tokens';
+import { useWeeklyStudioDraft } from '../../features/tasks/weekly-studio/use-weekly-studio-draft';
 import { useConstellations } from '../../hooks/useConstellations';
 import { useDailyPlan } from '../../hooks/useDailyPlan';
 import { useDraggableDrawer } from '../../hooks/useDraggableDrawer';
-import type { BlockType, DailyPlan } from '../../types/dreams';
+import type { BlockType, DailyPlan } from '../../types/tasks';
 
 const BLOCKS: {
   key: BlockType;
@@ -168,7 +168,7 @@ export function WeeklyStudio({
 }: WeeklyStudioProps) {
   const { appearance } = useAppTheme();
   const styles = useThemedStyles(themedStyles, appearance);
-  const Palette = useDreamsPalette();
+  const Palette = useTasksPalette();
   const router = useRouter();
   const navigation = useNavigation();
   const isDrawer = presentation === 'drawer';

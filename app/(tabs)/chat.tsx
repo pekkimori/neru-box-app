@@ -29,16 +29,16 @@ import { Type } from '@/constants/typography';
 import {
   PERSONALITIES,
   SUGGESTIONS,
-  type CompanionMessage,
+  type ChatMessage,
   type MemoryItem,
   type Personality,
   type PersonalityId,
-} from '@/features/companion/preview-model';
+} from '@/features/chat/preview-model';
 import {
-  useCompanionPreview,
-  type CompanionConversation,
-} from '@/features/companion/use-companion-preview';
-import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+  useChatPreview,
+  type ChatConversation,
+} from '@/features/chat/use-chat-preview';
+import { useAppTheme, useThemedStyles } from '@/features/control/app-theme';
 import { useDraggableDrawer } from '@/hooks/useDraggableDrawer';
 
 const Palette = createEditorialPalette(() => ({
@@ -148,13 +148,13 @@ function formatHistoryDate(date: Date) {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase();
 }
 
-function getConversationTitle(conversation: CompanionConversation) {
+function getConversationTitle(conversation: ChatConversation) {
   return conversation.title
     ?? conversation.messages.find(({ sender }) => sender === 'user')?.text
     ?? 'New conversation';
 }
 
-function getConversationPreview(conversation: CompanionConversation) {
+function getConversationPreview(conversation: ChatConversation) {
   return conversation.messages.at(-1)?.text ?? 'No messages yet';
 }
 
@@ -167,7 +167,7 @@ export default function ChatScreen() {
   const [renameDraft, setRenameDraft] = useState('');
   const [pendingDeleteConversationId, setPendingDeleteConversationId] = useState<string | null>(null);
   const [typingPulse, setTypingPulse] = useState(0);
-  const flatListRef = useRef<FlatList<CompanionMessage>>(null);
+  const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
   const closeHistory = useCallback(() => {
     setIsHistoryOpen(false);
@@ -219,12 +219,12 @@ export default function ChatScreen() {
     sendMessage,
     addMemory,
     removeMemory,
-  } = useCompanionPreview(scrollToEnd);
+  } = useChatPreview(scrollToEnd);
   const handleSelectConversation = useCallback((conversationId: string) => {
     selectConversation(conversationId);
     closeHistoryDrawer();
   }, [closeHistoryDrawer, selectConversation]);
-  const handleBeginRename = useCallback((conversation: CompanionConversation) => {
+  const handleBeginRename = useCallback((conversation: ChatConversation) => {
     setPendingDeleteConversationId(null);
     setRenamingConversationId(conversation.id);
     setRenameDraft(getConversationTitle(conversation));
@@ -254,7 +254,7 @@ export default function ChatScreen() {
       : 'idle';
   const catStatus = isTyping ? 'THINKING' : inputText.trim() ? 'LISTENING' : 'READY';
 
-  const renderMessage = useCallback(({ item }: { item: CompanionMessage }) => {
+  const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isUser = item.sender === 'user';
     return (
       <View style={[styles.messageBlock, isUser && styles.messageBlockUser]}>

@@ -1,29 +1,29 @@
-import { PhotoCompletionModal } from '@/components/candy';
+import { PhotoCompletionModal } from '@/components/photo-completion-modal';
 import {
   MotionModal as Modal,
   MotionTouchableOpacity as TouchableOpacity,
 } from '@/components/motion';
 import { createEditorialStyles } from '@/constants/editorial-theme';
 import { Type } from '@/constants/typography';
-import { useThemedStyles } from '@/features/settings/app-theme';
+import { useThemedStyles } from '@/features/control/app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ConstellationCanvas } from '../../features/dreams/observatory/constellation-canvas';
-import { ObservatoryHeader } from '../../features/dreams/observatory/observatory-header';
-import { PeriodRail } from '../../features/dreams/observatory/period-rail';
-import { RoutineGate } from '../../features/dreams/observatory/routine-gate';
-import { StarTaskList } from '../../features/dreams/observatory/star-task-list';
-import { useObservatoryData } from '../../features/dreams/observatory/use-observatory-data';
-import { Palette, R, Sp, useDreamsPalette } from '../../features/dreams/tokens';
+import { ConstellationCanvas } from '../../features/tasks/observatory/constellation-canvas';
+import { ObservatoryHeader } from '../../features/tasks/observatory/observatory-header';
+import { PeriodRail } from '../../features/tasks/observatory/period-rail';
+import { RoutineGate } from '../../features/tasks/observatory/routine-gate';
+import { StarTaskList } from '../../features/tasks/observatory/star-task-list';
+import { useObservatoryData } from '../../features/tasks/observatory/use-observatory-data';
+import { Palette, R, Sp, useTasksPalette } from '../../features/tasks/tokens';
 import { WeeklyStudio } from '../tasks/plan';
-import type { BlockType, Star } from '../../types/dreams';
+import type { BlockType, Star } from '../../types/tasks';
 
 export default function TasksToday() {
   const styles = useThemedStyles(themedStyles);
-  const Palette = useDreamsPalette();
+  const Palette = useTasksPalette();
   const router = useRouter();
   const d = useObservatoryData();
   const [photoVisible, setPhotoVisible] = useState(false);
