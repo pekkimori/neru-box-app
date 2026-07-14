@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   getRelevantSleepSchedule,
+  getSleepScheduleState,
   normalizeSleepSchedule,
 } from './sleep-schedule-migration.ts';
 
@@ -67,4 +68,42 @@ test('uses the weekday wake-day schedule on Sunday night', () => {
   const sundayNight = new Date(2026, 6, 19, 23, 30);
   assert.equal(sundayNight.getDay(), 0);
   assert.equal(getRelevantSleepSchedule(schedule, sundayNight)?.id, 'weekdays');
+});
+
+test('activates and ends an overnight sleep window at exact schedule boundaries', () => {
+  const schedule = normalizeSleepSchedule([
+    { id: 'weekdays', label: 'Weekdays', days: ['M'], bedtime: '23:00', wakeTime: '07:00', enabled: true },
+    { id: 'weekend', label: 'Weekend', days: ['S'], bedtime: '00:30', wakeTime: '08:30', enabled: true },
+  ]);
+
+  assert.equal(getSleepScheduleState(schedule, new Date(2026, 6, 13, 22, 59)).isSleepWindow, false);
+  assert.equal(getSleepScheduleState(schedule, new Date(2026, 6, 13, 23, 0)).isSleepWindow, true);
+  assert.equal(getSleepScheduleState(schedule, new Date(2026, 6, 14, 6, 59)).isSleepWindow, true);
+  assert.equal(getSleepScheduleState(schedule, new Date(2026, 6, 14, 7, 0)).isSleepWindow, false);
+});
+
+test('reflects disabled schedule updates immediately in sleep-window state', () => {
+  const enabled = normalizeSleepSchedule([
+    { id: 'weekdays', label: 'Weekdays', days: ['M'], bedtime: '23:00', wakeTime: '07:00', enabled: true },
+    { id: 'weekend', label: 'Weekend', days: ['S'], bedtime: '00:30', wakeTime: '08:30', enabled: true },
+  ]);
+  const disabled = enabled.map((entry) => (
+    entry.id === 'weekdays' ? { ...entry, enabled: false } : entry
+  ));
+  const mondayNight = new Date(2026, 6, 13, 23, 30);
+
+  assert.equal(getSleepScheduleState(enabled, mondayNight).isSleepWindow, true);
+  assert.equal(getSleepScheduleState(disabled, mondayNight).isSleepWindow, false);
+});
+
+test('never activates a schedule while its time fields are invalid', () => {
+  const schedule = normalizeSleepSchedule([
+    { id: 'weekdays', label: 'Weekdays', days: ['M'], bedtime: '23:00', wakeTime: '', enabled: true },
+    { id: 'weekend', label: 'Weekend', days: ['S'], bedtime: '00:30', wakeTime: '08:30', enabled: true },
+  ]);
+
+  assert.deepEqual(getSleepScheduleState(schedule, new Date(2026, 6, 13, 23, 30)), {
+    activeSleep: null,
+    isSleepWindow: false,
+  });
 });

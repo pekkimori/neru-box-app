@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MotionPressable as Pressable } from '@/components/motion';
 import { CandyColors, CandyRadii, CandyShadow, CandySpacing } from '@/constants/candy-theme';
 
 type CandyButtonVariant = 'primary' | 'secondary' | 'ghost';
@@ -79,7 +80,6 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   pressed: {
-    transform: [{ translateY: 3 }],
     shadowOffset: { width: 0, height: 2 },
   },
   label: {

@@ -1,16 +1,19 @@
 // features/dreams/observatory/add-modals.tsx
 import { useState, useEffect } from 'react';
 import {
-  Modal, Pressable, Text, TextInput,
-  TouchableOpacity, View, StyleSheet,
+  Pressable, Text, TextInput,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Sp, R } from '../tokens';
+import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 import type { BlockType } from '../../../types/dreams';
 import type { WeekDay } from '../types';
 
 // ── Shared styles for add modals ──────────────────────────────────────
-const S = StyleSheet.create({
+const themedS = createEditorialStyles(() => ({
   backdrop: {
     flex: 1, backgroundColor: Palette.backdrop,
     alignItems: 'center', justifyContent: 'center', padding: Sp.lg,
@@ -58,7 +61,7 @@ const S = StyleSheet.create({
     paddingVertical: 10, minHeight: 44,
   },
   btnSecondaryText: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
-});
+}));
 
 // ── AddStarModal ──────────────────────────────────────────────────────
 interface AddStarModalProps {
@@ -79,6 +82,8 @@ interface AddStarModalProps {
 export function AddStarModal({
   visible, constellations, weekDays, plan, selectedBlock, onClose, onSubmit,
 }: AddStarModalProps) {
+  const S = useThemedStyles(themedS);
+  const Palette = useDreamsPalette();
   const [constellationId, setConstellationId] = useState<string | null>(null);
   const [label, setLabel] = useState('');
   const [block, setBlock] = useState<BlockType>(selectedBlock ?? 'morning');
@@ -210,6 +215,8 @@ interface AddConstellationModalProps {
 export function AddConstellationModal({
   visible, onClose, onSubmit,
 }: AddConstellationModalProps) {
+  const S = useThemedStyles(themedS);
+  const Palette = useDreamsPalette();
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('✨');
 

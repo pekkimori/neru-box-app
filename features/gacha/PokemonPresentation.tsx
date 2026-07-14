@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/motion';
 
 import type { GachaCreature } from '@/constants/gacha';
+import { POKEMON_CRY_VOLUME } from '@/utils/interaction-feedback';
 import { getPokemonMedia, playPokemonCryOnWeb, playPreparedPokemonCry, type PokemonMedia } from './pokemon-media';
 
 type SpriteSide = 'front' | 'back';
@@ -52,7 +54,7 @@ export function PokemonPresentation({
         playPokemonCryOnWeb(nextMedia.cry, pokemon.id);
       } else if (!playPreparedPokemonCry(pokemon.id, nextMedia.cry)) {
         player.replace(nextMedia.cry);
-        player.volume = 0.32;
+        player.volume = POKEMON_CRY_VOLUME;
         setNativePlayRequest((current) => current + 1);
       }
     }

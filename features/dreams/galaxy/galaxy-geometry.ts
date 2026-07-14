@@ -55,12 +55,6 @@ export interface GalaxyLayout {
   weekLabels: GalaxyWeekLabel[];
 }
 
-interface SimulatedWeek {
-  stars: GalaxyStar[];
-  width: number;
-  height: number;
-}
-
 /** ISO 8601 week number for a local-calendar Date. */
 export function getISOWeek(date: Date): { year: number; week: number } {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -147,17 +141,36 @@ function assignDomainColors(ids: string[]): Map<string, string> {
   return colors;
 }
 
-function simulateWeek(stars: GalaxyStar[], edges: GalaxyEdge[]): SimulatedWeek {
+function simulateGalaxy(stars: GalaxyStar[], edges: GalaxyEdge[]): GalaxyStar[] {
   const sorted = [...stars].sort((a, b) => starKey(a).localeCompare(starKey(b)));
   const count = sorted.length;
-  const radius = Math.max(110, Math.sqrt(count) * 80);
-  const nodes = sorted.map((star, index) => {
+  const weeks = [...new Set(sorted.map((star) => star.isoWeek))].sort();
+  const weekIndex = new Map(weeks.map((week, index) => [week, index]));
+  const starsByWeek = new Map(weeks.map((week) => [
+    week,
+    sorted.filter((star) => star.isoWeek === week),
+  ]));
+  const fieldRadius = weeks.length === 1 ? 0 : Math.max(90, Math.sqrt(count) * 27);
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+  const nodes = sorted.map((star) => {
+    const clusterIndex = weekIndex.get(star.isoWeek) ?? 0;
+    const weekStars = starsByWeek.get(star.isoWeek) ?? [star];
+    const localIndex = weekStars.findIndex((candidate) => starKey(candidate) === starKey(star));
+    const clusterDistance = weeks.length === 1
+      ? 0
+      : fieldRadius * Math.sqrt((clusterIndex + 0.7) / weeks.length);
+    const clusterAngle = clusterIndex * goldenAngle
+      + (deterministicHash(star.isoWeek, 23) % 90) * Math.PI / 1800;
+    const clusterX = Math.cos(clusterAngle) * clusterDistance;
+    const clusterY = Math.sin(clusterAngle) * clusterDistance;
     const offset = (deterministicHash(starKey(star), 31) % 1000) / 1000;
-    const angle = (index / Math.max(count, 1)) * Math.PI * 2 + offset * 0.35;
+    const angle = (localIndex / Math.max(weekStars.length, 1)) * Math.PI * 2 + offset * 0.35;
+    const radius = weekStars.length === 1 ? 0 : Math.max(70, Math.sqrt(weekStars.length) * 42);
     return {
       ...star,
-      x: count === 1 ? 0 : Math.cos(angle) * radius,
-      y: count === 1 ? 0 : Math.sin(angle) * radius,
+      x: clusterX + Math.cos(angle) * radius,
+      y: clusterY + Math.sin(angle) * radius,
       vx: 0,
       vy: 0,
     };
@@ -168,8 +181,11 @@ function simulateWeek(stars: GalaxyStar[], edges: GalaxyEdge[]): SimulatedWeek {
     const to = indexByKey.get(starKey(edge.to));
     return from == null || to == null ? [] : [{ from, to, kind: edge.kind }];
   });
+  const linkedPairs = new Set(localEdges.map((edge) => (
+    edge.from < edge.to ? `${edge.from}:${edge.to}` : `${edge.to}:${edge.from}`
+  )));
 
-  for (let iteration = 0; iteration < 220; iteration++) {
+  for (let iteration = 0; iteration < 340; iteration++) {
     const fx = new Array<number>(count).fill(0);
     const fy = new Array<number>(count).fill(0);
 
@@ -184,7 +200,13 @@ function simulateWeek(stars: GalaxyStar[], edges: GalaxyEdge[]): SimulatedWeek {
         }
         const distanceSq = Math.max(dx * dx + dy * dy, 225);
         const distance = Math.sqrt(distanceSq);
-        const force = 7200 / distanceSq;
+        const directlyLinked = linkedPairs.has(`${i}:${j}`);
+        const repulsion = nodes[i].isoWeek !== nodes[j].isoWeek
+          ? 22000
+          : directlyLinked
+            ? 7200
+            : 10800;
+        const force = repulsion / distanceSq;
         const pushX = (dx / distance) * force;
         const pushY = (dy / distance) * force;
         fx[i] += pushX;
@@ -215,10 +237,10 @@ function simulateWeek(stars: GalaxyStar[], edges: GalaxyEdge[]): SimulatedWeek {
     }
 
     for (let i = 0; i < count; i++) {
-      fx[i] -= nodes[i].x * 0.008;
-      fy[i] -= nodes[i].y * 0.008;
-      nodes[i].vx = (nodes[i].vx + fx[i]) * 0.82;
-      nodes[i].vy = (nodes[i].vy + fy[i]) * 0.82;
+      fx[i] -= nodes[i].x * 0.016;
+      fy[i] -= nodes[i].y * 0.016;
+      nodes[i].vx = (nodes[i].vx + fx[i]) * 0.84;
+      nodes[i].vy = (nodes[i].vy + fy[i]) * 0.84;
       const speed = Math.max(Math.hypot(nodes[i].vx, nodes[i].vy), 1);
       const scale = Math.min(1, 10 / speed);
       nodes[i].x += nodes[i].vx * scale;
@@ -226,22 +248,16 @@ function simulateWeek(stars: GalaxyStar[], edges: GalaxyEdge[]): SimulatedWeek {
     }
   }
 
-  const minX = Math.min(...nodes.map((node) => node.x));
-  const maxX = Math.max(...nodes.map((node) => node.x));
-  const minY = Math.min(...nodes.map((node) => node.y));
-  const maxY = Math.max(...nodes.map((node) => node.y));
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
-  return {
-    stars: nodes.map(({ vx: _vx, vy: _vy, ...star }) => ({
-      ...star, x: star.x - centerX, y: star.y - centerY,
-    })),
-    width: Math.max(maxX - minX, 180),
-    height: Math.max(maxY - minY, 180),
-  };
+  const centerX = nodes.reduce((sum, node) => sum + node.x, 0) / nodes.length;
+  const centerY = nodes.reduce((sum, node) => sum + node.y, 0) / nodes.length;
+  return nodes.map(({ vx: _vx, vy: _vy, ...star }) => ({
+    ...star,
+    x: star.x - centerX,
+    y: star.y - centerY,
+  }));
 }
 
-/** Deterministic force-directed layout, packed as one cluster per ISO week. */
+/** Deterministic force field with stronger repulsion between disconnected weeks. */
 export function computeGalaxyPositions(stars: GalaxyStar[], edges: GalaxyEdge[]): GalaxyLayout {
   if (stars.length === 0) return { positioned: [], domains: [], weekLabels: [] };
 
@@ -253,20 +269,7 @@ export function computeGalaxyPositions(stars: GalaxyStar[], edges: GalaxyEdge[])
     ...star, domainColor: colors.get(star.constellationId) ?? DOMAIN_COLORS[0],
   }));
   const weeks = [...new Set(colored.map((star) => star.isoWeek))].sort();
-  const simulated = weeks.map((week) => simulateWeek(
-    colored.filter((star) => star.isoWeek === week),
-    edges.filter((edge) => edge.from.isoWeek === week && edge.to.isoWeek === week),
-  ));
-  const columns = Math.max(1, Math.ceil(Math.sqrt(simulated.length)));
-  const cellWidth = Math.max(620, ...simulated.map((week) => week.width + 260));
-  const cellHeight = Math.max(520, ...simulated.map((week) => week.height + 240));
-  const positioned = simulated.flatMap((week, index) => {
-    const centerX = cellWidth / 2 + (index % columns) * cellWidth;
-    const centerY = cellHeight / 2 + Math.floor(index / columns) * cellHeight;
-    return week.stars.map((star) => ({
-      ...star, x: star.x + centerX, y: star.y + centerY,
-    }));
-  });
+  const positioned = simulateGalaxy(colored, edges);
 
   const domains: GalaxyDomain[] = domainEntries.map((domain) => {
     const domainStars = positioned.filter((star) => star.constellationId === domain.id);

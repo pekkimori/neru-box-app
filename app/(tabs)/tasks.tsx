@@ -1,9 +1,15 @@
 import { PhotoCompletionModal } from '@/components/candy';
+import {
+  MotionModal as Modal,
+  MotionTouchableOpacity as TouchableOpacity,
+} from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
 import { Type } from '@/constants/typography';
+import { useThemedStyles } from '@/features/settings/app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConstellationCanvas } from '../../features/dreams/observatory/constellation-canvas';
 import { ObservatoryHeader } from '../../features/dreams/observatory/observatory-header';
@@ -11,14 +17,18 @@ import { PeriodRail } from '../../features/dreams/observatory/period-rail';
 import { RoutineGate } from '../../features/dreams/observatory/routine-gate';
 import { StarTaskList } from '../../features/dreams/observatory/star-task-list';
 import { useObservatoryData } from '../../features/dreams/observatory/use-observatory-data';
-import { Palette, R, Sp } from '../../features/dreams/tokens';
+import { Palette, R, Sp, useDreamsPalette } from '../../features/dreams/tokens';
+import { WeeklyStudio } from '../tasks/plan';
 import type { BlockType, Star } from '../../types/dreams';
 
-export default function DreamsToday() {
+export default function TasksToday() {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   const router = useRouter();
   const d = useObservatoryData();
   const [photoVisible, setPhotoVisible] = useState(false);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
+  const [weeklyStudioOpen, setWeeklyStudioOpen] = useState(false);
 
   const dailyProgress = useMemo(() => {
     const tasks = (['morning', 'afternoon', 'evening'] as BlockType[])
@@ -91,6 +101,7 @@ export default function DreamsToday() {
           totalPlanned={dailyProgress.total}
           coins={d.coins}
           streakDays={d.productivityStreak}
+          onPlanPress={() => setWeeklyStudioOpen(true)}
         />
 
         <PeriodRail
@@ -98,6 +109,7 @@ export default function DreamsToday() {
           selectedPeriod={d.selectedPeriod}
           periodStateMap={d.periodStateMap}
           trueActivePeriod={d.trueActivePeriod}
+          currentMinute={d.nowMin}
           onSelect={d.setSelectedPeriod}
         />
 
@@ -154,7 +166,7 @@ export default function DreamsToday() {
               </View>
               <TouchableOpacity
                 style={styles.planButton}
-                onPress={() => router.push('/dreams/plan')}
+                onPress={() => setWeeklyStudioOpen(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Open Weekly Studio"
               >
@@ -179,7 +191,7 @@ export default function DreamsToday() {
           </View>
           <TouchableOpacity
             style={styles.archiveButton}
-            onPress={() => router.push('/dreams/galaxy')}
+            onPress={() => router.push('/tasks/galaxy')}
             accessibilityRole="button"
             accessibilityLabel="Open completed stars archive"
           >
@@ -204,11 +216,22 @@ export default function DreamsToday() {
         onComplete={handlePhotoComplete}
         onCancel={() => { setPhotoVisible(false); setPendingCompletion(null); }}
       />
+      <Modal
+        transparent
+        animationType="none"
+        visible={weeklyStudioOpen}
+        onRequestClose={() => setWeeklyStudioOpen(false)}
+      >
+        <WeeklyStudio
+          presentation="drawer"
+          onDismiss={() => setWeeklyStudioOpen(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   safe: { flex: 1, backgroundColor: Palette.bg },
   scroll: { flex: 1 },
   dashboard: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 104 : 92, gap: 14 },
@@ -231,4 +254,4 @@ const styles = StyleSheet.create({
   archiveText: { ...Type.buttonSmall, color: Palette.warmDim },
   skeleton: { gap: Sp.md, paddingHorizontal: Sp.lg, paddingTop: Sp.lg },
   skeletonBlock: { height: 56, backgroundColor: Palette.bgElevated, borderRadius: R.sm },
-});
+}));

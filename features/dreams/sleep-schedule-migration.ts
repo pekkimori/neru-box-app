@@ -9,6 +9,11 @@ export interface SleepScheduleEntry {
 
 export type SharedSleepSchedule = SleepScheduleEntry[];
 
+export interface SleepScheduleState {
+  activeSleep: SleepScheduleEntry | null;
+  isSleepWindow: boolean;
+}
+
 export const DEFAULT_SLEEP_SCHEDULE: SharedSleepSchedule = [
   {
     id: 'weekdays',
@@ -90,6 +95,17 @@ function minutesFromTime(time: string): number {
   return hours * 60 + minutes;
 }
 
+function validMinutesFromTime(time: string): number | null {
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  return minutesFromTime(time);
+}
+
+function isMinuteInScheduleRange(minute: number, start: number, end: number): boolean {
+  if (start === end) return true;
+  if (end > start) return minute >= start && minute < end;
+  return minute >= start || minute < end;
+}
+
 /**
  * Select the sleep session relevant at `now`.
  *
@@ -108,10 +124,33 @@ export function getRelevantSleepSchedule(
   if (!todayEntry) return null;
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const useToday = nowMinutes < minutesFromTime(todayEntry.wakeTime);
+  const todayWakeMin = validMinutesFromTime(todayEntry.wakeTime);
+  if (todayWakeMin === null) return null;
+  const useToday = nowMinutes < todayWakeMin;
   const scheduleDay = useToday ? now.getDay() : (now.getDay() + 1) % 7;
   const entry = schedule.find(
     (candidate) => candidate.id === scheduleIdForDay(scheduleDay),
   );
   return entry?.enabled ? entry : null;
+}
+
+/** Resolve the relevant schedule and whether its sleep window is active now. */
+export function getSleepScheduleState(
+  schedule: SharedSleepSchedule,
+  now: Date,
+): SleepScheduleState {
+  const activeSleep = getRelevantSleepSchedule(schedule, now);
+  if (!activeSleep) return { activeSleep: null, isSleepWindow: false };
+
+  const bedtimeMin = validMinutesFromTime(activeSleep.bedtime);
+  const wakeMin = validMinutesFromTime(activeSleep.wakeTime);
+  if (bedtimeMin === null || wakeMin === null) {
+    return { activeSleep, isSleepWindow: false };
+  }
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return {
+    activeSleep,
+    isSleepWindow: isMinuteInScheduleRange(nowMin, bedtimeMin, wakeMin),
+  };
 }

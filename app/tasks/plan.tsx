@@ -3,19 +3,21 @@ import { usePreventRemove } from '@react-navigation/native';
 import type { NavigationAction } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Modal,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
 import { AddConstellationModal } from '../../features/dreams/observatory/add-modals';
 import { DeleteConstellationConfirmModal } from '../../features/dreams/observatory/delete-modals';
 import {
@@ -29,10 +31,11 @@ import {
   getWeekDateKeys,
   parseLocalDate,
 } from '../../features/dreams/time-helpers';
-import { Palette, R } from '../../features/dreams/tokens';
+import { Palette, R, useDreamsPalette } from '../../features/dreams/tokens';
 import { useWeeklyStudioDraft } from '../../features/dreams/weekly-studio/use-weekly-studio-draft';
 import { useConstellations } from '../../hooks/useConstellations';
 import { useDailyPlan } from '../../hooks/useDailyPlan';
+import { useDraggableDrawer } from '../../hooks/useDraggableDrawer';
 import type { BlockType, DailyPlan } from '../../types/dreams';
 
 const BLOCKS: {
@@ -43,9 +46,9 @@ const BLOCKS: {
   color: string;
   soft: string;
 }[] = [
-  { key: 'morning', label: 'Morning', short: 'AM', icon: 'sunny-outline', color: Palette.red, soft: Palette.redSoft },
-  { key: 'afternoon', label: 'Afternoon', short: 'PM', icon: 'partly-sunny-outline', color: Palette.red, soft: Palette.redSoft },
-  { key: 'evening', label: 'Evening', short: 'EVE', icon: 'moon-outline', color: Palette.red, soft: Palette.redSoft },
+  { key: 'morning', label: 'Morning', short: 'AM', icon: 'sunny-outline', get color() { return Palette.red; }, get soft() { return Palette.redSoft; } },
+  { key: 'afternoon', label: 'Afternoon', short: 'PM', icon: 'partly-sunny-outline', get color() { return Palette.red; }, get soft() { return Palette.redSoft; } },
+  { key: 'evening', label: 'Evening', short: 'EVE', icon: 'moon-outline', get color() { return Palette.red; }, get soft() { return Palette.redSoft; } },
 ];
 
 type WeekDay = {
@@ -78,9 +81,97 @@ function formatFullDate(date: string): string {
   });
 }
 
-export default function WeeklyStudio() {
+type WeeklyStudioProps = {
+  presentation?: 'screen' | 'drawer';
+  onDismiss?: () => void;
+};
+
+function WeeklyStudioDrawerFrame({
+  children,
+  onDismiss,
+  onBeforeClose,
+  renderHeader,
+}: {
+  children: React.ReactNode;
+  onDismiss: () => void;
+  onBeforeClose: () => boolean;
+  renderHeader: (closeDrawer: () => void) => React.ReactNode;
+}) {
+  const styles = useThemedStyles(themedStyles);
+  const { backdropOpacity, closeDrawer, panHandlers, translateY } =
+    useDraggableDrawer({
+      visible: true,
+      onClose: onDismiss,
+      onBeforeClose,
+    });
+
+  return (
+    <View style={styles.drawerRoot}>
+      <Animated.View style={[styles.drawerBackdrop, { opacity: backdropOpacity }]}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={closeDrawer}
+          accessibilityLabel="Close Weekly Studio"
+        />
+      </Animated.View>
+      <Animated.View
+        accessibilityViewIsModal
+        style={[styles.drawerSheet, { transform: [{ translateY }] }]}
+      >
+        <View {...panHandlers} collapsable={false} style={styles.drawerDragArea}>
+          <View style={styles.drawerHandle} />
+          {renderHeader(closeDrawer)}
+        </View>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
+function WeeklyStudioPresentation({
+  children,
+  drawer,
+  onDismiss,
+  onBeforeClose,
+  renderDrawerHeader,
+}: {
+  children: React.ReactNode;
+  drawer: boolean;
+  onDismiss: () => void;
+  onBeforeClose: () => boolean;
+  renderDrawerHeader: (closeDrawer: () => void) => React.ReactNode;
+}) {
+  const styles = useThemedStyles(themedStyles);
+
+  if (drawer) {
+    return (
+      <WeeklyStudioDrawerFrame
+        onDismiss={onDismiss}
+        onBeforeClose={onBeforeClose}
+        renderHeader={renderDrawerHeader}
+      >
+        {children}
+      </WeeklyStudioDrawerFrame>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      {children}
+    </SafeAreaView>
+  );
+}
+
+export function WeeklyStudio({
+  presentation = 'screen',
+  onDismiss,
+}: WeeklyStudioProps) {
+  const { appearance } = useAppTheme();
+  const styles = useThemedStyles(themedStyles, appearance);
+  const Palette = useDreamsPalette();
   const router = useRouter();
   const navigation = useNavigation();
+  const isDrawer = presentation === 'drawer';
   const today = formatLocalDate(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -92,6 +183,8 @@ export default function WeeklyStudio() {
   const [weekPlans, setWeekPlans] = useState<Record<string, DailyPlan>>({});
   const [saving, setSaving] = useState(false);
   const [pendingLeaveAction, setPendingLeaveAction] = useState<NavigationAction | null>(null);
+  const [pendingDismiss, setPendingDismiss] = useState(false);
+  const dismissBypass = useRef(false);
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const {
@@ -120,7 +213,7 @@ export default function WeeklyStudio() {
     storedStars,
   });
 
-  usePreventRemove(hasUnsavedChanges, ({ data }) => {
+  usePreventRemove(!isDrawer && hasUnsavedChanges, ({ data }) => {
     setPendingLeaveAction(data.action);
   });
 
@@ -204,16 +297,52 @@ export default function WeeklyStudio() {
     setDeleteNebula(null);
   };
 
-  const saveAndLeave = async () => {
+  const finishDismiss = () => {
+    if (onDismiss) {
+      onDismiss();
+      return;
+    }
+    router.back();
+  };
+
+  const requestDismiss = () => {
+    if (dismissBypass.current) {
+      dismissBypass.current = false;
+      return true;
+    }
+    if (saving) return false;
+    if (hasUnsavedChanges) {
+      setPendingDismiss(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleDismiss = () => {
+    if (requestDismiss()) finishDismiss();
+  };
+
+  const saveAndLeave = async (dismiss?: () => void) => {
     if (saving) return;
     if (!hasUnsavedChanges) {
-      router.back();
+      if (dismiss) {
+        requestAnimationFrame(dismiss);
+      } else {
+        finishDismiss();
+      }
       return;
     }
     setSaving(true);
     try {
       await saveDrafts();
-      requestAnimationFrame(() => router.back());
+      requestAnimationFrame(() => {
+        if (dismiss) {
+          dismissBypass.current = true;
+          dismiss();
+        } else {
+          finishDismiss();
+        }
+      });
     } catch {
       Alert.alert('Could not save changes', 'Please try again. Your edits are still open.');
     } finally {
@@ -222,6 +351,12 @@ export default function WeeklyStudio() {
   };
 
   const discardAndLeave = () => {
+    if (pendingDismiss) {
+      setPendingDismiss(false);
+      setHasUnsavedChanges(false);
+      requestAnimationFrame(finishDismiss);
+      return;
+    }
     if (!pendingLeaveAction) return;
     const action = pendingLeaveAction;
     setPendingLeaveAction(null);
@@ -248,30 +383,66 @@ export default function WeeklyStudio() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <StatusBar style="dark" />
-
-      <View style={styles.headerFrame}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerIcon} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back to Dreams">
-            <Ionicons name="arrow-back" size={20} color={Palette.warmWhite} />
-          </TouchableOpacity>
-          <View style={styles.headerCopy}>
-            <Text style={styles.title}>WEEKLY STUDIO</Text>
-            <Text style={styles.kicker}>Dreams / organize</Text>
+    <WeeklyStudioPresentation
+      drawer={isDrawer}
+      onDismiss={finishDismiss}
+      onBeforeClose={requestDismiss}
+      renderDrawerHeader={(closeDrawer) => (
+        <View style={styles.drawerHeader}>
+          <View style={styles.drawerTitleGroup}>
+            <Text style={styles.drawerEyebrow}>TASKS / PLAN</Text>
+            <Text style={styles.drawerTitle}>Weekly studio</Text>
+            <Text style={styles.drawerSubtitle}>Organize the week across your nebulae.</Text>
           </View>
-          <TouchableOpacity
-            style={[styles.doneButton, saving && styles.periodDisabled]}
-            onPress={saveAndLeave}
-            disabled={saving}
-            accessibilityRole="button"
-            accessibilityLabel={saving ? 'Saving plan' : 'Save plan and finish'}
-            accessibilityState={{ disabled: saving }}
-          >
-            <Ionicons name={saving ? 'hourglass-outline' : 'checkmark'} size={21} color={Palette.warmWhite} />
-          </TouchableOpacity>
+          <View style={styles.drawerHeaderActions}>
+            <TouchableOpacity
+              style={[styles.drawerHeaderButton, styles.drawerSaveButton, saving && styles.periodDisabled]}
+              onPress={() => saveAndLeave(closeDrawer)}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={saving ? 'Saving plan' : 'Save plan and finish'}
+              accessibilityState={{ disabled: saving }}
+            >
+              <Ionicons name={saving ? 'hourglass-outline' : 'checkmark'} size={20} color={Palette.warmWhite} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.drawerHeaderButton}
+              onPress={closeDrawer}
+              accessibilityRole="button"
+              accessibilityLabel="Close Weekly Studio"
+            >
+              <Ionicons name="close" size={22} color={Palette.warmWhite} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
+    >
+      {!isDrawer && (
+        <>
+          <StatusBar style={appearance.mode === 'dark' ? 'light' : 'dark'} />
+          <View style={styles.headerFrame}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.headerIcon} onPress={handleDismiss} accessibilityRole="button" accessibilityLabel="Back to Tasks">
+                <Ionicons name="arrow-back" size={20} color={Palette.warmWhite} />
+              </TouchableOpacity>
+              <View style={styles.headerCopy}>
+                <Text style={styles.title}>WEEKLY STUDIO</Text>
+                <Text style={styles.kicker}>Tasks / organize</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.doneButton, saving && styles.periodDisabled]}
+                onPress={() => saveAndLeave()}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel={saving ? 'Saving plan' : 'Save plan and finish'}
+                accessibilityState={{ disabled: saving }}
+              >
+                <Ionicons name={saving ? 'hourglass-outline' : 'checkmark'} size={21} color={Palette.warmWhite} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
+      )}
 
       <View style={styles.calendarFrame}>
         <View style={styles.calendar}>
@@ -548,10 +719,19 @@ export default function WeeklyStudio() {
       <Modal
         transparent
         animationType="fade"
-        visible={pendingLeaveAction !== null}
-        onRequestClose={() => setPendingLeaveAction(null)}
+        visible={pendingLeaveAction !== null || pendingDismiss}
+        onRequestClose={() => {
+          setPendingLeaveAction(null);
+          setPendingDismiss(false);
+        }}
       >
-        <Pressable style={styles.backdropCenter} onPress={() => setPendingLeaveAction(null)}>
+        <Pressable
+          style={styles.backdropCenter}
+          onPress={() => {
+            setPendingLeaveAction(null);
+            setPendingDismiss(false);
+          }}
+        >
           <Pressable style={styles.leaveCard} onPress={(event) => event.stopPropagation()}>
             <View style={styles.leaveIcon}>
               <Ionicons name="alert-circle-outline" size={22} color={Palette.red} />
@@ -561,7 +741,10 @@ export default function WeeklyStudio() {
             <View style={styles.leaveActions}>
               <TouchableOpacity
                 style={styles.keepEditingButton}
-                onPress={() => setPendingLeaveAction(null)}
+                onPress={() => {
+                  setPendingLeaveAction(null);
+                  setPendingDismiss(false);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Keep editing"
               >
@@ -579,12 +762,40 @@ export default function WeeklyStudio() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </WeeklyStudioPresentation>
   );
 }
 
-const styles = StyleSheet.create({
+export default function WeeklyStudioScreen() {
+  return <WeeklyStudio />;
+}
+
+const themedStyles = createEditorialStyles(() => ({
   safe: { flex: 1, backgroundColor: Palette.bg },
+  drawerRoot: { flex: 1, justifyContent: 'flex-end' },
+  drawerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: Palette.backdrop },
+  drawerSheet: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '92%',
+    alignSelf: 'center',
+    overflow: 'hidden',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: Palette.gray,
+    backgroundColor: Palette.bgRaised,
+  },
+  drawerDragArea: { paddingTop: 9 },
+  drawerHandle: { width: 38, height: 4, alignSelf: 'center', borderRadius: 2, backgroundColor: Palette.gray },
+  drawerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 22, paddingTop: 17, paddingBottom: 18 },
+  drawerTitleGroup: { flex: 1, minWidth: 0 },
+  drawerEyebrow: { color: Palette.red, fontSize: 11, fontWeight: '800', letterSpacing: 1.1, marginBottom: 5 },
+  drawerTitle: { color: Palette.warmWhite, fontSize: 24, lineHeight: 28, fontWeight: '900' },
+  drawerSubtitle: { color: Palette.warmMuted, fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 },
+  drawerHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  drawerHeaderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
+  drawerSaveButton: { borderColor: Palette.red, backgroundColor: Palette.redSoft },
   headerFrame: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20 },
   header: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: Palette.gray },
   headerIcon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: Palette.bgElevated, borderWidth: 1, borderColor: Palette.gray, borderRadius: 22 },
@@ -608,7 +819,7 @@ const styles = StyleSheet.create({
   pastText: { color: Palette.warmMuted },
   todayDot: { width: 3, height: 3, borderRadius: 2, marginTop: 2, backgroundColor: 'transparent' },
   todayDotVisible: { backgroundColor: Palette.red },
-  weekGoal: { width: 'auto', maxWidth: 720, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, marginTop: 12, padding: 12, borderRadius: R.sm, borderWidth: 1, borderColor: '#F4C8CC', backgroundColor: Palette.redSoft },
+  weekGoal: { width: 'auto', maxWidth: 720, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, marginTop: 12, padding: 12, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.red, backgroundColor: Palette.redSoft },
   goalIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.bgElevated },
   goalCopy: { flex: 1, minWidth: 0 },
   goalTitle: { color: Palette.warmWhite, fontSize: 13, fontWeight: '800' },
@@ -625,7 +836,7 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   contentInner: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 32, gap: 10 },
   domainCard: { backgroundColor: Palette.bgElevated, borderWidth: 1, borderColor: Palette.gray, borderRadius: R.sm, padding: 12, gap: 10 },
-  domainCardGoal: { borderColor: '#F0AEB5' },
+  domainCardGoal: { borderColor: Palette.red },
   domainHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   domainIdentity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   domainIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.graySoft },
@@ -637,7 +848,7 @@ const styles = StyleSheet.create({
   domainActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   goalDots: { flexDirection: 'row', gap: 4 },
   goalDot: { width: 12, height: 5, borderRadius: 3, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bg },
-  goalDotPlanned: { borderColor: '#F0AEB5', backgroundColor: Palette.redSoft },
+  goalDotPlanned: { borderColor: Palette.red, backgroundColor: Palette.redSoft },
   goalDotComplete: { borderColor: Palette.red, backgroundColor: Palette.red },
   deleteNebulaButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: R.full, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bg },
   emptyTask: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: R.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: Palette.gray },
@@ -659,7 +870,7 @@ const styles = StyleSheet.create({
   emptyDomains: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 24, gap: 6 },
   emptyDomainsTitle: { color: Palette.warmWhite, fontSize: 15, fontWeight: '800' },
   emptyDomainsText: { color: Palette.warmDim, fontSize: 11, lineHeight: 16, fontWeight: '600', textAlign: 'center' },
-  addNebulaButton: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: R.sm, borderWidth: 1, borderColor: '#F4C8CC', backgroundColor: Palette.redSoft },
+  addNebulaButton: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.red, backgroundColor: Palette.redSoft },
   addNebulaText: { color: Palette.red, fontSize: 12, fontWeight: '800' },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: Palette.backdrop },
   backdropCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: Palette.backdrop },
@@ -692,4 +903,4 @@ const styles = StyleSheet.create({
   loadingHeader: { height: 60, margin: 16, borderRadius: R.md, backgroundColor: Palette.bgElevated },
   loadingWeek: { height: 104, marginHorizontal: 16, borderRadius: R.md, backgroundColor: Palette.bgElevated },
   loadingCard: { height: 100, marginHorizontal: 16, marginTop: 10, borderRadius: R.md, backgroundColor: Palette.bgElevated },
-});
+}));

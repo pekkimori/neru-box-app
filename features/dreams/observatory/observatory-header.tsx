@@ -1,9 +1,18 @@
 // features/dreams/observatory/observatory-header.tsx
-import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { NeruRobot } from '@/components/neru-robot';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import {
+  pageHeaderActionRowStyle,
+  pageHeaderIconControlStyle,
+  pageHeaderLabelControlStyle,
+} from '@/constants/page-header';
+import { useThemedStyles } from '@/features/settings/app-theme';
 import { Type } from '@/constants/typography';
-import { Palette } from '../tokens';
+import { Palette, useDreamsPalette } from '../tokens';
 import { formatDate } from '../time-helpers';
 
 interface Props {
@@ -12,24 +21,30 @@ interface Props {
   totalPlanned: number;
   coins: number;
   streakDays: number;
+  onPlanPress?: () => void;
 }
 
 export function ObservatoryHeader({
-  date, litCount, totalPlanned, coins, streakDays,
+  date, litCount, totalPlanned, coins, streakDays, onPlanPress,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   const router = useRouter();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.titleCol}>
-          <Text style={styles.title}>DREAMS</Text>
-          <Text style={styles.date}>{formatDate(date)}</Text>
+        <View style={styles.identity}>
+          <NeruRobot reactToButtons size={42} tabIndex={2} />
+          <View style={styles.titleCol}>
+            <Text style={styles.title}>TASKS</Text>
+            <Text style={styles.date}>{formatDate(date)}</Text>
+          </View>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push('/dreams/plan')}
+            onPress={onPlanPress ?? (() => router.push('/tasks/plan'))}
             accessibilityRole="button"
             accessibilityLabel="Manage week plan"
           >
@@ -38,7 +53,7 @@ export function ObservatoryHeader({
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push('/dreams/galaxy')}
+            onPress={() => router.push('/tasks/galaxy')}
             accessibilityRole="button"
             accessibilityLabel="Open completed stars archive"
           >
@@ -76,25 +91,20 @@ export function ObservatoryHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   container: { gap: 12 },
   header: {
     minHeight: 72, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     borderBottomWidth: 1, borderBottomColor: Palette.gray,
   },
+  identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   titleCol: { flex: 1 },
   title: { ...Type.pageTitle, color: Palette.warmWhite },
   date: { ...Type.bodySmall, color: Palette.warmDim, marginTop: 3 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  actionButton: {
-    height: 44, borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingHorizontal: 13, backgroundColor: Palette.redSoft, borderWidth: 1, borderColor: '#F4C8CC',
-  },
+  actions: pageHeaderActionRowStyle,
+  actionButton: pageHeaderLabelControlStyle(Palette),
   actionText: { ...Type.buttonSmall, color: Palette.red },
-  iconButton: {
-    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Palette.bgElevated, borderWidth: 1, borderColor: Palette.gray,
-  },
+  iconButton: pageHeaderIconControlStyle(Palette),
   stats: {
     minHeight: 62, flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8,
@@ -107,4 +117,4 @@ const styles = StyleSheet.create({
   metricDivider: { width: 1, height: 34, backgroundColor: Palette.gray },
   coinMark: { width: 20, height: 20, borderRadius: 10, backgroundColor: Palette.red, alignItems: 'center', justifyContent: 'center' },
   coinMarkText: { ...Type.captionStrong, color: Palette.onRed },
-});
+}));

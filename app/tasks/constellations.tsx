@@ -3,10 +3,8 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   FlatList,
   TextInput,
-  Modal,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
@@ -15,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CandyButton, CandyCard, CandyScreen, StatusPill } from '@/components/candy';
+import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
 import { useConstellations } from '../../hooks/useConstellations';
 
@@ -68,7 +67,7 @@ export default function ConstellationList() {
           return (
             <TouchableOpacity
               style={styles.cardTouch}
-              onPress={() => router.push(`/dreams/constellation/${item.id}`)}
+              onPress={() => router.push(`/tasks/constellation/${item.id}`)}
               onLongPress={() => handleDelete(item.id, item.name)}
               accessibilityRole="button"
               accessibilityLabel={`Open ${item.name} constellation, ${starCount} stars`}

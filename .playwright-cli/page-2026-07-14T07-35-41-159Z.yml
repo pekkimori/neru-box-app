@@ -1,0 +1,172 @@
+- generic [ref=e1]:
+  - generic [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e177]:
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - button "Play with NERU" [ref=e190] [cursor=pointer]
+            - generic [ref=e191]:
+              - generic [ref=e192]:
+                - generic [ref=e193]: NERU
+                - generic [ref=e195]: READY
+              - generic [ref=e196]: Warm mode
+          - generic [ref=e197]:
+            - button "Start a new chat" [ref=e198] [cursor=pointer]:
+              - generic [ref=e199]: 
+            - button "Open chat history" [ref=e200] [cursor=pointer]:
+              - generic [ref=e201]: 
+            - button "Customize NERU" [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]: 
+        - generic [ref=e204]: CONVERSATION / 02
+        - generic [ref=e241]:
+          - generic [ref=e242]: NERU · 04:33 AM
+          - generic [ref=e244]: Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?
+        - generic [ref=e216]:
+          - generic [ref=e217] [cursor=pointer]:
+            - generic [ref=e218]: Plan my week
+            - generic [ref=e219]: 
+          - generic [ref=e220] [cursor=pointer]:
+            - generic [ref=e221]: Find my focus
+            - generic [ref=e222]: 
+          - generic [ref=e223] [cursor=pointer]:
+            - generic [ref=e224]: I need a break
+            - generic [ref=e225]: 
+        - generic [ref=e226]:
+          - textbox "Message NERU" [ref=e227]:
+            - /placeholder: Tell NERU what's on your mind...
+          - button "Send message" [disabled]:
+            - generic [ref=e228]: 
+        - generic [ref=e229]: PRIVATE SESSION · STORED ON THIS SCREEN ONLY
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - button [ref=e230] [cursor=pointer]
+              - generic [ref=e66]:
+                - generic [ref=e67]: DREAMS
+                - generic [ref=e68]: Tuesday, July 14
+            - generic [ref=e69]:
+              - button [ref=e231] [cursor=pointer]:
+                - generic [ref=e71]: 
+                - generic [ref=e72]: Plan
+              - button [ref=e232] [cursor=pointer]:
+                - generic [ref=e74]: 
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: 
+                - generic [ref=e79]: 0/0
+              - generic [ref=e80]: Stars lit
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - generic [ref=e84]: "N"
+                - generic [ref=e86]: "1000"
+              - generic [ref=e87]: Coins
+            - generic [ref=e89]:
+              - generic [ref=e90]:
+                - generic [ref=e91]: 
+                - generic [ref=e92]: "0"
+              - generic [ref=e93]: Day streak
+        - generic [ref=e94]:
+          - tab [ref=e233] [cursor=pointer]:
+            - generic [ref=e96]: 
+            - generic [ref=e98]:
+              - generic [ref=e99]: Sleep time
+              - generic [ref=e100]: 2h 25m left · Periods paused
+          - button [ref=e234] [cursor=pointer]:
+            - generic [ref=e102]: 
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - generic [ref=e105]: Sleep routine
+            - generic [ref=e106]: 0/4
+          - generic [ref=e107]: Finish these wind-down steps to signal that you are going to sleep.
+          - generic [ref=e109]:
+            - checkbox [ref=e235] [cursor=pointer]:
+              - generic [ref=e111]: 
+              - generic [ref=e112]: Turn on Do Not Disturb
+            - checkbox [ref=e236] [cursor=pointer]:
+              - generic [ref=e114]: 
+              - generic [ref=e115]: Brush your teeth
+            - checkbox [ref=e237] [cursor=pointer]:
+              - generic [ref=e117]: 
+              - generic [ref=e118]: Dim the lights
+            - checkbox [ref=e238] [cursor=pointer]:
+              - generic [ref=e120]: 
+              - generic [ref=e121]: Get into bed
+        - generic [ref=e123]:
+          - generic [ref=e124]: Sleep mode
+          - generic [ref=e125]: Regular tasks are paused while you wind down
+        - generic [ref=e127]:
+          - generic [ref=e128]: 
+          - generic [ref=e129]:
+            - generic [ref=e130]: Tasks are paused
+            - generic [ref=e131]: Complete the sleep routine above when you are ready for bed.
+        - generic [ref=e132]:
+          - generic [ref=e133]:
+            - generic [ref=e134]: Your sky
+            - generic [ref=e135]: Completed tasks stay lit in place
+          - button [ref=e239] [cursor=pointer]:
+            - generic [ref=e137]: 
+            - generic [ref=e138]: Archive
+        - generic [ref=e139]: Create your first nebula to start mapping your sky.
+    - tablist [ref=e147]:
+      - tab "Control" [ref=e148] [cursor=pointer]:
+        - generic [ref=e149]: 
+        - generic [ref=e151]: CONTROL
+      - tab "Chat" [ref=e153] [cursor=pointer]:
+        - generic [ref=e154]: 
+        - generic [ref=e156]: CHAT
+      - tab "Tasks" [ref=e158] [cursor=pointer]:
+        - generic [ref=e159]: 
+        - generic [ref=e161]: TASKS
+      - tab "Gacha" [ref=e162] [cursor=pointer]:
+        - generic [ref=e163]: 
+        - generic [ref=e165]: GACHA
+      - tab "Diary" [ref=e167] [cursor=pointer]:
+        - generic [ref=e168]: 
+        - generic [ref=e170]: DIARY
+  - dialog [ref=e247]:
+    - generic [ref=e250]:
+      - generic "Close chat history" [ref=e252] [cursor=pointer]
+      - generic [ref=e253]:
+        - generic [ref=e256]:
+          - generic [ref=e257]:
+            - generic [ref=e258]: CHAT / HISTORY
+            - generic [ref=e259]: Past conversations.
+          - button "Close chat history" [ref=e260] [cursor=pointer]:
+            - generic [ref=e261]: 
+        - generic [ref=e263]:
+          - generic [ref=e264]:
+            - generic [ref=e265]:
+              - button "Open conversation 2" [ref=e300] [cursor=pointer]:
+                - generic [ref=e301]:
+                  - generic [ref=e302]: CONVERSATION / 02
+                  - generic [ref=e303]: CURRENT
+                  - generic [ref=e304]: JUL 14
+                - generic [ref=e305]: Study plan
+                - generic [ref=e306]: Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?
+              - generic [ref=e273]:
+                - button "Rename conversation 2" [ref=e307] [cursor=pointer]:
+                  - generic [ref=e275]: 
+                - button "Delete conversation 2" [active] [ref=e308] [cursor=pointer]:
+                  - generic [ref=e277]: 
+            - generic [ref=e309]:
+              - generic [ref=e310]:
+                - generic [ref=e311]: 
+                - generic [ref=e312]: Delete this chat?
+              - button "Cancel delete" [ref=e313] [cursor=pointer]:
+                - generic [ref=e314]: Cancel
+              - button "Confirm delete conversation 2" [ref=e315] [cursor=pointer]:
+                - generic [ref=e316]: Delete
+          - generic [ref=e279]:
+            - button "Open conversation 1" [ref=e280] [cursor=pointer]:
+              - generic [ref=e281]:
+                - generic [ref=e282]: CONVERSATION / 01
+                - generic [ref=e283]: JUL 14
+              - generic [ref=e284]: New conversation
+              - generic [ref=e285]: Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?
+            - generic [ref=e286]:
+              - button "Rename conversation 1" [ref=e287] [cursor=pointer]:
+                - generic [ref=e288]: 
+              - button "Delete conversation 1" [ref=e289] [cursor=pointer]:
+                - generic [ref=e290]: 

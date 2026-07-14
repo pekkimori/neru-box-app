@@ -6,6 +6,7 @@ import {
     StarToken,
     StatusPill,
 } from "@/components/candy";
+import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
 import { CandyColors, CandySpacing } from "@/constants/candy-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -17,7 +18,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { NeruColors } from "../../../constants/neru-theme";
@@ -121,7 +121,7 @@ export default function TimeBlockScreen() {
       if (allDone && updatedTasks.length > 0) {
         addCoins(10);
         setTimeout(() => {
-          router.push(`/dreams/reflection/${block}`);
+          router.push(`/tasks/reflection/${block}`);
         }, 600);
       }
     },
@@ -144,7 +144,7 @@ export default function TimeBlockScreen() {
   const handleCameraPress = useCallback(
     (task: PlannedTask) => {
       router.push({
-        pathname: "/dreams/camera",
+        pathname: "/tasks/camera",
         params: {
           starId: task.starId,
           block,

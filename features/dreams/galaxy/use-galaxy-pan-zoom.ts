@@ -3,7 +3,7 @@
 // single-tap star selection, and double-tap (canvas decides reset vs zoom).
 // Uses built-in PanResponder — no gesture-handler dependency.
 
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { PanResponder } from 'react-native';
 import type { ViewBox } from './galaxy-geometry';
 
@@ -15,8 +15,10 @@ interface UseGalaxyPanZoomOpts {
   fullExtent: ViewBox;
   viewBox: ViewBox;
   setViewBox: (vb: ViewBox | ((prev: ViewBox) => ViewBox)) => void;
-  onTapStar: (svgX: number, svgY: number) => void;
+  /** Returns true when the tap was consumed by a star or popup interaction. */
+  onTapStar: (svgX: number, svgY: number) => boolean;
   onDoubleTap: (svgX: number, svgY: number) => void;
+  onInteractionStart?: () => void;
   screenW: number;
   screenH: number;
 }
@@ -24,10 +26,19 @@ interface UseGalaxyPanZoomOpts {
 interface TouchState {
   pageX: number;
   pageY: number;
+  locationX?: number;
+  locationY?: number;
 }
 
 function touchDist(a: TouchState, b: TouchState): number {
   return Math.sqrt((a.pageX - b.pageX) ** 2 + (a.pageY - b.pageY) ** 2);
+}
+
+function localTouch(touch: TouchState): TouchState {
+  return {
+    pageX: touch.locationX ?? touch.pageX,
+    pageY: touch.locationY ?? touch.pageY,
+  };
 }
 
 function screenToSvg(
@@ -51,6 +62,7 @@ export function useGalaxyPanZoom({
   setViewBox,
   onTapStar,
   onDoubleTap,
+  onInteractionStart,
   screenW,
   screenH,
 }: UseGalaxyPanZoomOpts) {
@@ -64,28 +76,55 @@ export function useGalaxyPanZoom({
   const lastTapTime = useRef(0);
   const lastTapPos = useRef<{ x: number; y: number } | null>(null);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gestureMoved = useRef(false);
+
+  useEffect(() => () => {
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+  }, []);
 
   const panResponder = useMemo(
-    () =>
-      PanResponder.create({
+    () => {
+      const beginPinch = (touches: readonly TouchState[]) => {
+        if (touches.length < 2) return;
+        const a = touches[0];
+        const b = touches[1];
+        const localA = localTouch(a);
+        const localB = localTouch(b);
+        const baseViewBox = { ...viewBoxRef.current };
+
+        gestureMoved.current = true;
+        pinchBase.current = touchDist(a, b);
+        pinchVb.current = baseViewBox;
+        pinchAnchorSVG.current = screenToSvg(
+          baseViewBox,
+          (localA.pageX + localB.pageX) / 2,
+          (localA.pageY + localB.pageY) / 2,
+          screenW,
+          screenH,
+        );
+        panStart.current = null;
+      };
+
+      const clearGesture = () => {
+        panStart.current = null;
+        pinchBase.current = null;
+        pinchVb.current = null;
+        pinchAnchorSVG.current = null;
+        gestureMoved.current = false;
+      };
+
+      return PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gs) =>
           Math.abs(gs.dx) > TOUCH_SLOP || Math.abs(gs.dy) > TOUCH_SLOP,
 
         onPanResponderGrant: (evt) => {
+          onInteractionStart?.();
           const touches = evt.nativeEvent.touches;
-          if (touches && touches.length === 2) {
-            const a: TouchState = { pageX: touches[0].pageX, pageY: touches[0].pageY };
-            const b: TouchState = { pageX: touches[1].pageX, pageY: touches[1].pageY };
-            pinchBase.current = touchDist(a, b);
-            pinchVb.current = { ...viewBoxRef.current };
-            const cx = (a.pageX + b.pageX) / 2;
-            const cy = (a.pageY + b.pageY) / 2;
-            pinchAnchorSVG.current = screenToSvg(
-              viewBoxRef.current, cx, cy, screenW, screenH,
-            );
-            panStart.current = null;
+          if (touches && touches.length >= 2) {
+            beginPinch(touches);
           } else {
+            gestureMoved.current = false;
             panStart.current = {
               x: evt.nativeEvent.pageX,
               y: evt.nativeEvent.pageY,
@@ -98,15 +137,17 @@ export function useGalaxyPanZoom({
 
         onPanResponderMove: (evt) => {
           const touches = evt.nativeEvent.touches;
-          if (
-            touches &&
-            touches.length === 2 &&
-            pinchBase.current !== null &&
-            pinchVb.current &&
-            pinchAnchorSVG.current
-          ) {
-            const a: TouchState = { pageX: touches[0].pageX, pageY: touches[0].pageY };
-            const b: TouchState = { pageX: touches[1].pageX, pageY: touches[1].pageY };
+          if (touches && touches.length >= 2) {
+            if (pinchBase.current === null || !pinchVb.current || !pinchAnchorSVG.current) {
+              // The common mobile sequence is one finger first, then the second.
+              // Promote the active pan to a pinch as soon as that finger arrives.
+              beginPinch(touches);
+              return;
+            }
+
+            gestureMoved.current = true;
+            const a = touches[0];
+            const b = touches[1];
             const d = touchDist(a, b);
             const scale = pinchBase.current / d;
 
@@ -127,6 +168,12 @@ export function useGalaxyPanZoom({
               };
             });
           } else if (panStart.current && screenW > 0 && screenH > 0) {
+            if (
+              Math.abs(evt.nativeEvent.pageX - panStart.current.x) > TOUCH_SLOP
+              || Math.abs(evt.nativeEvent.pageY - panStart.current.y) > TOUCH_SLOP
+            ) {
+              gestureMoved.current = true;
+            }
             const dx = panStart.current.x - evt.nativeEvent.pageX;
             const dy = panStart.current.y - evt.nativeEvent.pageY;
             const startView = panStart.current.vb;
@@ -144,14 +191,25 @@ export function useGalaxyPanZoom({
         },
 
         onPanResponderRelease: (evt) => {
-          const wasGesture = panStart.current !== null || pinchBase.current !== null;
+          const wasGesture = gestureMoved.current || pinchBase.current !== null;
 
           if (!wasGesture && screenW > 0 && screenH > 0) {
             const tapX = evt.nativeEvent.locationX;
             const tapY = evt.nativeEvent.locationY;
             const now = Date.now();
 
-            if (
+            const svgPos = screenToSvg(
+              viewBoxRef.current, tapX, tapY, screenW, screenH,
+            );
+            // Star selection is immediate on mobile. Double tap remains a
+            // background shortcut, while pinch and controls handle node zoom.
+            const consumed = onTapStar(svgPos.x, svgPos.y);
+
+            if (consumed) {
+              lastTapTime.current = 0;
+              lastTapPos.current = null;
+              if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
+            } else if (
               lastTapPos.current &&
               lastTapTime.current > 0 &&
               now - lastTapTime.current < DOUBLE_TAP_MS &&
@@ -167,26 +225,23 @@ export function useGalaxyPanZoom({
               if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; }
             } else {
               if (tapTimer.current) clearTimeout(tapTimer.current);
-              const svgPos = screenToSvg(
-                viewBoxRef.current, tapX, tapY, screenW, screenH,
-              );
               lastTapTime.current = now;
               lastTapPos.current = { x: tapX, y: tapY };
 
               tapTimer.current = setTimeout(() => {
-                onTapStar(svgPos.x, svgPos.y);
+                lastTapTime.current = 0;
+                lastTapPos.current = null;
                 tapTimer.current = null;
               }, DOUBLE_TAP_MS);
             }
           }
 
-          panStart.current = null;
-          pinchBase.current = null;
-          pinchVb.current = null;
-          pinchAnchorSVG.current = null;
+          clearGesture();
         },
-      }),
-    [fullExtent.w, screenW, screenH, setViewBox, onTapStar, onDoubleTap],
+        onPanResponderTerminate: clearGesture,
+      });
+    },
+    [fullExtent.w, screenW, screenH, setViewBox, onTapStar, onDoubleTap, onInteractionStart],
   );
 
   return panResponder;

@@ -4,9 +4,11 @@ import test from 'node:test';
 import {
   addLocalDays,
   durationBetweenTimes,
+  formatDurationMinutes,
   formatLocalDate,
   getWeekDateKeys,
   isMinuteInRange,
+  minutesUntilClockTime,
   parseTimeMinutes,
   splitTimeRange,
   timeRangesOverlap,
@@ -23,6 +25,14 @@ test('calculates same-day, overnight, and full-day durations', () => {
   assert.equal(durationBetweenTimes('09:00', '10:30'), 90);
   assert.equal(durationBetweenTimes('23:30', '07:00'), 450);
   assert.equal(durationBetweenTimes('08:00', '08:00'), 1440);
+});
+
+test('calculates and formats time left before a clock boundary', () => {
+  assert.equal(minutesUntilClockTime(10 * 60 + 30, 12 * 60), 90);
+  assert.equal(minutesUntilClockTime(23 * 60 + 30, 5 * 60), 330);
+  assert.equal(formatDurationMinutes(90), '1h 30m');
+  assert.equal(formatDurationMinutes(60), '1h');
+  assert.equal(formatDurationMinutes(45), '45m');
 });
 
 test('splits overnight ranges for a 24-hour timeline', () => {

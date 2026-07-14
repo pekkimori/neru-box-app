@@ -1,120 +1,123 @@
+import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Easing, Platform } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { EditorialColors } from '@/constants/editorial-theme';
-import { Type } from '@/constants/typography';
+import { FloatingTabBar } from '@/components/floating-tab-bar';
+import { useAppTheme } from '@/features/settings/app-theme';
 
-const TAB_RED = EditorialColors.red;
-const TAB_INK = '#6F6F6F';
+/**
+ * A restrained card-deck transition: the old view drifts away while the next
+ * one rises into place. Keeping this in the navigator preserves every tab's
+ * scroll position and local state while the native driver handles the motion.
+ */
+const cardDeckInterpolator: NonNullable<
+  BottomTabNavigationOptions['sceneStyleInterpolator']
+> = ({ current }) => ({
+  sceneStyle: {
+    opacity: current.progress.interpolate({
+      inputRange: [-1, -0.82, 0, 0.82, 1],
+      outputRange: [0, 0.08, 1, 0.08, 0],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateX: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [-46, 0, 46],
+          extrapolate: 'clamp',
+        }),
+      },
+      {
+        translateY: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [10, 0, 10],
+          extrapolate: 'clamp',
+        }),
+      },
+      {
+        scale: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [0.965, 1, 0.965],
+          extrapolate: 'clamp',
+        }),
+      },
+      {
+        rotateZ: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: ['-0.65deg', '0deg', '0.65deg'],
+          extrapolate: 'clamp',
+        }),
+      },
+    ],
+  },
+});
 
-type TabIconProps = {
-  focused: boolean;
-  active: React.ComponentProps<typeof Ionicons>['name'];
-  inactive: React.ComponentProps<typeof Ionicons>['name'];
+const CARD_DECK_TRANSITION: NonNullable<BottomTabNavigationOptions['transitionSpec']> = {
+  animation: 'timing',
+  config: {
+    duration: 310,
+    easing: Easing.bezier(0.22, 1, 0.36, 1),
+  },
 };
 
-function TabIcon({ focused, active, inactive }: TabIconProps) {
-  return (
-    <View style={styles.iconFrame}>
-      <View style={[styles.activeRule, focused && styles.activeRuleVisible]} />
-      <Ionicons name={focused ? active : inactive} size={21} color={focused ? TAB_RED : TAB_INK} />
-    </View>
-  );
-}
-
 export default function TabLayout() {
+  const reduceMotion = useReducedMotion();
+  const { colors } = useAppTheme();
+
   return (
     <Tabs
+      initialRouteName="tasks"
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarActiveTintColor: TAB_RED,
-        tabBarInactiveTintColor: TAB_INK,
-        tabBarStyle: {
-          position: 'absolute',
-          left: 14,
-          right: 14,
-          bottom: Platform.OS === 'ios' ? 14 : 10,
-          height: Platform.OS === 'ios' ? 66 : 58,
-          paddingTop: 5,
-          paddingBottom: Platform.OS === 'ios' ? 12 : 6,
-          backgroundColor: EditorialColors.white,
-          borderTopWidth: 0,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: '#DEDEDE',
-          shadowColor: '#171717',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.1,
-          shadowRadius: 18,
-          elevation: 7,
+        tabBarHideOnKeyboard: true,
+        sceneStyle: {
+          backgroundColor: colors.background,
+          paddingBottom: Platform.OS === 'ios' ? 44 : 30,
         },
-        tabBarLabelStyle: {
-          ...Type.microLabel,
-        },
+        ...(reduceMotion
+          ? { animation: 'none' as const }
+          : {
+              sceneStyleInterpolator: cardDeckInterpolator,
+              transitionSpec: CARD_DECK_TRANSITION,
+            }),
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="control"
         options={{
-          title: 'Dreams',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="star" inactive="star-outline" />,
+          title: 'Control',
         }}
       />
       <Tabs.Screen
-        name="protect"
+        name="chat"
         options={{
-          title: 'Protect',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="shield" inactive="shield-outline" />,
+          title: 'Chat',
         }}
       />
       <Tabs.Screen
-        name="companion"
+        name="tasks"
         options={{
-          title: 'Neru',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} active="chatbubble-ellipses" inactive="chatbubble-ellipses-outline" />
-          ),
+          title: 'Tasks',
         }}
       />
       <Tabs.Screen
-        name="social"
+        name="gacha"
         options={{
           title: 'Gacha',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="gift" inactive="gift-outline" />,
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
           title: 'Diary',
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} active="book" inactive="book-outline" />,
+          // Diary is the heaviest tab (local fonts, archive data, and imagery).
+          // Mount it behind the app-launch veil so it is ready on first open.
+          lazy: false,
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconFrame: {
-    width: 32,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeRule: {
-    position: 'absolute',
-    top: 0,
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: TAB_RED,
-    opacity: 0,
-  },
-  activeRuleVisible: {
-    opacity: 1,
-  },
-});

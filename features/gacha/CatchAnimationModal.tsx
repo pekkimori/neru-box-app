@@ -1,8 +1,9 @@
-import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { MotionModal as Modal } from '@/components/motion';
 import { RARITY_COLORS, type Rarity } from '@/constants/gacha';
+import { playCatchFeedback, playCatchSuccessFeedback } from '@/utils/interaction-feedback';
 
 export const CATCH_TAPS_REQUIRED = 3;
 const RARITY_REVEAL_TAP = 3;
@@ -84,9 +85,7 @@ export function CatchAnimationModal({
 
   const finishCatch = useCallback(() => {
     setOpened(true);
-    if (Platform.OS !== 'web') {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+    playCatchSuccessFeedback();
 
     const opening = Animated.sequence([
       Animated.parallel([
@@ -117,11 +116,7 @@ export function CatchAnimationModal({
     flash.setValue(0);
     tapsRef.current = nextTap;
     setTapCount(nextTap);
-    if (Platform.OS !== 'web') {
-      void Haptics.impactAsync(nextTap === requiredTaps
-        ? Haptics.ImpactFeedbackStyle.Heavy
-        : Haptics.ImpactFeedbackStyle.Medium);
-    }
+    playCatchFeedback(nextTap === requiredTaps);
 
     const captureShake = Animated.parallel([
       Animated.sequence([

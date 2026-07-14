@@ -19,6 +19,22 @@ export function getMinuteOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+/** Minutes from one minute-of-day to another, wrapping across midnight. */
+export function minutesUntilClockTime(nowMinutes: number, targetMinutes: number): number {
+  return (targetMinutes - nowMinutes + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+}
+
+/** Compact duration for countdown UI, for example `2h 15m` or `45m`. */
+export function formatDurationMinutes(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.floor(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+
+  if (hours === 0) return `${remainder}m`;
+  if (remainder === 0) return `${hours}h`;
+  return `${hours}h ${remainder}m`;
+}
+
 /** Duration between two clock times, treating equal times as a full day. */
 export function durationBetweenTimes(start: string, end: string): number | null {
   const startMinutes = parseTimeMinutes(start);

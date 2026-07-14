@@ -14,6 +14,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { MotionTouchableOpacity } from '@/components/motion';
+import { playTapFeedback } from '@/utils/interaction-feedback';
 import { CandyScreen } from '@/components/candy';
 import {
   CandyColors,
@@ -80,6 +82,7 @@ function AcceptButton({
   }));
 
   const handlePress = useCallback(() => {
+    playTapFeedback();
     scale.value = withSequence(
       withTiming(0.93, { duration: 80 }),
       withSpring(1, { damping: 10, stiffness: 200 }),
@@ -237,7 +240,7 @@ export default function ExchangeScreen() {
                   />
                   <Text style={styles.acceptText}>Accept</Text>
                 </AcceptButton>
-                <TouchableOpacity
+                <MotionTouchableOpacity
                   style={styles.declineButton}
                   onPress={() => dismissOffer(offer.id)}
                   activeOpacity={0.8}
@@ -248,7 +251,7 @@ export default function ExchangeScreen() {
                     color={NeruColors.red}
                   />
                   <Text style={styles.declineText}>Decline</Text>
-                </TouchableOpacity>
+                </MotionTouchableOpacity>
               </View>
             </View>
           ))

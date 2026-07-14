@@ -1,18 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Modal, Pressable, Text, View } from "react-native";
-
 import {
-  EditorialColors,
-  editorialOverlay,
-} from "../../constants/editorial-theme";
-import type { InstalledApp } from "./model";
-import { protectStyles as styles } from "./styles";
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-const Palette = {
-  ...EditorialColors,
-  overlay: editorialOverlay(0.42),
-};
+import { MotionModal as Modal, MotionPressable } from "@/components/motion";
+import { useAppTheme, useThemedStyles } from "@/features/settings/app-theme";
+import { useDraggableDrawer } from "@/hooks/useDraggableDrawer";
+import type { InstalledApp } from "./model";
+import { protectStyles } from "./styles";
 
 export function EditorModal({
   visible,
@@ -27,49 +27,75 @@ export function EditorModal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: Palette } = useAppTheme();
+  const { backdropOpacity, closeDrawer, panHandlers, translateY } =
+    useDraggableDrawer({
+      visible,
+      onClose,
+    });
+
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={closeDrawer}
     >
       <View style={styles.editorModalRoot}>
-        <Pressable
-          style={styles.editorBackdrop}
-          onPress={onClose}
-          accessibilityLabel={`Close ${title}`}
-        />
-        <View style={styles.editorSheet}>
-          <View style={styles.editorHandle} />
-          <View style={styles.editorHeader}>
-            <View style={styles.editorTitleGroup}>
-              <Text style={styles.editorEyebrow}>PROTECT / SETTINGS</Text>
-              <Text style={styles.editorTitle}>{title}</Text>
-              {subtitle ? (
-                <Text style={styles.editorSubtitle}>{subtitle}</Text>
-              ) : null}
+        <Animated.View
+          pointerEvents="box-none"
+          style={[styles.editorBackdrop, { opacity: backdropOpacity }]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={closeDrawer}
+            accessibilityLabel={`Close ${title}`}
+          />
+        </Animated.View>
+        <Animated.View
+          accessibilityViewIsModal
+          style={[
+            styles.editorSheet,
+            { transform: [{ translateY }] },
+          ]}
+        >
+          <View
+            {...panHandlers}
+            collapsable={false}
+            style={styles.editorDragArea}
+          >
+            <View style={styles.editorHandle} />
+            <View style={styles.editorHeader}>
+              <View style={styles.editorTitleGroup}>
+                <Text style={styles.editorEyebrow}>CONTROL / SETTINGS</Text>
+                <Text style={styles.editorTitle}>{title}</Text>
+                {subtitle ? (
+                  <Text style={styles.editorSubtitle}>{subtitle}</Text>
+                ) : null}
+              </View>
+              <MotionPressable
+                accessibilityRole="button"
+                accessibilityLabel={`Close ${title}`}
+                onPress={closeDrawer}
+                style={({ pressed }) => [
+                  styles.editorClose,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="close" size={22} color={Palette.ink} />
+              </MotionPressable>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Close ${title}`}
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.editorClose,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons name="close" size={22} color={Palette.ink} />
-            </Pressable>
           </View>
           <View style={styles.editorBody}>{children}</View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
+  const styles = useThemedStyles(protectStyles);
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
@@ -80,15 +106,17 @@ export function ToggleSwitch({
   value: boolean;
   onValueChange: (value: boolean) => void;
 }) {
+  const styles = useThemedStyles(protectStyles);
+
   return (
-    <Pressable
+    <MotionPressable
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       onPress={() => onValueChange(!value)}
       style={[styles.toggleTrack, value && styles.toggleTrackActive]}
     >
       <View style={[styles.toggleThumb, value && styles.toggleThumbActive]} />
-    </Pressable>
+    </MotionPressable>
   );
 }
 
@@ -99,6 +127,9 @@ export function AppMark({
   app: InstalledApp;
   size?: number;
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: Palette } = useAppTheme();
+
   return (
     <View
       style={[

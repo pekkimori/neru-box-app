@@ -7,14 +7,13 @@ import {
   Animated,
   Image,
   Linking,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { Palette, R } from '../../features/dreams/tokens';
+import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { Palette, R, useDreamsPalette } from '../../features/dreams/tokens';
 
 type PhotoCompletionModalProps = {
   visible: boolean;
@@ -29,6 +28,7 @@ type PhotoSource = 'camera' | 'gallery';
 export function PhotoCompletionModal({
   visible, taskLabel, onComplete, onCancel,
 }: PhotoCompletionModalProps) {
+  const Palette = useDreamsPalette();
   const [step, setStep] = useState<ModalStep>('choose');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [sourceBusy, setSourceBusy] = useState<PhotoSource | null>(null);

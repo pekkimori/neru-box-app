@@ -1,10 +1,11 @@
 // app/dreams/camera.tsx
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { CandyButton, CandyScreen } from '@/components/candy';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { CandyColors } from '@/constants/candy-theme';
 import { todayString } from '../../features/dreams/time-helpers';
 import { useDailyPlan } from '../../hooks/useDailyPlan';

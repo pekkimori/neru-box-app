@@ -1,8 +1,11 @@
 // features/dreams/observatory/routine-gate.tsx
-import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Text, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
 import { Type } from '@/constants/typography';
-import { Palette, Sp, R } from '../tokens';
+import { useThemedStyles } from '@/features/settings/app-theme';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 import type { RoutineQuest } from '../../../types/dreams';
 
 interface Props {
@@ -20,6 +23,8 @@ export function RoutineGate({
   routines, isComplete, tasksUnlocked,
   isSleepPeriod, sleepReady, readOnly, sleepBlocked, onToggle,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   const completedCount = routines.filter((r) => isComplete(r.id)).length;
   const allDone = routines.length === 0 || completedCount === routines.length;
 
@@ -61,7 +66,7 @@ export function RoutineGate({
     );
   }
 
-  if (allDone && tasksUnlocked && !isSleepPeriod && !sleepReady) {
+  if (allDone && tasksUnlocked && !isSleepPeriod) {
     return (
       <View style={styles.open}>
         <Ionicons name="checkmark-circle" size={18} color={Palette.red} />
@@ -119,6 +124,9 @@ export function RoutineGate({
 function RoutineRow({
   label, done, onToggle,
 }: { label: string; done: boolean; onToggle: () => void }) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
+
   return (
     <TouchableOpacity
       style={styles.row}
@@ -138,7 +146,7 @@ function RoutineRow({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   gate: {
     backgroundColor: Palette.bgElevated, borderRadius: R.sm,
     borderWidth: 1, borderColor: Palette.gray, paddingHorizontal: 14, paddingVertical: 13, gap: 10,
@@ -172,4 +180,4 @@ const styles = StyleSheet.create({
   sleepReadyCopy: { flex: 1, gap: 2 },
   sleepReadyText: { ...Type.bodyStrong, color: Palette.red },
   sleepReadyHint: { ...Type.bodySmall, color: Palette.warmDim },
-});
+}));

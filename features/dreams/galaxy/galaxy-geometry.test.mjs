@@ -117,3 +117,63 @@ test('mock archive spans four disconnected weeks with dense daily chains', () =>
   assert.ok(edges.length > 30);
   assert.ok(edges.every((edge) => edge.from.isoWeek === edge.to.isoWeek));
 });
+
+test('packs disconnected weeks into one compact field with physical separation', () => {
+  const mocks = createGalaxyMockStars();
+  const positioned = computeGalaxyPositions(mocks, buildGalaxyEdges(mocks)).positioned;
+  const width = Math.max(...positioned.map((item) => item.x))
+    - Math.min(...positioned.map((item) => item.x));
+  const height = Math.max(...positioned.map((item) => item.y))
+    - Math.min(...positioned.map((item) => item.y));
+  let closestCrossWeekPair = Infinity;
+
+  for (let i = 0; i < positioned.length; i++) {
+    for (let j = i + 1; j < positioned.length; j++) {
+      if (positioned[i].isoWeek === positioned[j].isoWeek) continue;
+      closestCrossWeekPair = Math.min(
+        closestCrossWeekPair,
+        Math.hypot(
+          positioned[i].x - positioned[j].x,
+          positioned[i].y - positioned[j].y,
+        ),
+      );
+    }
+  }
+
+  assert.ok(width < 900, `expected a compact shared field, received width ${width}`);
+  assert.ok(height < 900, `expected a compact shared field, received height ${height}`);
+  assert.ok(
+    closestCrossWeekPair > 120,
+    `expected repulsive separation between weeks, received ${closestCrossWeekPair}`,
+  );
+});
+
+test('gives unlinked nodes more room inside each weekly structure', () => {
+  const mocks = createGalaxyMockStars();
+  const positioned = computeGalaxyPositions(mocks, buildGalaxyEdges(mocks)).positioned;
+  const edges = buildGalaxyEdges(positioned);
+  const key = (item) => `${item.starId}:${item.completionDate}:${item.completionOrder}`;
+  const linkedPairs = new Set(edges.flatMap((edge) => [
+    `${key(edge.from)}|${key(edge.to)}`,
+    `${key(edge.to)}|${key(edge.from)}`,
+  ]));
+  const linkedDistances = [];
+  const unlinkedDistances = [];
+
+  for (let i = 0; i < positioned.length; i++) {
+    for (let j = i + 1; j < positioned.length; j++) {
+      if (positioned[i].isoWeek !== positioned[j].isoWeek) continue;
+      const distance = Math.hypot(
+        positioned[i].x - positioned[j].x,
+        positioned[i].y - positioned[j].y,
+      );
+      const bucket = linkedPairs.has(`${key(positioned[i])}|${key(positioned[j])}`)
+        ? linkedDistances
+        : unlinkedDistances;
+      bucket.push(distance);
+    }
+  }
+
+  const average = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  assert.ok(average(unlinkedDistances) > average(linkedDistances));
+});

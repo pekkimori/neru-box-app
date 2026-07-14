@@ -1,12 +1,13 @@
 // app/dreams/constellation/[id].tsx
 import { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet,
+  View, Text, FlatList, TextInput, StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 import { CandyButton, CandyCard, CandyScreen, StarToken } from '@/components/candy';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { CandyColors, CandyRadii, CandySpacing } from '@/constants/candy-theme';
 import { useConstellations } from '../../../hooks/useConstellations';
 

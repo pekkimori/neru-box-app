@@ -22,9 +22,23 @@ export type CanCompleteResult =
   | { can: false; reason: 'future' | 'sleep_mode' };
 
 export function useObservatoryData() {
-  const now = new Date();
+  const [now, setNow] = useState(() => new Date());
   const nowMin = getMinuteOfDay(now);
   const today = todayString();
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const delayUntilNextMinute = 60_000 - (Date.now() % 60_000) + 50;
+    const timeout = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60_000);
+    }, delayUntilNextMinute);
+
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
+  }, []);
 
   const {
     schedule, activeSleep, isSleepWindow, sleepReady,
@@ -49,6 +63,14 @@ export function useObservatoryData() {
   const [selectedNebulaId, setSelectedNebulaId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
 
+  // Schedule edits can end Sleep while this tab is mounted in the background.
+  // Never leave its hidden Sleep content selected after the window closes.
+  useEffect(() => {
+    if (selectedPeriod === 'sleep' && trueActivePeriod !== 'sleep') {
+      setSelectedPeriod(trueActivePeriod);
+    }
+  }, [selectedPeriod, trueActivePeriod]);
+
   const periods = useMemo((): PeriodConfig[] => {
     const wakeMin = activeSleep
       ? (parseTimeMinutes(activeSleep.wakeTime) ?? 5 * 60)
@@ -58,7 +80,7 @@ export function useObservatoryData() {
       : 23 * 60;
     const base: PeriodConfig[] = [
       { key: 'morning', label: 'Morning', icon: 'sunny', block: 'morning',
-        getStartMin: () => 5 * 60, getEndMin: () => 12 * 60 },
+        getStartMin: () => (activeSleep ? wakeMin : 5 * 60), getEndMin: () => 12 * 60 },
       { key: 'afternoon', label: 'Afternoon', icon: 'partly-sunny', block: 'afternoon',
         getStartMin: () => 12 * 60, getEndMin: () => 18 * 60 },
       { key: 'evening', label: 'Evening', icon: 'moon', block: 'evening',
@@ -109,7 +131,9 @@ export function useObservatoryData() {
   );
   const displayRoutines = selectedPeriod === 'sleep' ? sleepRoutines : selectedRoutines;
 
-  const sleepModeActive = isSleepWindow || sleepReady;
+  // A saved wind-down intent is informational. Only the configured schedule
+  // window is allowed to pause regular routines and tasks.
+  const sleepModeActive = isSleepWindow;
   const sleepBlocked = sleepModeActive && selectedPeriod !== 'sleep';
 
   const tasksUnlocked =
@@ -170,14 +194,14 @@ export function useObservatoryData() {
 
   useEffect(() => {
     if (
-      selectedPeriod === 'sleep' && !sleepReady &&
+      isSleepWindow && selectedPeriod === 'sleep' && !sleepReady &&
       sleepRoutines.length > 0 &&
       sleepRoutines.every((r) => isQuestComplete(r.id))
     ) { markSleepReady(); }
-  }, [selectedPeriod, sleepReady, sleepRoutines, isQuestComplete, markSleepReady]);
+  }, [isSleepWindow, selectedPeriod, sleepReady, sleepRoutines, isQuestComplete, markSleepReady]);
 
   return {
-    loaded, today, coins, addCoins, productivityStreak,
+    loaded, today, nowMin, coins, addCoins, productivityStreak,
     constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation,
     plan, assignTask, updateTaskStatus, awardCoins, removeTask,
     getQuestsForBlock, isQuestComplete, toggleQuestComplete,

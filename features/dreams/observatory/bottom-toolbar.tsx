@@ -1,7 +1,10 @@
 // features/dreams/observatory/bottom-toolbar.tsx
-import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Sp, R } from '../tokens';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 
 interface Props {
   editMode: boolean;
@@ -10,6 +13,9 @@ interface Props {
 }
 
 export function BottomToolbar({ editMode, onToggleEdit, onAddNebula }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
+
   return (
     <View style={styles.toolbar}>
       <TouchableOpacity
@@ -42,7 +48,7 @@ export function BottomToolbar({ editMode, onToggleEdit, onAddNebula }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   toolbar: {
     flexDirection: 'row', gap: 6,
   },
@@ -53,4 +59,4 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.bgElevated,
   },
   buttonText: { color: Palette.warmDim, fontSize: 13, fontWeight: '800' },
-});
+}));

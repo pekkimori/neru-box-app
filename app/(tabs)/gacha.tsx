@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  MotionModal as Modal,
+  MotionPressable as Pressable,
+  MotionTouchableOpacity as TouchableOpacity,
+} from '@/components/motion';
+import { NeruRobot } from '@/components/neru-robot';
 import {
   GACHA_BANNERS,
   GachaBanner,
@@ -29,7 +31,16 @@ import {
   getBannerPool,
   getPokemonRarityLabel,
 } from '@/constants/gacha';
-import { EditorialColors, editorialOverlay } from '@/constants/editorial-theme';
+import {
+  createEditorialPalette,
+  createEditorialStyles,
+  editorialOverlay,
+} from '@/constants/editorial-theme';
+import {
+  pageHeaderActionRowStyle,
+  pageHeaderIconControlStyle,
+  pageHeaderLabelControlStyle,
+} from '@/constants/page-header';
 import { Type } from '@/constants/typography';
 import { CatchAnimationModal } from '@/features/gacha/CatchAnimationModal';
 import { PokemonPresentation } from '@/features/gacha/PokemonPresentation';
@@ -38,12 +49,13 @@ import { playPokemonCryOnWeb } from '@/features/gacha/pokemon-media';
 import { useGachaCollection } from '@/features/gacha/use-gacha-collection';
 import { useGachaPull } from '@/features/gacha/use-gacha-pull';
 import { usePokeApiCatalog } from '@/features/gacha/use-pokeapi-catalog';
+import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
 import { useCoins } from '@/hooks/useCoins';
+import { PokedexScreen } from '@/app/gacha/pokedex';
 
-const Palette = {
-  ...EditorialColors,
+const Palette = createEditorialPalette(() => ({
   overlay: editorialOverlay(0.56),
-};
+}));
 
 function PokemonImage({
   pokemon,
@@ -66,6 +78,8 @@ function PokemonImage({
 }
 
 function BannerArtwork({ banner, compact = false }: { banner: GachaBanner; compact?: boolean }) {
+  const styles = useThemedStyles(themedStyles);
+
   return (
     <View style={[styles.artworkStage, styles.noPointerEvents, compact && styles.artworkStageCompact]}>
       <View
@@ -88,6 +102,9 @@ function BannerSelector({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="radio"
@@ -120,6 +137,8 @@ function PokemonTile({
   ownedCount: number;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
   const owned = ownedCount > 0;
 
   return (
@@ -156,12 +175,14 @@ function RevealModal({
   onClose: () => void;
   onOpenPokedex: () => void;
 }) {
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
   const headline = getFeaturedPokemon(results);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close pull results" />
+        <Pressable pressScale={1} style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close pull results" />
         <View style={styles.revealCard}>
           <View style={styles.revealTopline}>
             <Text style={styles.revealEyebrow}>RESEARCH RESULT</Text>
@@ -209,13 +230,15 @@ function RevealModal({
 }
 
 export default function GachaScreen() {
-  const router = useRouter();
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
   const { width } = useWindowDimensions();
   const { coins, spendCoins } = useCoins();
   const { gachaResults, addGachaResults } = useGachaCollection();
   const { catalog, loading: catalogLoading, error: catalogError, refresh: refreshCatalog } = usePokeApiCatalog();
   const [selectedBannerId, setSelectedBannerId] = useState(GACHA_BANNERS[0].id);
   const [selectedPokemon, setSelectedPokemon] = useState<GachaCreature | null>(null);
+  const [isPokedexOpen, setIsPokedexOpen] = useState(false);
 
   const selectedBanner = GACHA_BANNERS.find((banner) => banner.id === selectedBannerId) ?? GACHA_BANNERS[0];
   const selectedPool = useMemo(() => getBannerPool(selectedBanner, catalog), [catalog, selectedBanner]);
@@ -271,7 +294,7 @@ export default function GachaScreen() {
 
   const openFullPokedex = () => {
     closeReveal();
-    router.push('/gacha/pokedex');
+    setIsPokedexOpen(true);
   };
 
   const openPokemonDetail = (pokemon: GachaCreature) => {
@@ -286,17 +309,20 @@ export default function GachaScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.pageTitle}>GACHA</Text>
-            <Text style={styles.eyebrow}>Neru research lab</Text>
+          <View style={styles.headerIdentity}>
+            <NeruRobot reactToButtons size={42} tabIndex={3} />
+            <View>
+              <Text style={styles.pageTitle}>GACHA</Text>
+              <Text style={styles.eyebrow}>Neru research lab</Text>
+            </View>
           </View>
           <View style={styles.headerActions}>
             <View style={styles.coinPill} accessibilityLabel={`${coins} research coins`}>
               <View style={styles.coinMark}><Text style={styles.coinMarkText}>N</Text></View>
               <Text style={styles.coinValue}>{coins}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open full Pokédex" onPress={() => router.push('/gacha/pokedex')} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-              <Ionicons name="book-outline" size={20} color={Palette.ink} />
+            <Pressable accessibilityRole="button" accessibilityLabel="Open full Pokédex" onPress={() => setIsPokedexOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+              <Ionicons name="journal-outline" size={20} color={Palette.ink} />
             </Pressable>
           </View>
         </View>
@@ -360,7 +386,7 @@ export default function GachaScreen() {
               </>}
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: isPulling || !catalogReady || coins < TEN_PULL_COST }} style={[styles.pullPrimary, (isPulling || !catalogReady || coins < TEN_PULL_COST) && styles.disabled]} onPress={() => runPull(10)} disabled={isPulling || !catalogReady || coins < TEN_PULL_COST} activeOpacity={0.84}>
-              {pullingCount === 10 ? <ActivityIndicator color={Palette.white} /> : <>
+              {pullingCount === 10 ? <ActivityIndicator color={Palette.onAccent} /> : <>
                 <Text style={styles.pullPrimaryTop}>PULL ×10</Text>
                 <Text style={styles.pullPrimaryCost}>{TEN_PULL_COST} N · SAVE 20</Text>
               </>}
@@ -368,7 +394,7 @@ export default function GachaScreen() {
           </View>
           {catalogLoading ? <Text style={styles.balanceHint}>Loading Generations I–V from PokéAPI…</Text> : null}
           {catalogError ? <Pressable accessibilityRole="button" onPress={refreshCatalog} style={styles.retryRow}><Ionicons name="refresh" size={14} color={Palette.red} /><Text style={styles.retryText}>Catalog unavailable · Retry</Text></Pressable> : null}
-          {coins < SINGLE_PULL_COST ? <Text style={styles.balanceHint}>Complete Dreams tasks to earn more research coins.</Text> : null}
+          {coins < SINGLE_PULL_COST ? <Text style={styles.balanceHint}>Complete Tasks to earn more research coins.</Text> : null}
         </View>
 
         <View style={styles.collectionHeader}>
@@ -376,7 +402,7 @@ export default function GachaScreen() {
             <Text style={styles.sectionEyebrow}>FIELD ARCHIVE</Text>
             <Text style={styles.sectionTitle}>Your Pokédex</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/gacha/pokedex')} style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" onPress={() => setIsPokedexOpen(true)} style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}>
             <Text style={styles.textActionLabel}>View all</Text>
             <Ionicons name="arrow-forward" size={15} color={Palette.red} />
           </Pressable>
@@ -423,9 +449,18 @@ export default function GachaScreen() {
 
       <RevealModal visible={showReveal} results={pullResults} onClose={closeReveal} onOpenPokedex={openFullPokedex} />
 
+      <Modal
+        transparent
+        animationType="none"
+        visible={isPokedexOpen}
+        onRequestClose={() => setIsPokedexOpen(false)}
+      >
+        <PokedexScreen presentation="drawer" onDismiss={() => setIsPokedexOpen(false)} />
+      </Modal>
+
       <Modal visible={selectedPokemon !== null} transparent animationType="fade" onRequestClose={() => setSelectedPokemon(null)}>
         <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedPokemon(null)} />
+          <Pressable pressScale={1} style={StyleSheet.absoluteFill} onPress={() => setSelectedPokemon(null)} />
           {selectedPokemon ? (
             <View style={styles.detailCard}>
               <View style={styles.detailTopline}>
@@ -453,29 +488,30 @@ export default function GachaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Palette.white },
+const themedStyles = createEditorialStyles(() => ({
+  safe: { flex: 1, backgroundColor: Palette.background },
   noPointerEvents: { pointerEvents: 'none' },
   scrollContent: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 92 : 80 },
   pressed: { opacity: 0.7 },
   disabled: { opacity: 0.4 },
   header: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Palette.line },
+  headerIdentity: { minWidth: 0, flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   eyebrow: { ...Type.bodySmall, marginTop: 3, color: Palette.secondary },
   pageTitle: { ...Type.pageTitle, color: Palette.ink },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  coinPill: { height: 44, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Palette.line, borderRadius: 8, paddingHorizontal: 11 },
+  headerActions: pageHeaderActionRowStyle,
+  coinPill: pageHeaderLabelControlStyle(Palette),
   coinMark: { width: 20, height: 20, borderRadius: 10, backgroundColor: Palette.red, alignItems: 'center', justifyContent: 'center' },
-  coinMarkText: { ...Type.captionStrong, color: Palette.white },
+  coinMarkText: { ...Type.captionStrong, color: Palette.onAccent },
   coinValue: { ...Type.metricSmall, color: Palette.ink, fontVariant: ['tabular-nums'] },
-  iconButton: { width: 44, height: 44, borderWidth: 1, borderColor: Palette.line, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  heroCard: { height: 250, marginTop: 20, borderRadius: 10, overflow: 'hidden', backgroundColor: Palette.ink, position: 'relative' },
+  iconButton: pageHeaderIconControlStyle(Palette),
+  heroCard: { height: 250, marginTop: 20, borderRadius: 10, overflow: 'hidden', backgroundColor: Palette.inverse, position: 'relative' },
   heroCopy: { width: '56%', height: '100%', zIndex: 3, justifyContent: 'center', paddingLeft: 20 },
-  heroCode: { ...Type.label, color: '#AFAFAF' },
-  heroTitle: { ...Type.heroTitle, marginTop: 10, maxWidth: 190, color: Palette.white },
-  heroSubtitle: { ...Type.bodySmall, marginTop: 10, maxWidth: 200, color: '#C7C7C7' },
+  heroCode: { ...Type.label, color: Palette.muted },
+  heroTitle: { ...Type.heroTitle, marginTop: 10, maxWidth: 190, color: Palette.onInverse },
+  heroSubtitle: { ...Type.bodySmall, marginTop: 10, maxWidth: 200, color: Palette.secondary },
   heroStatusRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 7 },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
-  heroStatus: { ...Type.microLabel, color: '#9B9B9B' },
+  heroStatus: { ...Type.microLabel, color: Palette.muted },
   artworkStage: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 88, overflow: 'hidden' },
   artworkStageCompact: { width: 54 },
   verticalField: { ...StyleSheet.absoluteFillObject, opacity: 0.82 },
@@ -485,7 +521,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...Type.sectionTitle, marginTop: 4, color: Palette.ink },
   sectionCount: { ...Type.caption, color: Palette.secondary },
   bannerRail: { gap: 12, paddingRight: 20 },
-  bannerSelector: { height: 126, borderWidth: 1, borderColor: Palette.line, borderRadius: 9, overflow: 'hidden', backgroundColor: Palette.white, position: 'relative' },
+  bannerSelector: { height: 126, borderWidth: 1, borderColor: Palette.line, borderRadius: 9, overflow: 'hidden', backgroundColor: Palette.card, position: 'relative' },
   bannerSelectorSelected: { borderColor: Palette.ink, borderWidth: 1.5 },
   bannerSelectorCopy: { zIndex: 2, width: '62%', height: '100%', justifyContent: 'center', paddingLeft: 14 },
   bannerCode: { ...Type.microLabel, color: Palette.muted },
@@ -511,8 +547,8 @@ const styles = StyleSheet.create({
   pullSecondaryTop: { ...Type.button, color: Palette.ink },
   pullSecondaryCost: { ...Type.microLabel, marginTop: 2, color: Palette.secondary },
   pullPrimary: { flex: 1.2, minHeight: 54, borderRadius: 8, backgroundColor: Palette.red, alignItems: 'center', justifyContent: 'center' },
-  pullPrimaryTop: { ...Type.button, color: Palette.white },
-  pullPrimaryCost: { ...Type.microLabel, marginTop: 2, color: '#FFDADD' },
+  pullPrimaryTop: { ...Type.button, color: Palette.onAccent },
+  pullPrimaryCost: { ...Type.microLabel, marginTop: 2, color: Palette.onAccent },
   balanceHint: { ...Type.caption, marginTop: 10, color: Palette.secondary, textAlign: 'center' },
   retryRow: { minHeight: 34, marginTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   retryText: { ...Type.captionStrong, color: Palette.red },
@@ -534,7 +570,7 @@ const styles = StyleSheet.create({
   recentCollectionMeta: { ...Type.caption, color: Palette.muted },
   pokedexGrid: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pokemonTile: { width: '31.7%', minHeight: 150, borderWidth: 1, borderColor: Palette.line, borderRadius: 8, padding: 9, backgroundColor: Palette.surface },
-  pokemonTileOwned: { backgroundColor: Palette.white },
+  pokemonTileOwned: { backgroundColor: Palette.card },
   tileNumberRow: { minHeight: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tileNumber: { ...Type.microLabel, color: Palette.muted },
   rarityDot: { width: 6, height: 6, borderRadius: 3 },
@@ -548,7 +584,7 @@ const styles = StyleSheet.create({
   emptyCopy: { ...Type.caption, marginTop: 5, maxWidth: 270, color: Palette.secondary, textAlign: 'center' },
   bottomClearance: { height: 16 },
   modalOverlay: { flex: 1, backgroundColor: Palette.overlay, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  revealCard: { width: '100%', maxWidth: 430, borderRadius: 12, backgroundColor: Palette.white, padding: 18 },
+  revealCard: { width: '100%', maxWidth: 430, borderRadius: 12, backgroundColor: Palette.card, padding: 18 },
   revealTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   revealEyebrow: { ...Type.label, color: Palette.muted },
   revealHero: { height: 190, marginTop: 12, borderRadius: 9, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
@@ -562,10 +598,10 @@ const styles = StyleSheet.create({
   resultRarity: { marginTop: 5, width: 18, height: 2 },
   revealActions: { marginTop: 14, gap: 8 },
   revealPrimary: { minHeight: 46, borderRadius: 8, backgroundColor: Palette.red, alignItems: 'center', justifyContent: 'center' },
-  revealPrimaryText: { ...Type.button, color: Palette.white },
+  revealPrimaryText: { ...Type.button, color: Palette.onAccent },
   revealSecondary: { minHeight: 42, borderWidth: 1, borderColor: Palette.line, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   revealSecondaryText: { ...Type.buttonSmall, color: Palette.secondary },
-  detailCard: { width: '100%', maxWidth: 390, borderRadius: 12, backgroundColor: Palette.white, padding: 18 },
+  detailCard: { width: '100%', maxWidth: 390, borderRadius: 12, backgroundColor: Palette.card, padding: 18 },
   detailTopline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   detailNumber: { ...Type.label, color: Palette.muted },
   detailImageStage: { height: 205, marginTop: 8, borderRadius: 9, backgroundColor: Palette.surface, alignItems: 'center', justifyContent: 'center' },
@@ -577,4 +613,4 @@ const styles = StyleSheet.create({
   detailFooterLabel: { ...Type.label, color: Palette.muted },
   detailFooterValue: { ...Type.cardTitle, color: Palette.ink },
   detailFooterRight: { alignItems: 'flex-end' },
-});
+}));

@@ -39,7 +39,7 @@ export default function BlockReflection() {
     if (text.trim()) {
       saveReflection(block, text.trim());
     }
-    router.navigate('/(tabs)');
+    router.navigate('/tasks');
   };
 
   return (

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DEFAULT_SLEEP_SCHEDULE,
-  getRelevantSleepSchedule,
+  getSleepScheduleState,
   isSharedSleepSchedule,
   normalizeSleepSchedule,
   type SharedSleepSchedule,
@@ -11,7 +11,6 @@ import {
 import {
   formatLocalDate,
   getMinuteOfDay,
-  isMinuteInRange,
   parseTimeMinutes,
 } from '../utils/time';
 import { useStorage } from './useStorage';
@@ -64,17 +63,10 @@ export function useSleepSchedule() {
     return () => clearTimeout(id);
   }, [now]);
 
-  const activeSleep = useMemo<SleepScheduleEntry | null>(() => {
-    return getRelevantSleepSchedule(schedule, now);
-  }, [schedule, now]);
-
-  const isSleepWindow = useMemo(() => {
-    if (!activeSleep) return false;
-    const bedtimeMin = parseTimeMinutes(activeSleep.bedtime);
-    const wakeMin = parseTimeMinutes(activeSleep.wakeTime);
-    if (bedtimeMin === null || wakeMin === null) return false;
-    return isMinuteInRange(getMinuteOfDay(now), bedtimeMin, wakeMin);
-  }, [activeSleep, now]);
+  const { activeSleep, isSleepWindow } = useMemo(
+    () => getSleepScheduleState(schedule, now),
+    [schedule, now],
+  );
 
   // The intent is stored for the bedtime session, rather than only in memory.
   // Overnight sessions retain the same key across midnight and naturally reset

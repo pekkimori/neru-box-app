@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
 import { Type } from '@/constants/typography';
-import { Palette, R } from '../tokens';
+import { formatDurationMinutes, minutesUntilClockTime } from '@/utils/time';
+import { Palette, R, useDreamsPalette } from '../tokens';
 import type { DisplayPeriod, PeriodConfig, PeriodState } from '../types';
 
 interface Props {
@@ -10,14 +14,17 @@ interface Props {
   selectedPeriod: DisplayPeriod;
   periodStateMap: Record<DisplayPeriod, PeriodState>;
   trueActivePeriod: DisplayPeriod;
+  currentMinute: number;
   onSelect: (period: DisplayPeriod) => void;
 }
 
 type RegularPeriod = Exclude<DisplayPeriod, 'sleep'>;
 
 export function PeriodRail({
-  periods, selectedPeriod, periodStateMap, trueActivePeriod, onSelect,
+  periods, selectedPeriod, periodStateMap, trueActivePeriod, currentMinute, onSelect,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   const [sleepDismissed, setSleepDismissed] = useState(false);
   const wasSleepTime = useRef(false);
   const lastRegularPeriod = useRef<RegularPeriod>(
@@ -31,6 +38,9 @@ export function PeriodRail({
   );
   const sleepPeriod = periods.find((period) => period.key === 'sleep');
   const isSleepTime = trueActivePeriod === 'sleep' && Boolean(sleepPeriod);
+  const sleepTimeLeft = sleepPeriod
+    ? formatDurationMinutes(minutesUntilClockTime(currentMinute, sleepPeriod.getEndMin()))
+    : null;
 
   useEffect(() => {
     if (selectedPeriod !== 'sleep') lastRegularPeriod.current = selectedPeriod;
@@ -61,7 +71,7 @@ export function PeriodRail({
           style={styles.sleepMain}
           onPress={() => onSelect('sleep')}
           accessibilityRole="tab"
-          accessibilityLabel="Sleep time, active"
+          accessibilityLabel={`Sleep time, active, ${sleepTimeLeft} left`}
           accessibilityState={{ selected: selectedPeriod === 'sleep' }}
         >
           <View style={styles.sleepIcon}>
@@ -69,7 +79,9 @@ export function PeriodRail({
           </View>
           <View style={styles.sleepCopy}>
             <Text style={styles.sleepLabel}>Sleep time</Text>
-            <Text style={styles.sleepHint}>Your regular periods are paused</Text>
+            <Text style={styles.sleepHint} numberOfLines={1}>
+              {sleepTimeLeft} left · Periods paused
+            </Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -90,6 +102,9 @@ export function PeriodRail({
       {regularPeriods.map((period) => {
         const state = periodStateMap[period.key];
         const isSelected = period.key === selectedPeriod;
+        const timeLeft = state === 'active'
+          ? formatDurationMinutes(minutesUntilClockTime(currentMinute, period.getEndMin()))
+          : null;
         return (
           <TouchableOpacity
             key={period.key}
@@ -102,7 +117,7 @@ export function PeriodRail({
             ]}
             onPress={() => onSelect(period.key)}
             accessibilityRole="tab"
-            accessibilityLabel={`${period.label}, ${state}`}
+            accessibilityLabel={`${period.label}, ${state}${timeLeft ? `, ${timeLeft} left` : ''}`}
             accessibilityState={{ selected: isSelected }}
           >
             <Ionicons
@@ -137,6 +152,7 @@ export function PeriodRail({
               ]}
             >
               {period.label}
+              {timeLeft && <Text style={styles.timeLeft}>{` · ${timeLeft}`}</Text>}
             </Text>
           </TouchableOpacity>
         );
@@ -145,7 +161,7 @@ export function PeriodRail({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   rail: {
     width: '100%',
     height: 50,
@@ -170,6 +186,13 @@ const styles = StyleSheet.create({
   controlLocked: { borderColor: Palette.gray },
   controlUpcoming: { opacity: 0.45 },
   label: { ...Type.captionStrong, color: Palette.warmDim },
+  timeLeft: {
+    ...Type.microLabel,
+    color: Palette.red,
+    letterSpacing: 0.15,
+    textTransform: 'none',
+    fontVariant: ['tabular-nums'],
+  },
   labelActive: { color: Palette.red },
   labelMuted: { color: Palette.warmMuted },
   sleepControl: {
@@ -209,4 +232,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 2,
   },
-});
+}));

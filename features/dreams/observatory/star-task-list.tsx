@@ -1,8 +1,11 @@
 // features/dreams/observatory/star-task-list.tsx
-import { Text, View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { Text, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
 import { Type } from '@/constants/typography';
-import { Palette, Sp, R } from '../tokens';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 import type { BlockType, Star, Constellation, PlannedTask } from '../../../types/dreams';
 
 interface Props {
@@ -16,6 +19,8 @@ interface Props {
 export function StarTaskList({
   tasks, stars, constellations, tasksUnlocked, onStarPress,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   if (tasks.length === 0) return null;
 
   return (
@@ -85,7 +90,7 @@ export function StarTaskList({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   list: { flex: 1 },
   listContent: { gap: 8 },
   row: {
@@ -111,4 +116,4 @@ const styles = StyleSheet.create({
   lockedButton: { backgroundColor: Palette.graySoft },
   completeText: { ...Type.captionStrong, color: Palette.onRed },
   mutedActionText: { color: Palette.warmMuted },
-});
+}));

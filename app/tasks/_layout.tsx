@@ -1,8 +1,8 @@
-// app/dreams/_layout.tsx
+// app/tasks/_layout.tsx
 import { Stack } from 'expo-router';
 import { NeruColors } from '../../constants/neru-theme';
 
-export default function DreamsLayout() {
+export default function TasksLayout() {
   return (
     <Stack
       screenOptions={{

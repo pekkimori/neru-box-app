@@ -1,8 +1,11 @@
 // features/dreams/observatory/nebula-deck.tsx
 import { useMemo } from 'react';
-import { Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Sp, R } from '../tokens';
+import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 import type { Constellation, Star, DailyPlan } from '../../../types/dreams';
 
 interface Props {
@@ -19,6 +22,8 @@ interface Props {
 export function NebulaDeck({
   constellations, stars, plan, editMode, selectedNebulaId, onSelect, onDelete, domainProgress,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useDreamsPalette();
   const allTasks = useMemo(
     () => [
       ...plan.blocks.morning,
@@ -116,7 +121,7 @@ export function NebulaDeck({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   scroll: { gap: Sp.sm, paddingRight: Sp.lg },
   card: {
     minWidth: 116, height: 40, paddingHorizontal: 10, borderRadius: R.sm, borderWidth: 1,
@@ -131,4 +136,4 @@ const styles = StyleSheet.create({
   cardName: { color: Palette.warmWhite, fontSize: 13, fontWeight: '800', maxWidth: 72 },
   cardCount: { color: Palette.warmDim, fontSize: 12, fontWeight: '600' },
   cardDelete: { marginLeft: 2, padding: 2 },
-});
+}));

@@ -1,15 +1,17 @@
 // Obsidian-inspired completed-task graph with semantic edges only.
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   LayoutChangeEvent,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/motion';
+import { playTapFeedback } from '@/utils/interaction-feedback';
 import Svg from 'react-native-svg';
+import { useReducedMotion } from 'react-native-reanimated';
 import {
   computeGalaxyPositions,
   type GalaxyDomain,
@@ -25,17 +27,17 @@ import { GalaxyHoverTarget } from './galaxy-hover-target';
 import { GalaxyHoverStyles } from './galaxy-hover-styles';
 import { TwinkleBackground } from './twinkle-background';
 
-const CULL_MARGIN = 0.25;
 const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 const DOUBLE_TAP_ZOOM = 1.8;
 const TAP_RADIUS_SCREEN = 28;
+const NODE_VISUAL_RADIUS_SCREEN = 20;
 
 interface Props {
   stars: GalaxyStar[];
   domains: GalaxyDomain[];
-  onStarSelect: (star: GalaxyStar) => void;
+  onStarExclude: (star: GalaxyStar) => Promise<void>;
 }
 
 function extentFromStars(stars: GalaxyStar[], pad: number): ViewBox {
@@ -119,10 +121,30 @@ function svgToScreen(
   };
 }
 
-export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
+function actualVisibleViewport(
+  viewBox: ViewBox,
+  canvasW: number,
+  canvasH: number,
+): ViewBox {
+  if (canvasW <= 0 || canvasH <= 0) return viewBox;
+  const scale = Math.min(canvasW / viewBox.w, canvasH / viewBox.h);
+  const offsetX = (canvasW - viewBox.w * scale) / 2;
+  const offsetY = (canvasH - viewBox.h * scale) / 2;
+  return {
+    x: viewBox.x - offsetX / scale,
+    y: viewBox.y - offsetY / scale,
+    w: canvasW / scale,
+    h: canvasH / scale,
+  };
+}
+
+export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
+  const reduceMotion = useReducedMotion();
   const [canvasW, setCanvasW] = useState(0);
   const [canvasH, setCanvasH] = useState(0);
   const [highlightedDomainId, setHighlightedDomainId] = useState<string | null>(null);
+  const [pinnedStarKey, setPinnedStarKey] = useState<string | null>(null);
+  const popupInteractionAt = useRef(0);
   const sourceEdges = useMemo(() => buildGalaxyEdges(stars), [stars]);
   const layout = useMemo(
     () => computeGalaxyPositions(stars, sourceEdges),
@@ -132,7 +154,58 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
   const edges = useMemo(() => buildGalaxyEdges(graphStars), [graphStars]);
   const fullExtent = useMemo(() => extentFromStars(graphStars, 120), [graphStars]);
   const [viewBox, setViewBox] = useState<ViewBox>(fullExtent);
+  const viewBoxRef = useRef(viewBox);
+  const cameraFrame = useRef<number | null>(null);
+  viewBoxRef.current = viewBox;
+  const visibleViewport = useMemo(
+    () => actualVisibleViewport(viewBox, canvasW, canvasH),
+    [canvasH, canvasW, viewBox],
+  );
   const parallax = backgroundParallax(viewBox, fullExtent, canvasW, canvasH);
+
+  const cancelCameraAnimation = useCallback(() => {
+    if (cameraFrame.current !== null) {
+      cancelAnimationFrame(cameraFrame.current);
+      cameraFrame.current = null;
+    }
+  }, []);
+
+  const animateViewBox = useCallback((target: ViewBox) => {
+    cancelCameraAnimation();
+    if (reduceMotion) {
+      viewBoxRef.current = target;
+      setViewBox(target);
+      return;
+    }
+
+    const start = viewBoxRef.current;
+    const duration = 380;
+    let startedAt: number | null = null;
+    const frame = (timestamp: number) => {
+      startedAt ??= timestamp;
+      const linear = Math.min((timestamp - startedAt) / duration, 1);
+      const eased = 1 - (1 - linear) ** 3;
+      const next = {
+        x: start.x + (target.x - start.x) * eased,
+        y: start.y + (target.y - start.y) * eased,
+        w: start.w + (target.w - start.w) * eased,
+        h: start.h + (target.h - start.h) * eased,
+      };
+      viewBoxRef.current = next;
+      setViewBox(next);
+      if (linear < 1) cameraFrame.current = requestAnimationFrame(frame);
+      else cameraFrame.current = null;
+    };
+    cameraFrame.current = requestAnimationFrame(frame);
+  }, [cancelCameraAnimation, reduceMotion]);
+
+  useEffect(() => cancelCameraAnimation, [cancelCameraAnimation]);
+
+  useEffect(() => {
+    cancelCameraAnimation();
+    viewBoxRef.current = fullExtent;
+    setViewBox(fullExtent);
+  }, [cancelCameraAnimation, fullExtent]);
 
   useEffect(() => {
     if (
@@ -143,6 +216,12 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
     }
   }, [domains, highlightedDomainId]);
 
+  useEffect(() => {
+    if (pinnedStarKey !== null && !graphStars.some((star) => starKey(star) === pinnedStarKey)) {
+      setPinnedStarKey(null);
+    }
+  }, [graphStars, pinnedStarKey]);
+
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     if (width > 0 && height > 0) {
@@ -152,15 +231,22 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
   }, []);
 
   const visibleStars = useMemo(() => {
-    const marginW = viewBox.w * CULL_MARGIN;
-    const marginH = viewBox.h * CULL_MARGIN;
-    return graphStars.filter((star) => (
-      star.x > viewBox.x - marginW
-      && star.x < viewBox.x + viewBox.w + marginW
-      && star.y > viewBox.y - marginH
-      && star.y < viewBox.y + viewBox.h + marginH
+    if (canvasW <= 0 || canvasH <= 0) return graphStars;
+    return graphStars.filter((star) => {
+      const screen = svgToScreen(star, viewBox, canvasW, canvasH);
+      return screen.x + NODE_VISUAL_RADIUS_SCREEN >= 0
+        && screen.x - NODE_VISUAL_RADIUS_SCREEN <= canvasW
+        && screen.y + NODE_VISUAL_RADIUS_SCREEN >= 0
+        && screen.y - NODE_VISUAL_RADIUS_SCREEN <= canvasH;
+    });
+  }, [canvasH, canvasW, graphStars, viewBox]);
+  const visibleEdges = useMemo(() => {
+    const visibleStarKeys = new Set(visibleStars.map(starKey));
+    return edges.filter((edge) => (
+      visibleStarKeys.has(starKey(edge.from))
+      || visibleStarKeys.has(starKey(edge.to))
     ));
-  }, [graphStars, viewBox]);
+  }, [edges, visibleStars]);
   const hoverTargets = useMemo(
     () => visibleStars.map((star) => ({
       star,
@@ -171,52 +257,61 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
   );
 
   const applyZoom = useCallback((factor: number) => {
-    setViewBox((previous) => {
-      const nextW = clamp(
-        previous.w * factor,
-        fullExtent.w * MIN_ZOOM,
-        fullExtent.w * MAX_ZOOM,
-      );
-      const nextH = nextW * (previous.h / previous.w);
-      const centerX = previous.x + previous.w / 2;
-      const centerY = previous.y + previous.h / 2;
-      return {
-        x: centerX - nextW / 2,
-        y: centerY - nextH / 2,
-        w: nextW,
-        h: nextH,
-      };
+    const previous = viewBoxRef.current;
+    const nextW = clamp(
+      previous.w * factor,
+      fullExtent.w * MIN_ZOOM,
+      fullExtent.w * MAX_ZOOM,
+    );
+    const nextH = nextW * (previous.h / previous.w);
+    const centerX = previous.x + previous.w / 2;
+    const centerY = previous.y + previous.h / 2;
+    animateViewBox({
+      x: centerX - nextW / 2,
+      y: centerY - nextH / 2,
+      w: nextW,
+      h: nextH,
     });
-  }, [fullExtent.w]);
+  }, [animateViewBox, fullExtent.w]);
 
   const resetView = useCallback(() => {
-    setViewBox(fullExtent);
-  }, [fullExtent]);
+    animateViewBox(fullExtent);
+  }, [animateViewBox, fullExtent]);
 
   const centerOn = useCallback((x: number, y: number) => {
-    setViewBox((previous) => {
-      const nextW = Math.max(fullExtent.w * MIN_ZOOM, fullExtent.w / DOUBLE_TAP_ZOOM);
-      const nextH = nextW * (previous.h / previous.w);
-      return { x: x - nextW / 2, y: y - nextH / 2, w: nextW, h: nextH };
-    });
-  }, [fullExtent.w]);
+    const previous = viewBoxRef.current;
+    const nextW = Math.max(fullExtent.w * MIN_ZOOM, fullExtent.w / DOUBLE_TAP_ZOOM);
+    const nextH = nextW * (previous.h / previous.w);
+    animateViewBox({ x: x - nextW / 2, y: y - nextH / 2, w: nextW, h: nextH });
+  }, [animateViewBox, fullExtent.w]);
 
   const handleTap = useCallback((svgX: number, svgY: number) => {
-    if (canvasW <= 0) return;
+    if (canvasW <= 0) return false;
+    if (Date.now() - popupInteractionAt.current < 600) return true;
     const radius = TAP_RADIUS_SCREEN * (viewBox.w / canvasW);
     const star = nearestStar(graphStars, svgX, svgY, radius);
     if (star) {
-      onStarSelect(star);
+      playTapFeedback();
+      setPinnedStarKey(starKey(star));
+      return true;
+    } else {
+      setPinnedStarKey(null);
+      return false;
     }
-  }, [canvasW, graphStars, onStarSelect, viewBox.w]);
+  }, [canvasW, graphStars, viewBox.w]);
 
   const handleDoubleTap = useCallback((svgX: number, svgY: number) => {
     if (canvasW <= 0) return;
     const radius = TAP_RADIUS_SCREEN * (viewBox.w / canvasW);
     const star = nearestStar(graphStars, svgX, svgY, radius);
+    playTapFeedback();
     if (star) centerOn(star.x, star.y);
     else resetView();
   }, [canvasW, centerOn, graphStars, resetView, viewBox.w]);
+
+  const handleInteractionStart = useCallback(() => {
+    cancelCameraAnimation();
+  }, [cancelCameraAnimation]);
 
   const panResponder = useGalaxyPanZoom({
     fullExtent,
@@ -224,11 +319,12 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
     setViewBox,
     onTapStar: handleTap,
     onDoubleTap: handleDoubleTap,
+    onInteractionStart: handleInteractionStart,
     screenW: canvasW,
     screenH: canvasH,
   });
 
-  const a11yLabel = `Task network with ${graphStars.length} completed tasks across ${domains.length} color-coded domains. Each week is a separate completion-flow structure with daily sequence, repeated-domain, and next-day bridge connections.`;
+  const a11yLabel = `Task network with ${graphStars.length} completed tasks across ${domains.length} color-coded domains. Weekly completion structures share one force field, with daily sequence, repeated-domain, and next-day bridge connections.`;
 
   return (
     <View style={styles.container}>
@@ -284,7 +380,7 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
           accessibilityLabel={a11yLabel}
           accessibilityRole="image"
         >
-          <NetworkEdges edges={edges} highlightedDomainId={highlightedDomainId} />
+          <NetworkEdges edges={visibleEdges} highlightedDomainId={highlightedDomainId} />
           <NetworkNodes stars={visibleStars} highlightedDomainId={highlightedDomainId} />
         </Svg>
 
@@ -298,18 +394,25 @@ export function GalaxyCanvas({ stars, domains, onStarSelect }: Props) {
             y={target.y}
             canvasW={canvasW}
             canvasH={canvasH}
-            onSelect={() => onStarSelect(target.star)}
+            pinned={pinnedStarKey === target.key}
+            onPin={() => setPinnedStarKey(target.key)}
+            onClose={() => setPinnedStarKey((current) => (
+              current === target.key ? null : current
+            ))}
+            onExclude={() => onStarExclude(target.star)}
+            onPopupInteraction={() => { popupInteractionAt.current = Date.now(); }}
           />
         ))}
 
         <GalaxyControls
           fullExtent={fullExtent}
           viewBox={viewBox}
+          visibleViewport={visibleViewport}
           stars={graphStars}
           onZoomIn={() => applyZoom(1 / (1 + ZOOM_STEP))}
           onZoomOut={() => applyZoom(1 + ZOOM_STEP)}
           onResetView={resetView}
-          onCenterViewBox={(x, y, w, h) => setViewBox({ x, y, w, h })}
+          onCenterViewBox={(x, y, w, h) => animateViewBox({ x, y, w, h })}
         />
       </View>
     </View>

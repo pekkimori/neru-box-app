@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 
+import { POKEMON_CRY_VOLUME } from '@/utils/interaction-feedback';
+
 export type PokemonMedia = {
   id: number;
   frontSprite: string;
@@ -22,7 +24,6 @@ type PokemonResponse = {
 };
 
 const POKEAPI_ROOT = 'https://pokeapi.co/api/v2';
-const CRY_VOLUME = 0.32;
 const memoryCache = new Map<number, PokemonMedia>();
 const webAudioPlayers = new Map<number, HTMLAudioElement>();
 let preparedNativeCry: { id: number; cry: string; player: AudioPlayer } | null = null;
@@ -121,7 +122,7 @@ export async function preparePokemonCry(id: number, cry: string | null) {
   } else {
     preparedNativeCry?.player.remove();
     const player = createAudioPlayer(cry, { downloadFirst: true, updateInterval: 100 });
-    player.volume = CRY_VOLUME;
+    player.volume = POKEMON_CRY_VOLUME;
     preparedNativeCry = { id, cry, player };
   }
 
@@ -143,7 +144,7 @@ export async function preparePokemonCry(id: number, cry: string | null) {
 export function playPreparedPokemonCry(id: number, cry: string | null | undefined) {
   if (!cry || Platform.OS === 'web') return false;
   if (!preparedNativeCry || preparedNativeCry.id !== id || preparedNativeCry.cry !== cry || !preparedNativeCry.player.isLoaded) return false;
-  preparedNativeCry.player.volume = CRY_VOLUME;
+  preparedNativeCry.player.volume = POKEMON_CRY_VOLUME;
   void preparedNativeCry.player.seekTo(0).then(() => preparedNativeCry?.player.play());
   return true;
 }
@@ -155,7 +156,7 @@ export function playPokemonCryOnWeb(cry: string | null | undefined, id?: number)
   audio.pause();
   audio.currentTime = 0;
   audio.muted = false;
-  audio.volume = CRY_VOLUME;
+  audio.volume = POKEMON_CRY_VOLUME;
   if (id) webAudioPlayers.set(id, audio);
   audio.play().catch(() => undefined);
   return audio;

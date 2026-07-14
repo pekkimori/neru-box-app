@@ -6,6 +6,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import Svg, { Polygon } from 'react-native-svg';
+
+import { playTapFeedback } from '@/utils/interaction-feedback';
 
 export const DIARY_ARTBOARD_WIDTH = 540;
 export const DIARY_ARTBOARD_HEIGHT = 700;
@@ -21,7 +24,8 @@ export type StickerTransform = {
 export type StickerHitShape =
   | { type: 'rect' }
   | { type: 'ellipse' }
-  | { type: 'roundedRect'; radius: number };
+  | { type: 'roundedRect'; radius: number }
+  | { type: 'polygon'; points: readonly { x: number; y: number }[] };
 
 const DEFAULT_HIT_SHAPE: StickerHitShape = { type: 'rect' };
 
@@ -63,23 +67,44 @@ function createHitTiles(
   const bandHeight = height / bandCount;
   return Array.from({ length: bandCount }, (_, index) => {
     const centerY = (index + 0.5) * bandHeight;
+    let tileLeft = 0;
     let tileWidth = width;
 
     if (shape.type === 'ellipse') {
       const normalizedY = (centerY - (height / 2)) / (height / 2);
       tileWidth = width * Math.sqrt(Math.max(0, 1 - (normalizedY * normalizedY)));
-    } else {
+      tileLeft = (width - tileWidth) / 2;
+    } else if (shape.type === 'roundedRect') {
       const radius = Math.min(shape.radius, width / 2, height / 2);
       const distanceFromNearestEdge = Math.min(centerY, height - centerY);
       if (distanceFromNearestEdge < radius) {
         const circleY = radius - distanceFromNearestEdge;
         const roundedInset = radius - Math.sqrt(Math.max(0, (radius * radius) - (circleY * circleY)));
         tileWidth = width - (roundedInset * 2);
+        tileLeft = roundedInset;
+      }
+    } else {
+      const normalizedY = centerY / height;
+      const intersections = shape.points.flatMap((point, pointIndex) => {
+        const nextPoint = shape.points[(pointIndex + 1) % shape.points.length];
+        const minimumY = Math.min(point.y, nextPoint.y);
+        const maximumY = Math.max(point.y, nextPoint.y);
+        if (point.y === nextPoint.y || normalizedY < minimumY || normalizedY >= maximumY) return [];
+        const progress = (normalizedY - point.y) / (nextPoint.y - point.y);
+        return [point.x + ((nextPoint.x - point.x) * progress)];
+      });
+      tileLeft = width / 2;
+      tileWidth = 0;
+      if (intersections.length >= 2) {
+        const minimumX = Math.min(...intersections);
+        const maximumX = Math.max(...intersections);
+        tileLeft = minimumX * width;
+        tileWidth = (maximumX - minimumX) * width;
       }
     }
 
     return {
-      left: (width - tileWidth) / 2,
+      left: tileLeft,
       top: Math.max(0, (index * bandHeight) - 0.5),
       width: tileWidth,
       height: Math.min(height, bandHeight + 1),
@@ -111,10 +136,73 @@ function transformedHalfExtents(
     };
   }
 
+  if (shape.type === 'polygon') {
+    return shape.points.reduce((extents, point) => {
+      const pointX = (point.x - 0.5) * width;
+      const pointY = (point.y - 0.5) * height;
+      const rotatedX = scale * ((pointX * cosine) - (pointY * sine));
+      const rotatedY = scale * ((pointX * sine) + (pointY * cosine));
+      return {
+        x: Math.max(extents.x, Math.abs(rotatedX)),
+        y: Math.max(extents.y, Math.abs(rotatedY)),
+      };
+    }, { x: 0, y: 0 });
+  }
+
   return {
     x: scale * ((Math.abs(width * cosine) + Math.abs(height * sine)) / 2),
     y: scale * ((Math.abs(width * sine) + Math.abs(height * cosine)) / 2),
   };
+}
+
+function SelectionOutline({
+  width,
+  height,
+  shape,
+  selected,
+}: {
+  width: number;
+  height: number;
+  shape: StickerHitShape;
+  selected: boolean;
+}) {
+  const stroke = selected ? '#E21D2F' : 'rgba(53, 69, 92, 0.34)';
+  const strokeWidth = selected ? 2 : 1.5;
+  const fill = selected ? 'rgba(226,29,47,0.05)' : 'rgba(255,255,255,0.08)';
+  if (shape.type === 'polygon') {
+    return (
+      <Svg pointerEvents="none" width={width} height={height} style={styles.selectionOutline}>
+        <Polygon
+          points={shape.points.map((point) => `${point.x * width},${point.y * height}`).join(' ')}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          strokeDasharray={selected ? undefined : '5 4'}
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+
+  const borderRadius = shape.type === 'ellipse'
+    ? Math.min(width, height) / 2
+    : shape.type === 'roundedRect'
+      ? shape.radius
+      : 0;
+  return (
+    <View
+      style={[
+        styles.selectionOutline,
+        {
+          borderWidth: strokeWidth,
+          borderStyle: selected ? 'solid' : 'dashed',
+          borderColor: stroke,
+          borderRadius,
+          backgroundColor: fill,
+        },
+      ]}
+    />
+  );
 }
 
 export function TransformableSticker({
@@ -184,6 +272,7 @@ export function TransformableSticker({
       && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3)
     ),
     onPanResponderGrant: () => {
+      playTapFeedback();
       dragOrigin.current = pixelPosition.current;
       onSelect(id);
     },
@@ -253,7 +342,11 @@ export function TransformableSticker({
         </View>
 
         {arranging ? (
-          <View pointerEvents="none" style={[styles.selectionLayer, selected && styles.selectionLayerSelected]}>
+          <View
+            pointerEvents="none"
+            style={styles.selectionLayer}
+          >
+            <SelectionOutline width={width} height={height} shape={hitShape} selected={selected} />
             {selected ? (
               <>
                 <View style={[styles.selectionDot, styles.selectionDotTopLeft]} />
@@ -303,18 +396,8 @@ const styles = StyleSheet.create({
   selectionLayer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(53, 69, 92, 0.34)',
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  selectionLayerSelected: {
-    borderWidth: 2,
-    borderStyle: 'solid',
-    borderColor: '#E21D2F',
-    backgroundColor: 'rgba(226,29,47,0.05)',
-  },
+  selectionOutline: { ...StyleSheet.absoluteFillObject },
   selectionDot: {
     position: 'absolute',
     width: 10,

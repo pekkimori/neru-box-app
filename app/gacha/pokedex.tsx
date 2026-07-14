@@ -4,10 +4,9 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MotionModal as Modal, MotionPressable as Pressable } from '@/components/motion';
 
 import {
   GACHA_BANNERS,
@@ -27,16 +27,21 @@ import {
   Rarity,
   getPokemonRarityLabel,
 } from '@/constants/gacha';
-import { EditorialColors, editorialOverlay } from '@/constants/editorial-theme';
+import {
+  createEditorialPalette,
+  createEditorialStyles,
+  editorialOverlay,
+} from '@/constants/editorial-theme';
 import { PokemonPresentation } from '@/features/gacha/PokemonPresentation';
 import { playPokemonCryOnWeb } from '@/features/gacha/pokemon-media';
 import { useGachaCollection } from '@/features/gacha/use-gacha-collection';
 import { usePokeApiCatalog } from '@/features/gacha/use-pokeapi-catalog';
+import { useAppTheme, useThemedStyles } from '@/features/settings/app-theme';
+import { useDraggableDrawer } from '@/hooks/useDraggableDrawer';
 
-const Palette = {
-  ...EditorialColors,
+const Palette = createEditorialPalette(() => ({
   overlay: editorialOverlay(0.56),
-};
+}));
 
 type Filter = 'all' | 'owned' | Rarity;
 type GenerationFilter = 'all' | 1 | 2 | 3 | 4 | 5;
@@ -64,8 +69,64 @@ function PokemonImage({ pokemon, owned, size }: { pokemon: GachaCreature; owned:
   );
 }
 
-export default function PokedexScreen() {
+type PokedexScreenProps = {
+  presentation?: 'screen' | 'drawer';
+  onDismiss?: () => void;
+};
+
+function PokedexDrawerFrame({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) {
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
+  const { backdropOpacity, closeDrawer, panHandlers, translateY } = useDraggableDrawer({
+    visible: true,
+    onClose: onDismiss,
+  });
+
+  return (
+    <View style={styles.drawerRoot}>
+      <Animated.View style={[styles.drawerBackdrop, { opacity: backdropOpacity }]}>
+        <Pressable
+          pressScale={1}
+          style={StyleSheet.absoluteFill}
+          onPress={closeDrawer}
+          accessibilityLabel="Close Pokédex"
+        />
+      </Animated.View>
+      <Animated.View
+        accessibilityViewIsModal
+        style={[styles.drawerSheet, { transform: [{ translateY }] }]}
+      >
+        <View {...panHandlers} collapsable={false} style={styles.drawerDragArea}>
+          <View style={styles.drawerHandle} />
+          <View style={styles.drawerHeader}>
+            <View style={styles.drawerTitleGroup}>
+              <Text style={styles.drawerEyebrow}>GACHA / FIELD ARCHIVE</Text>
+              <Text style={styles.drawerTitle}>Pokédex</Text>
+              <Text style={styles.drawerSubtitle}>Every encounter, indexed in one place.</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close Pokédex"
+              hitSlop={8}
+              onPress={closeDrawer}
+              style={({ pressed }) => [styles.drawerCloseButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="close" size={21} color={Palette.ink} />
+            </Pressable>
+          </View>
+        </View>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
+export function PokedexScreen({ presentation = 'screen', onDismiss }: PokedexScreenProps) {
+  const styles = useThemedStyles(themedStyles);
+  const { colors: Palette } = useAppTheme();
   const router = useRouter();
+  const isDrawer = presentation === 'drawer';
+  const dismiss = onDismiss ?? (() => router.back());
   const { width } = useWindowDimensions();
   const { gachaResults } = useGachaCollection();
   const { catalog, loading, error, refresh } = usePokeApiCatalog();
@@ -109,8 +170,9 @@ export default function PokedexScreen() {
 
   const listHeader = (
     <>
+      {!isDrawer ? (
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back to Gacha" hitSlop={8} onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back to Gacha" hitSlop={8} onPress={dismiss} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
             <Ionicons name="arrow-back" size={20} color={Palette.ink} />
           </Pressable>
           <View style={styles.headerCopy}>
@@ -122,6 +184,7 @@ export default function PokedexScreen() {
             <Text style={styles.headerIndexLabel}>FOUND</Text>
           </View>
         </View>
+      ) : null}
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryMain}>
@@ -191,8 +254,8 @@ export default function PokedexScreen() {
     </>
   );
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+  const content = (
+    <>
       <FlatList
         key={`pokedex-${columnCount}`}
         data={visiblePokemon}
@@ -239,7 +302,7 @@ export default function PokedexScreen() {
 
       <Modal visible={selected !== null} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
         <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelected(null)} accessibilityLabel="Close Pokémon details" />
+          <Pressable pressScale={1} style={StyleSheet.absoluteFill} onPress={() => setSelected(null)} accessibilityLabel="Close Pokémon details" />
           {selected ? (
             <View style={styles.detailCard}>
               <View style={styles.detailTopline}>
@@ -270,12 +333,49 @@ export default function PokedexScreen() {
           ) : null}
         </View>
       </Modal>
+    </>
+  );
+
+  if (isDrawer) {
+    return <PokedexDrawerFrame onDismiss={dismiss}>{content}</PokedexDrawerFrame>;
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      {content}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Palette.white },
+export default function PokedexRoute() {
+  return <PokedexScreen />;
+}
+
+const themedStyles = createEditorialStyles(() => ({
+  safe: { flex: 1, backgroundColor: Palette.background },
+  drawerRoot: { flex: 1, justifyContent: 'flex-end' },
+  drawerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: Palette.overlay },
+  drawerSheet: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '92%',
+    flex: 1,
+    alignSelf: 'center',
+    overflow: 'hidden',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: Palette.line,
+    backgroundColor: Palette.background,
+  },
+  drawerDragArea: { paddingTop: 9, backgroundColor: Palette.card },
+  drawerHandle: { width: 38, height: 4, alignSelf: 'center', borderRadius: 2, backgroundColor: Palette.line },
+  drawerHeader: { minHeight: 92, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 20, paddingTop: 13, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Palette.line },
+  drawerTitleGroup: { flex: 1, minWidth: 0 },
+  drawerEyebrow: { fontSize: 8, fontWeight: '800', letterSpacing: 1.4, color: Palette.red },
+  drawerTitle: { marginTop: 3, fontSize: 23, fontWeight: '900', color: Palette.ink },
+  drawerSubtitle: { marginTop: 3, fontSize: 11, lineHeight: 15, fontWeight: '600', color: Palette.secondary },
+  drawerCloseButton: { width: 42, height: 42, borderWidth: 1, borderColor: Palette.line, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20 },
   pressed: { opacity: 0.7 },
   header: { minHeight: 76, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Palette.line },
@@ -286,19 +386,19 @@ const styles = StyleSheet.create({
   headerIndex: { alignItems: 'flex-end' },
   headerIndexValue: { fontSize: 19, fontWeight: '900', color: Palette.ink },
   headerIndexLabel: { marginTop: 1, fontSize: 7, fontWeight: '800', letterSpacing: 1, color: Palette.muted },
-  summaryCard: { marginTop: 20, borderRadius: 10, backgroundColor: Palette.ink, padding: 18, position: 'relative', overflow: 'hidden' },
+  summaryCard: { marginTop: 20, borderRadius: 10, backgroundColor: Palette.inverse, padding: 18, position: 'relative', overflow: 'hidden' },
   summaryMain: { paddingRight: 120 },
-  summaryEyebrow: { fontSize: 8, fontWeight: '800', letterSpacing: 1.4, color: '#999999' },
+  summaryEyebrow: { fontSize: 8, fontWeight: '800', letterSpacing: 1.4, color: Palette.muted },
   summaryValueRow: { marginTop: 8, flexDirection: 'row', alignItems: 'baseline' },
-  summaryValue: { fontSize: 40, lineHeight: 42, fontWeight: '900', color: Palette.white, fontVariant: ['tabular-nums'] },
-  summaryTotal: { marginLeft: 6, fontSize: 14, fontWeight: '800', color: '#8F8F8F' },
-  summaryCopy: { marginTop: 7, fontSize: 11, lineHeight: 16, color: '#C7C7C7' },
-  summaryMetrics: { position: 'absolute', right: 18, top: 20, bottom: 22, width: 92, justifyContent: 'center', gap: 10, borderLeftWidth: 1, borderLeftColor: '#3A3A3A', paddingLeft: 15 },
+  summaryValue: { fontSize: 40, lineHeight: 42, fontWeight: '900', color: Palette.onInverse, fontVariant: ['tabular-nums'] },
+  summaryTotal: { marginLeft: 6, fontSize: 14, fontWeight: '800', color: Palette.secondary },
+  summaryCopy: { marginTop: 7, fontSize: 11, lineHeight: 16, color: Palette.secondary },
+  summaryMetrics: { position: 'absolute', right: 18, top: 20, bottom: 22, width: 92, justifyContent: 'center', gap: 10, borderLeftWidth: 1, borderLeftColor: Palette.line, paddingLeft: 15 },
   summaryMetric: {},
-  metricValue: { fontSize: 16, fontWeight: '900', color: Palette.white },
-  metricLabel: { marginTop: 2, fontSize: 7, fontWeight: '800', letterSpacing: 0.8, color: '#898989' },
-  metricRule: { height: 1, backgroundColor: '#3A3A3A' },
-  progressTrack: { height: 4, marginTop: 16, backgroundColor: '#3A3A3A', borderRadius: 2, overflow: 'hidden' },
+  metricValue: { fontSize: 16, fontWeight: '900', color: Palette.onInverse },
+  metricLabel: { marginTop: 2, fontSize: 7, fontWeight: '800', letterSpacing: 0.8, color: Palette.muted },
+  metricRule: { height: 1, backgroundColor: Palette.line },
+  progressTrack: { height: 4, marginTop: 16, backgroundColor: Palette.line, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: 4, backgroundColor: Palette.red, borderRadius: 2 },
   toolsHeader: { marginTop: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.45, color: Palette.muted },
@@ -312,13 +412,13 @@ const styles = StyleSheet.create({
   generationFilterTextActive: { color: Palette.red },
   filters: { gap: 7, paddingVertical: 10, paddingRight: 20 },
   filter: { minHeight: 34, borderWidth: 1, borderColor: Palette.line, borderRadius: 7, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  filterActive: { borderColor: Palette.ink, backgroundColor: Palette.ink },
+  filterActive: { borderColor: Palette.inverse, backgroundColor: Palette.inverse },
   filterDot: { width: 6, height: 6, borderRadius: 3 },
   filterText: { fontSize: 10, fontWeight: '800', color: Palette.secondary },
-  filterTextActive: { color: Palette.white },
+  filterTextActive: { color: Palette.onInverse },
   gridRow: { gap: 6, marginBottom: 6 },
   card: { borderWidth: 1, borderColor: Palette.line, borderRadius: 7, paddingTop: 7, paddingHorizontal: 7, paddingBottom: 4, backgroundColor: Palette.surface },
-  cardOwned: { backgroundColor: Palette.white },
+  cardOwned: { backgroundColor: Palette.card },
   cardTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardNumber: { fontSize: 7, fontWeight: '800', letterSpacing: 0.55, color: Palette.muted },
   rarityMark: { width: 14, height: 2, borderRadius: 1 },
@@ -335,7 +435,7 @@ const styles = StyleSheet.create({
   retryText: { fontSize: 11, fontWeight: '800', color: Palette.red },
   bottomSpace: { height: Platform.OS === 'ios' ? 34 : 24 },
   modalOverlay: { flex: 1, backgroundColor: Palette.overlay, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  detailCard: { width: '100%', maxWidth: 410, borderRadius: 12, backgroundColor: Palette.white, padding: 18 },
+  detailCard: { width: '100%', maxWidth: 410, borderRadius: 12, backgroundColor: Palette.card, padding: 18 },
   detailTopline: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   detailNumber: { fontSize: 8, fontWeight: '800', letterSpacing: 1.1, color: Palette.muted },
   detailBanner: { marginTop: 4, fontSize: 11, fontWeight: '800', color: Palette.secondary },
@@ -353,4 +453,4 @@ const styles = StyleSheet.create({
   detailStatLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 1, color: Palette.muted },
   detailStatValue: { fontSize: 16, fontWeight: '900', color: Palette.ink },
   detailStatRight: { alignItems: 'flex-end' },
-});
+}));

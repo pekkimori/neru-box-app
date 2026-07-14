@@ -1,15 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { Dispatch, SetStateAction } from "react";
 import {
-  Pressable,
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
-import { EditorialColors } from "../../constants/editorial-theme";
+import {
+  MotionPressable as Pressable,
+  MotionTouchableOpacity as TouchableOpacity,
+} from "@/components/motion";
+import { useAppTheme, useThemedStyles } from "@/features/settings/app-theme";
 import type { SleepScheduleEntry } from "../../hooks/useSleepSchedule";
 import { TIME_24_HOUR_PATTERN, durationBetweenTimes } from "../../utils/time";
 import { AppMark, SectionLabel, ToggleSwitch } from "./components";
@@ -24,7 +26,7 @@ import {
   type ModeEffects,
   type SelectedApp,
 } from "./model";
-import { protectStyles as styles } from "./styles";
+import { protectStyles } from "./styles";
 
 type UpdateEffect = <Key extends keyof ModeEffects>(
   key: Key,
@@ -48,6 +50,9 @@ export function AppsEditorContent({
   toggleApp: (id: string) => void;
   updateLimit: (id: string, value: string | number) => void;
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: EditorialColors } = useAppTheme();
+
   return (
     <ScrollView
       contentContainerStyle={styles.editorContent}
@@ -94,7 +99,7 @@ export function AppsEditorContent({
                     <Ionicons
                       name="checkmark"
                       size={17}
-                      color={EditorialColors.white}
+                      color={EditorialColors.onAccent}
                     />
                   ) : null}
                 </View>
@@ -176,6 +181,9 @@ export function ScheduleEditorContent({
   updateBlock: (id: string, patch: Partial<FocusBlock>) => void;
   blockError: (block: FocusBlock) => string | null;
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: EditorialColors } = useAppTheme();
+
   return (
     <ScrollView
       contentContainerStyle={styles.editorContent}
@@ -332,6 +340,9 @@ export function FocusEditorContent({
   setFocusDuration: (value: string) => void;
   startFocus: (duration: number) => void;
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: EditorialColors } = useAppTheme();
+
   return (
     <ScrollView
       contentContainerStyle={styles.editorContent}
@@ -392,7 +403,7 @@ export function FocusEditorContent({
         onPress={() => startFocus(clampMinutes(focusDuration, 1, 480))}
         style={styles.primaryButton}
       >
-        <Ionicons name="play" size={16} color={EditorialColors.white} />
+        <Ionicons name="play" size={16} color={EditorialColors.onAccent} />
         <Text style={styles.primaryButtonText}>Start focus</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -412,6 +423,9 @@ export function ModeEditorContent({
   updateEffect: UpdateEffect;
   selectedApps: SelectedApp[];
 }) {
+  const styles = useThemedStyles(protectStyles);
+  const { colors: EditorialColors } = useAppTheme();
+
   return (
     <ScrollView
       contentContainerStyle={styles.editorContent}
@@ -440,7 +454,7 @@ export function ModeEditorContent({
               size={16}
               color={
                 editingMode === mode
-                  ? EditorialColors.white
+                  ? EditorialColors.onAccent
                   : EditorialColors.secondary
               }
             />
@@ -555,7 +569,7 @@ export function ModeEditorContent({
                         <Ionicons
                           name="checkmark"
                           size={17}
-                          color={EditorialColors.white}
+                          color={EditorialColors.onAccent}
                         />
                       ) : null}
                     </View>

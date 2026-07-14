@@ -3,32 +3,44 @@
 // shell; the galaxy keeps the same semantic names so both surfaces remain
 // legible without duplicating component styles.
 
-import { EditorialColors } from '../../constants/editorial-theme';
+import {
+  createEditorialPalette,
+  type EditorialPalette,
+} from '../../constants/editorial-theme';
+import { useAppTheme } from '../settings/app-theme';
 
-export const Palette = {
-  bg: EditorialColors.white,
-  bgElevated: EditorialColors.white,
-  bgRaised: EditorialColors.white,
-  red: EditorialColors.red,
-  redSoft: EditorialColors.redSoft,
-  onRed: EditorialColors.white,
-  violet: EditorialColors.red,
+const dreamsPaletteExtras = (colors: EditorialPalette) => ({
+  bg: colors.background,
+  bgElevated: colors.card,
+  bgRaised: colors.surfaceRaised,
+  red: colors.red,
+  redSoft: colors.redSoft,
+  onRed: colors.onAccent,
+  violet: colors.red,
   violetDim: '#C7C7C7',
-  warmWhite: EditorialColors.ink,
-  warmDim: EditorialColors.secondary,
-  warmMuted: EditorialColors.muted,
-  gray: EditorialColors.line,
-  graySoft: EditorialColors.surface,
+  warmWhite: colors.ink,
+  warmDim: colors.secondary,
+  warmMuted: colors.muted,
+  gray: colors.line,
+  graySoft: colors.surface,
   backdrop: 'rgba(31, 41, 55, 0.34)',
   // Galaxy additions (DESIGN.md 4.2.1)
-  starGlow: 'rgba(226, 29, 47, 0.18)',
-  clusterLabel: '#666666',
+  starGlow: colors.redSoft,
+  clusterLabel: colors.secondary,
   galaxyLine: 'rgba(110, 95, 210, 0.18)',
   galaxyBoundary: 'rgba(110, 95, 210, 0.28)',
-  minimapBg: 'rgba(255, 255, 255, 0.92)',
-  minimapViewport: 'rgba(226, 29, 47, 0.3)',
-  weekLabel: '#777777',
-} as const;
+  minimapBg: colors.card,
+  minimapViewport: colors.redSoft,
+  weekLabel: colors.muted,
+});
+
+export const Palette = createEditorialPalette(dreamsPaletteExtras);
+
+/** Reactive Dreams palette for render-time colors such as icons and SVGs. */
+export function useDreamsPalette() {
+  const { colors } = useAppTheme();
+  return { ...colors, ...dreamsPaletteExtras(colors) };
+}
 
 export const Sp = {
   xs: 6,

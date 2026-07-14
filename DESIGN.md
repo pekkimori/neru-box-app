@@ -79,18 +79,20 @@ The floating bottom navigation uses shell tokens with these specific measurement
 
 | Property | iOS | Android | Web |
 |---|---|---|---|
-| Horizontal inset | 14px | 14px | 14px |
-| Bottom inset | 14px | 10px | 10px |
-| Height | 66px | 58px | 58px |
-| Background | `shell-white` | `shell-white` | `shell-white` |
+| Horizontal inset | 12px | 12px | 12px |
+| Bottom inset | Safe-area aware | 12px | 12px |
+| Height | 70px | 70px | 70px, max width 720px |
+| Background | 97% `shell-white` | 97% `shell-white` | 97% `shell-white` |
 | Top border | 1px `shell-line` | 1px `shell-line` | 1px `shell-line` |
-| Corner radius | `shell-radius-dock` | `shell-radius-dock` | `shell-radius-dock` |
-| Tab icon size | 21px | 21px | 21px |
-| Active icon | filled variant, `shell-red` | filled variant, `shell-red` | filled variant, `shell-red` |
+| Corner radius | 26px floating tray | 26px floating tray | 26px floating tray |
+| Tab icon size | 20px | 20px | 20px |
+| Active icon | circular red-soft focus surface with lift | circular red-soft focus surface with lift | circular red-soft focus surface with lift |
 | Inactive icon | outline variant, `#6F6F6F` | outline variant, `#6F6F6F` | outline variant, `#6F6F6F` |
-| Active indicator | 3px `shell-red` rule above icon | 3px `shell-red` rule above icon | 3px `shell-red` rule above icon |
+| Active indicator | spring marker; elevated Tasks star | spring marker; elevated Tasks star | spring marker; elevated Tasks star |
 
-Tab routes (in order): Home (Dreams), Companion, Protect, Social, Gacha. All use `HapticTab` for haptic feedback on press.
+Tab routes (in order): Chat (Companion), Control (Protect), Tasks (Dreams), Gacha (Social), Diary. The dock supplies light iOS haptics on press.
+
+The dock is custom-rendered rather than using the stock bottom-tab layout. Every destination owns an equal-width fixed touch target; only its inner icon surface animates, so spring motion cannot disturb mobile spacing. Tasks is treated as the primary action with a raised 54px circular star button, while the four supporting destinations use 36px circular focus surfaces and small active markers. The scene reserves space for the dock and elevated star so content never sits underneath it.
 
 ## 2. Component Primitives (Editorial Shell)
 
@@ -133,7 +135,7 @@ backdrop: shell-backdrop (rgba(31, 41, 55, 0.34))
 surface: bg=shell-white, border=1px shell-line, radius=shell-radius-lg
          padding=shell-space-lg (16px), maxWidth=440px
          centered on all platforms
-animation: fade (opacity transition, 200ms)
+animation: retained fade (220ms enter, 180ms exit)
 dismiss: tap backdrop or platform back action
 ```
 
@@ -167,10 +169,12 @@ fullWidth (no horizontal margin)
 | State | Visual Treatment |
 |---|---|
 | Default | As specified per component |
-| Pressed (`onPressIn`) | Opacity 0.7 or background lighten by overlay |
+| Pressed (`onPressIn`) | Spring compression to 97% scale with a soft opacity response |
 | Disabled | Opacity 0.45, non-interactive |
 | Selected / Active | `shell-red` border or accent |
 | Focused (web) | `shell-red` outline ring, 2px offset |
+
+Interaction motion uses a high-stiffness, damped spring so controls respond immediately and settle without a long bounce. Tab items compress to 94% to make the smaller target feel tactile. Modal content remains mounted during its exit and fades over 180ms; entry fades over 220ms. All shared motion primitives respect the operating system Reduce Motion preference.
 
 ### 3.2 Status Indicators
 
@@ -495,8 +499,8 @@ accessibilityRole="button", accessibilityLabel="Switch to list view" / "Switch t
 ### 6.1 Motion Principles
 
 - GPU-composited properties only: `transform` and `opacity`. Never animate `height`, `width`, `margin`, `padding`, `top`, `left`, or any layout-triggering property.
-- Every animation maps to a real interaction, state change, or affordance. No decorative micro-animations.
-- Duration range: 150-400ms. No animation exceeds 400ms.
+- Every foreground animation maps to a real interaction, state change, or affordance. The constellation sky is the only surface permitted to use low-contrast ambient motion.
+- Interaction duration range: 100-400ms. Constellation assembly and completion trails may run up to 700ms; ambient sky cycles run for 5-8s so they read as atmosphere rather than UI feedback.
 - Easing: platform default ease-out for most transitions.
 
 ### 6.2 Shell Animations
@@ -513,6 +517,16 @@ accessibilityRole="button", accessibilityLabel="Switch to list view" / "Switch t
 | Transition | Property | Duration | Trigger |
 |---|---|---|---|
 | Star completion glow | `opacity 0 → 1` | 400ms ease-out | Status change to lit |
+| Constellation line draw | SVG endpoint + `opacity` | 520ms, 90ms stagger | A completed connection enters the sky |
+| Star field assembly | radius + `opacity` | spring, 45ms stagger | Period or constellation content changes |
+| Available-star beacon | `transform scale` + `opacity` | 1700ms, alternating | Task is available to complete |
+| Empty-sky orbit | `transform rotate` + core `opacity` | 7200ms linear | No stars are planned |
+| Archive node assembly | SVG radius + `opacity` | spring, 24ms week stagger | Network enters or a culled cluster enters view |
+| Archive relationship trace | SVG endpoint + `opacity` | 440ms, 18ms stagger | Network edge enters view |
+| Archive domain focus | node radius + edge/node `opacity` | 240-260ms ease-out | Domain legend selection changes |
+| Archive camera move | SVG `viewBox` interpolation | 380ms cubic ease-out | Zoom, reset, double-tap, or mini-map navigation |
+| Archive view switch | content `opacity` | 240ms in / 150ms out | Network/list mode changes |
+| Archive node hover | focus ring + card `transform`/`opacity` | 140-260ms | Pointer hover or keyboard focus |
 | Selected nebula border | `borderColor` | 200ms ease-out | Nebula selection |
 | Check icon appear | `opacity 0 → 1` | 150ms | Routine completion |
 | Sleep-ready transition | `opacity` on text + background glow | 300ms fade-in | Last wind-down complete |
@@ -523,6 +537,8 @@ accessibilityRole="button", accessibilityLabel="Switch to list view" / "Switch t
 When `prefers-reduced-motion` is active (via `AccessibilityInfo` on React Native):
 - All opacity transitions are set to 0ms (instant).
 - Star glow effect is disabled; lit stars show their final state immediately.
+- Ambient orbit and available-star beacon loops stop in a stable resting state.
+- Archive graph assembly, camera interpolation, view crossfade, and hover transitions resolve immediately.
 - Sleep-ready glow is disabled.
 - Scroll snapping uses instant positioning.
 

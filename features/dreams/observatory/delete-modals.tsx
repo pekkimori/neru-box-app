@@ -1,10 +1,13 @@
 // features/dreams/observatory/delete-modals.tsx
-import { Modal, Pressable, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Sp, R } from '../tokens';
+import { createEditorialStyles } from '@/constants/editorial-theme';
+import { useThemedStyles } from '@/features/settings/app-theme';
+import { Palette, Sp, R, useDreamsPalette } from '../tokens';
 
 // ── Shared styles ─────────────────────────────────────────────────────
-const S = StyleSheet.create({
+const themedS = createEditorialStyles(() => ({
   backdrop: {
     flex: 1, backgroundColor: Palette.backdrop,
     alignItems: 'center', justifyContent: 'center', padding: Sp.lg,
@@ -30,7 +33,7 @@ const S = StyleSheet.create({
     paddingVertical: 10, minHeight: 44,
   },
   btnSecondaryText: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
-});
+}));
 
 // ── DeleteStarConfirmModal ────────────────────────────────────────────
 interface DeleteStarConfirmModalProps {
@@ -43,6 +46,8 @@ interface DeleteStarConfirmModalProps {
 export function DeleteStarConfirmModal({
   visible, starLabel, onClose, onConfirm,
 }: DeleteStarConfirmModalProps) {
+  const S = useThemedStyles(themedS);
+  const Palette = useDreamsPalette();
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <Pressable style={S.backdrop} onPress={onClose}>
@@ -78,6 +83,8 @@ interface DeleteConstellationConfirmModalProps {
 export function DeleteConstellationConfirmModal({
   visible, name, busy, onClose, onConfirm,
 }: DeleteConstellationConfirmModalProps) {
+  const S = useThemedStyles(themedS);
+  const Palette = useDreamsPalette();
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <Pressable style={S.backdrop} onPress={onClose}>

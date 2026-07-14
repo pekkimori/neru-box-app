@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { EditorialColors, editorialOverlay } from "@/constants/editorial-theme";
+import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
+import { NeruRobot } from "@/components/neru-robot";
+import { APP_ACCENT_PRESETS } from "@/constants/editorial-theme";
 import { EditorModal, SectionLabel } from "@/features/protect/components";
 import {
   AppsEditorContent,
@@ -24,7 +26,8 @@ import {
   type SelectedApp,
 } from "@/features/protect/model";
 import { useFocusSession } from "@/features/protect/use-focus-session";
-import { protectStyles as styles } from "@/features/protect/styles";
+import { protectStyles } from "@/features/protect/styles";
+import { useAppTheme, useThemedStyles } from "@/features/settings/app-theme";
 import {
   useSleepSchedule,
   type SleepScheduleEntry,
@@ -37,12 +40,15 @@ import {
   splitTimeRange as getTimelineSegments,
 } from "@/utils/time";
 
-const Palette = {
-  ...EditorialColors,
-  overlay: editorialOverlay(0.42),
-};
-
-export default function ProtectScreen() {
+export default function ControlScreen() {
+  const {
+    appearance,
+    accentPreset,
+    colors: Palette,
+    setMode,
+    setAccentId,
+  } = useAppTheme();
+  const styles = useThemedStyles(protectStyles, appearance);
   const [editor, setEditor] = useState<ProtectEditor>(null);
   const [selectedApps, setSelectedApps] = useState<SelectedApp[]>([
     { id: "instagram", limitMinutes: 30 },
@@ -99,6 +105,7 @@ export default function ProtectScreen() {
   const validFocusBlocks = focusBlocks.filter(
     (block) => block.enabled && !blockError(block),
   );
+  const enabledSleepSchedules = schedule.filter((entry) => entry.enabled).length;
   const date = new Date(now);
   const currentMinute = getMinuteOfDay(date);
   const isInRange = (start: string, end: string) => {
@@ -206,16 +213,19 @@ export default function ProtectScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>PROTECT</Text>
-            <Text style={styles.eyebrow}>Digital wellbeing</Text>
+          <View style={styles.headerIdentity}>
+            <NeruRobot reactToButtons size={42} tabIndex={0} />
+            <View>
+              <Text style={styles.title}>CONTROL</Text>
+              <Text style={styles.eyebrow}>Digital wellbeing</Text>
+            </View>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
@@ -232,7 +242,7 @@ export default function ProtectScreen() {
               <Ionicons
                 name={session ? "stop" : "play"}
                 size={17}
-                color={session ? Palette.white : Palette.red}
+                color={session ? Palette.onAccent : Palette.red}
               />
               <Text
                 style={[
@@ -249,7 +259,7 @@ export default function ProtectScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open mode settings"
             >
-              <Ionicons name="options-outline" size={20} color={Palette.ink} />
+              <Ionicons name="options" size={20} color={Palette.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -261,7 +271,7 @@ export default function ProtectScreen() {
                 <Ionicons
                   name={modeMeta.icon}
                   size={22}
-                  color={Palette.white}
+                  color={Palette.onAccent}
                 />
               </View>
               <View>
@@ -307,7 +317,7 @@ export default function ProtectScreen() {
               onPress={() => setEditor("focus")}
               style={styles.primaryButton}
             >
-              <Ionicons name="play" size={16} color={Palette.white} />
+              <Ionicons name="play" size={16} color={Palette.onAccent} />
               <Text style={styles.primaryButtonText}>Start focus</Text>
             </TouchableOpacity>
           )}
@@ -379,6 +389,86 @@ export default function ProtectScreen() {
           </View>
         </View>
 
+        <SectionLabel>Appearance</SectionLabel>
+        <View style={styles.appearanceCard}>
+          <View style={styles.appearanceHeader}>
+            <View style={styles.appearanceIcon}>
+              <Ionicons name="color-palette-outline" size={20} color={Palette.red} />
+            </View>
+            <View style={styles.appearanceCopy}>
+              <Text style={styles.appearanceTitle}>App theme</Text>
+              <Text style={styles.appearanceDetail}>
+                {appearance.mode === "dark" ? "Dark" : "Light"} · {accentPreset.label}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.appearanceFieldLabel}>COLOR MODE</Text>
+          <View style={styles.appearanceModeRow} accessibilityRole="radiogroup">
+            {([
+              { id: "light" as const, label: "Light", icon: "sunny-outline" as const },
+              { id: "dark" as const, label: "Dark", icon: "moon-outline" as const },
+            ]).map((mode) => {
+              const selected = appearance.mode === mode.id;
+              return (
+                <TouchableOpacity
+                  key={mode.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${mode.label} mode`}
+                  onPress={() => setMode(mode.id)}
+                  style={[styles.appearanceMode, selected && styles.appearanceModeActive]}
+                >
+                  <Ionicons
+                    name={mode.icon}
+                    size={18}
+                    color={selected ? Palette.onAccent : Palette.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.appearanceModeText,
+                      selected && styles.appearanceModeTextActive,
+                    ]}
+                  >
+                    {mode.label}
+                  </Text>
+                  {selected ? (
+                    <Ionicons name="checkmark-circle" size={17} color={Palette.onAccent} />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.appearanceFieldLabel}>ACCENT PALETTE</Text>
+          <View style={styles.accentGrid} accessibilityRole="radiogroup">
+            {APP_ACCENT_PRESETS.map((preset) => {
+              const selected = appearance.accentId === preset.id;
+              const swatch = appearance.mode === "dark" ? preset.dark : preset.light;
+              return (
+                <TouchableOpacity
+                  key={preset.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${preset.label} accent. ${preset.description}`}
+                  onPress={() => setAccentId(preset.id)}
+                  style={[styles.accentOption, selected && styles.accentOptionActive]}
+                >
+                  <View style={[styles.accentSwatch, { backgroundColor: swatch }]}>
+                    {selected ? (
+                      <Ionicons name="checkmark" size={16} color={Palette.onAccent} />
+                    ) : null}
+                  </View>
+                  <View style={styles.accentCopy}>
+                    <Text style={styles.accentName}>{preset.label}</Text>
+                    <Text style={styles.accentDescription}>{preset.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         <SectionLabel>Configure</SectionLabel>
         <View style={styles.menuCard}>
           {[
@@ -392,7 +482,11 @@ export default function ProtectScreen() {
               editor: "schedule" as ProtectEditor,
               icon: "calendar-outline" as const,
               title: "Schedule",
-              detail: `${validFocusBlocks.length} focus blocks · sleep enabled`,
+              detail: `${validFocusBlocks.length} focus blocks · ${
+                enabledSleepSchedules === 0
+                  ? "sleep off"
+                  : `${enabledSleepSchedules} sleep ${enabledSleepSchedules === 1 ? "schedule" : "schedules"}`
+              }`,
             },
             {
               editor: "mode" as ProtectEditor,

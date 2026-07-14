@@ -8,7 +8,6 @@ import {
   SectionList,
   Text,
   View,
-  Pressable,
   TextInput,
   StyleSheet,
 } from 'react-native';
@@ -17,10 +16,7 @@ import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { compareByCompletion } from './galaxy-edges';
 import { GalaxyPalette } from './galaxy-theme';
 
-interface Props {
-  stars: GalaxyStar[];
-  onStarSelect: (star: GalaxyStar) => void;
-}
+interface Props { stars: GalaxyStar[]; }
 
 interface Section {
   title: string;
@@ -28,7 +24,7 @@ interface Section {
   data: GalaxyStar[];
 }
 
-export function GalaxyListView({ stars, onStarSelect }: Props) {
+export function GalaxyListView({ stars }: Props) {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo((): GalaxyStar[] => {
@@ -73,10 +69,8 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
 
   const renderItem = useCallback(
     ({ item }: { item: GalaxyStar }) => (
-      <Pressable
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-        onPress={() => onStarSelect(item)}
-        accessibilityRole="button"
+      <View
+        style={styles.row}
         accessibilityLabel={`${item.label}, ${item.constellationName}, completed ${formatCompletionDate(item.completionDate)}, ${item.coinsEarned} coins earned`}
       >
         <View style={styles.rowIcon}>
@@ -93,9 +87,9 @@ export function GalaxyListView({ stars, onStarSelect }: Props) {
           </Text>
         </View>
         <Text style={styles.coins}>{item.coinsEarned}</Text>
-      </Pressable>
+      </View>
     ),
-    [onStarSelect],
+    [],
   );
 
   const renderHeader = useCallback(
@@ -209,9 +203,6 @@ const styles = StyleSheet.create({
     borderColor: GalaxyPalette.border,
     marginBottom: Sp.xs,
     minHeight: 52,
-  },
-  rowPressed: {
-    borderColor: GalaxyPalette.textMuted,
   },
   rowIcon: {
     width: 32,
