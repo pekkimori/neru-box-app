@@ -6,8 +6,8 @@
 import {
   createEditorialPalette,
   type EditorialPalette,
-} from '../../constants/editorial-theme';
-import { useAppTheme } from '../control/app-theme';
+} from '@/theme/editorial-theme';
+import { useAppTheme } from '@/theme/app-theme';
 
 const tasksPaletteExtras = (colors: EditorialPalette) => ({
   bg: colors.background,

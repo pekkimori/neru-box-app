@@ -1,4 +1,8 @@
+import { useAppTheme } from '@/theme/app-theme';
+import { GalaxyPalette } from './galaxy-theme';
+
 export function GalaxyHoverStyles() {
+  useAppTheme();
   return (
     <style>{`
       .galaxy-hover-sensor:hover,
@@ -19,7 +23,7 @@ export function GalaxyHoverStyles() {
         cursor: pointer;
       }
       .galaxy-node-button:focus-visible {
-        outline: 2px solid rgba(245,242,234,.88);
+        outline: 2px solid ${GalaxyPalette.text};
         outline-offset: 3px;
       }
 
@@ -27,12 +31,12 @@ export function GalaxyHoverStyles() {
         pointer-events: auto;
         opacity: 0;
         visibility: hidden;
-        transform: translateY(9px) scale(.965);
-        transform-origin: center;
+        transform: translateY(100%);
+        transform-origin: bottom center;
         transition:
-          opacity 150ms ease,
-          transform 240ms cubic-bezier(.16, 1, .3, 1),
-          visibility 150ms;
+          opacity 180ms ease,
+          transform 300ms cubic-bezier(.16, 1, .3, 1),
+          visibility 180ms;
       }
       .galaxy-hover-sensor > .galaxy-hover-orbit {
         pointer-events: none;
@@ -55,12 +59,10 @@ export function GalaxyHoverStyles() {
         transform: scale(.45);
         transition: opacity 140ms ease, transform 300ms cubic-bezier(.2, .9, .2, 1.18);
       }
-      .galaxy-hover-sensor:hover > .galaxy-hover-popup,
-      .galaxy-hover-sensor:focus-within > .galaxy-hover-popup,
       .galaxy-hover-sensor.is-pinned > .galaxy-hover-popup {
         opacity: 1;
         visibility: visible;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
       }
       .galaxy-hover-sensor:hover > .galaxy-hover-orbit,
       .galaxy-hover-sensor:focus-within > .galaxy-hover-orbit,
@@ -78,95 +80,66 @@ export function GalaxyHoverStyles() {
         opacity: 1;
         transform: scale(.74);
       }
-      .galaxy-popup-connector {
-        opacity: 0;
-        transform: scaleX(.25);
-        transform-origin: right center;
-        transition: opacity 160ms 40ms ease, transform 240ms 40ms cubic-bezier(.16, 1, .3, 1);
+      .galaxy-drawer-backdrop {
+        position: fixed;
+        z-index: 48;
+        inset: 0;
+        background: ${GalaxyPalette.backdrop};
+        animation: galaxy-drawer-backdrop-in 180ms ease both;
       }
-      .galaxy-hover-popup[data-side="right"] .galaxy-popup-connector { transform-origin: left center; }
-      .galaxy-hover-sensor:hover .galaxy-popup-connector,
-      .galaxy-hover-sensor:focus-within .galaxy-popup-connector,
-      .galaxy-hover-sensor.is-pinned .galaxy-popup-connector {
-        opacity: 1;
-        transform: scaleX(1);
-      }
-
-      .galaxy-popup-clip { position: absolute; inset: 0; overflow: hidden; border-radius: 17px; }
-      .galaxy-popup-arc {
-        position: absolute;
-        width: 128px;
-        height: 128px;
-        top: -78px;
-        right: -40px;
-        border: 1px solid;
-        border-radius: 50%;
-      }
-      .galaxy-popup-accent {
-        position: absolute;
-        left: 0;
-        top: 20px;
-        bottom: 20px;
-        width: 3px;
-        border-radius: 0 3px 3px 0;
-      }
-      .galaxy-popup-content { position: relative; height: 100%; padding: 16px 16px 12px 20px; box-sizing: border-box; }
+      @keyframes galaxy-drawer-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+      .galaxy-popup-clip { position: absolute; inset: 0; overflow: hidden; border-radius: 18px 18px 0 0; }
+      .galaxy-drawer-handle { position: absolute; z-index: 3; top: 14px; left: 50%; width: 38px; height: 4px; border-radius: 2px; background: ${GalaxyPalette.border}; transform: translateX(-50%); }
+      .galaxy-popup-content { position: relative; height: 100%; padding: 38px 28px 22px; box-sizing: border-box; }
       .galaxy-popup-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
-      .galaxy-popup-record { color: #747B8B; font-size: 9px; font-weight: 800; letter-spacing: 1.35px; white-space: nowrap; }
-      .galaxy-popup-heading-actions { display: flex; align-items: center; gap: 5px; min-width: 0; }
+      .galaxy-popup-heading-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: flex-start; gap: 6px; }
+      .galaxy-popup-record { color: ${GalaxyPalette.textMuted}; font-size: 9px; font-weight: 800; letter-spacing: 1.35px; white-space: nowrap; }
       .galaxy-popup-domain {
         display: flex;
         align-items: center;
-        max-width: 105px;
+        max-width: 190px;
         gap: 6px;
         padding: 4px 8px;
         border: 1px solid;
         border-radius: 999px;
       }
       .galaxy-popup-domain > span { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; }
-      .galaxy-popup-domain > strong { overflow: hidden; color: #A8ADBA; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-      .galaxy-popup-close {
-        width: 24px;
-        height: 24px;
-        padding: 0 0 2px;
-        border: 1px solid rgba(255,255,255,.11);
-        border-radius: 50%;
-        background: rgba(8,10,14,.35);
-        color: #A8ADBA;
-        font: 600 17px/20px system-ui, sans-serif;
-        cursor: pointer;
+      .galaxy-popup-domain > strong { overflow: hidden; color: ${GalaxyPalette.textDim}; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .galaxy-popup-title { margin-top: 16px; max-width: 620px; color: ${GalaxyPalette.text}; font-size: 26px; line-height: 31px; font-weight: 800; letter-spacing: -.25px; }
+      .galaxy-popup-date { margin-top: 3px; color: ${GalaxyPalette.textMuted}; font-size: 11px; font-weight: 600; }
+      .galaxy-popup-photo {
+        position: relative;
+        height: 294px;
+        overflow: hidden;
+        margin-top: 14px;
+        border: 1px solid ${GalaxyPalette.subtleLine};
+        border-radius: 12px;
+        background: ${GalaxyPalette.photoSurface};
       }
-      .galaxy-popup-close:hover { border-color: rgba(255,255,255,.24); color: #F5F2EA; }
-      .galaxy-popup-title { margin-top: 11px; max-width: 242px; color: #F5F2EA; font-size: 18px; line-height: 22px; font-weight: 800; letter-spacing: -.25px; }
-      .galaxy-popup-date { margin-top: 3px; color: #747B8B; font-size: 11px; font-weight: 600; }
-      .galaxy-popup-stats { display: flex; gap: 7px; margin-top: 12px; }
-      .galaxy-popup-stat {
-        display: flex;
-        min-width: 0;
-        flex: 1;
-        flex-direction: column;
-        gap: 3px;
-        padding: 7px 8px;
-        border: 1px solid rgba(255,255,255,.075);
-        border-radius: 8px;
-        background: rgba(255,255,255,.035);
-      }
-      .galaxy-popup-stat > span { color: #747B8B; font-size: 8px; font-weight: 800; letter-spacing: .8px; }
-      .galaxy-popup-stat > strong { overflow: hidden; color: #D9DCE5; font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .galaxy-popup-photo > img { width: 100%; height: 100%; display: block; object-fit: cover; }
+      .galaxy-popup-photo-empty { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; color: ${GalaxyPalette.textMuted}; }
+      .galaxy-popup-photo-empty > .galaxy-popup-photo-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 50%; font-size: 20px; }
+      .galaxy-popup-photo-empty > strong { margin-top: 8px; color: ${GalaxyPalette.textDim}; font-size: 11px; }
+      .galaxy-popup-photo-empty > span:last-child { margin-top: 3px; font-size: 9px; font-weight: 600; }
+      .galaxy-popup-photo-label { position: absolute; top: 9px; left: 9px; padding: 5px 7px; border-radius: 7px; background: ${GalaxyPalette.proofLabel}; color: ${GalaxyPalette.textDim}; font-size: 8px; font-weight: 800; letter-spacing: .8px; }
+      .galaxy-popup-reward { display: flex; min-height: 48px; align-items: center; gap: 9px; margin-top: 10px; padding: 7px 10px; box-sizing: border-box; border: 1px solid ${GalaxyPalette.subtleLine}; border-radius: 10px; background: ${GalaxyPalette.subtleFill}; }
+      .galaxy-popup-reward-icon { display: grid; width: 31px; height: 31px; flex: 0 0 auto; place-items: center; border-radius: 50%; font-size: 16px; }
+      .galaxy-popup-reward-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+      .galaxy-popup-reward-copy > small { color: ${GalaxyPalette.textMuted}; font-size: 8px; font-weight: 800; letter-spacing: .75px; }
+      .galaxy-popup-reward-copy > strong { color: ${GalaxyPalette.text}; font-size: 11px; font-weight: 800; }
+      .galaxy-popup-order { color: ${GalaxyPalette.textMuted}; font-size: 10px; font-weight: 800; }
 
       .galaxy-popup-footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        min-height: 36px;
+        min-height: 43px;
         gap: 8px;
-        margin-top: 11px;
-        padding-top: 9px;
-        border-top: 1px solid rgba(255,255,255,.075);
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid ${GalaxyPalette.subtleLine};
       }
       .galaxy-popup-footer.is-confirming { align-items: flex-end; }
-      .galaxy-popup-pin-hint { display: flex; align-items: center; min-width: 0; gap: 6px; color: #747B8B; font-size: 9px; font-weight: 650; white-space: nowrap; }
-      .galaxy-popup-pin-dot { width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; }
       .galaxy-popup-exclude,
       .galaxy-popup-cancel,
       .galaxy-popup-exclude-confirm {
@@ -176,13 +149,13 @@ export function GalaxyHoverStyles() {
         font: 750 9px/26px system-ui, sans-serif;
         cursor: pointer;
       }
-      .galaxy-popup-exclude { border: 1px solid rgba(251,113,133,.24); background: rgba(251,113,133,.055); color: #CE8794; }
+      .galaxy-popup-exclude { width: 100%; border: 1px solid rgba(251,113,133,.28); background: rgba(251,113,133,.075); color: #F0A0AE; }
       .galaxy-popup-exclude:hover { border-color: rgba(251,113,133,.5); background: rgba(251,113,133,.11); color: #FB9AAC; }
       .galaxy-popup-confirm-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-      .galaxy-popup-confirm-copy > strong { color: #F5F2EA; font-size: 10px; font-weight: 800; }
-      .galaxy-popup-confirm-copy > span { color: #747B8B; font-size: 8px; font-weight: 600; white-space: nowrap; }
+      .galaxy-popup-confirm-copy > strong { color: ${GalaxyPalette.text}; font-size: 10px; font-weight: 800; }
+      .galaxy-popup-confirm-copy > span { color: ${GalaxyPalette.textMuted}; font-size: 8px; font-weight: 600; white-space: nowrap; }
       .galaxy-popup-confirm-actions { display: flex; gap: 5px; }
-      .galaxy-popup-cancel { border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.035); color: #A8ADBA; }
+      .galaxy-popup-cancel { border: 1px solid ${GalaxyPalette.subtleLine}; background: ${GalaxyPalette.subtleFill}; color: ${GalaxyPalette.textDim}; }
       .galaxy-popup-exclude-confirm { border: 1px solid #BE123C; background: #BE123C; color: #fff; }
       .galaxy-popup-cancel:disabled,
       .galaxy-popup-exclude-confirm:disabled { cursor: default; opacity: .55; }
@@ -194,39 +167,15 @@ export function GalaxyHoverStyles() {
       }
 
       @media (max-width: 600px) {
-        .galaxy-hover-sensor > .galaxy-hover-popup {
-          position: fixed !important;
-          left: 10px !important;
-          right: 10px !important;
-          top: auto !important;
-          bottom: max(10px, env(safe-area-inset-bottom)) !important;
-          width: auto !important;
-          height: auto !important;
-          min-height: 292px;
-          border-radius: 22px !important;
-          transform: translateY(16px) scale(.985);
-          transform-origin: bottom center;
-        }
-        .galaxy-hover-sensor:hover > .galaxy-hover-popup,
-        .galaxy-hover-sensor:focus-within > .galaxy-hover-popup,
-        .galaxy-hover-sensor.is-pinned > .galaxy-hover-popup {
-          transform: translateY(0) scale(1);
-        }
-        .galaxy-popup-connector { display: none; }
-        .galaxy-popup-clip { border-radius: 21px; }
-        .galaxy-popup-content { padding: 17px 18px 14px 20px; }
+        .galaxy-popup-content { padding: 38px 20px max(18px, env(safe-area-inset-bottom)); }
         .galaxy-popup-heading { min-height: 40px; }
         .galaxy-popup-record { font-size: 10px; }
         .galaxy-popup-domain { max-width: 120px; padding: 6px 9px; }
-        .galaxy-popup-close { width: 38px; height: 38px; font-size: 20px; line-height: 34px; }
         .galaxy-popup-title { margin-top: 9px; font-size: 22px; line-height: 26px; }
         .galaxy-popup-date { font-size: 12px; }
-        .galaxy-popup-stats { margin-top: 14px; gap: 8px; }
-        .galaxy-popup-stat { min-height: 52px; justify-content: center; padding: 9px 10px; border-radius: 10px; }
-        .galaxy-popup-stat > span { font-size: 9px; }
-        .galaxy-popup-stat > strong { margin-top: 2px; font-size: 11px; }
+        .galaxy-popup-photo { height: min(230px, 31vh); margin-top: 15px; }
+        .galaxy-popup-reward { min-height: 52px; margin-top: 11px; }
         .galaxy-popup-footer { min-height: 53px; margin-top: 13px; padding-top: 10px; }
-        .galaxy-popup-pin-hint { font-size: 10px; }
         .galaxy-popup-exclude,
         .galaxy-popup-cancel,
         .galaxy-popup-exclude-confirm {
@@ -240,11 +189,23 @@ export function GalaxyHoverStyles() {
         .galaxy-popup-confirm-copy > span { font-size: 10px; }
       }
 
+      .galaxy-hover-sensor > .galaxy-hover-popup {
+        position: fixed !important;
+        z-index: 50;
+        left: 50% !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: 0 !important;
+        width: min(760px, 100vw) !important;
+        height: min(600px, 86vh) !important;
+        border-radius: 18px 18px 0 0 !important;
+        transform: translate(-50%, 100%);
+      }
+      .galaxy-hover-sensor.is-pinned > .galaxy-hover-popup { transform: translate(-50%, 0); }
       @media (prefers-reduced-motion: reduce) {
         .galaxy-hover-sensor > .galaxy-hover-popup,
         .galaxy-hover-sensor > .galaxy-hover-orbit,
-        .galaxy-hover-sensor > .galaxy-hover-ring,
-        .galaxy-popup-connector { transition-duration: 0ms; }
+        .galaxy-hover-sensor > .galaxy-hover-ring { transition-duration: 0ms; }
       }
     `}</style>
   );

@@ -1,13 +1,13 @@
 // features/tasks/observatory/add-modals.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
-  Pressable, Text, TextInput,
+  KeyboardAvoidingView, Platform, Pressable, Text, TextInput,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useThemedStyles } from '@/features/control/app-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 import { Palette, Sp, R, useTasksPalette } from '../tokens';
 
 // ── Shared styles for add modals ──────────────────────────────────────
@@ -61,10 +61,6 @@ export function AddConstellationModal({
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('✨');
 
-  useEffect(() => {
-    if (visible) { setName(''); setIcon('✨'); }
-  }, [visible]);
-
   const handleSubmit = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -73,17 +69,28 @@ export function AddConstellationModal({
   };
 
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onDismiss={() => { setName(''); setIcon('✨'); }}
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={S.backdrop} onPress={onClose}>
         <Pressable style={S.card} onPress={(e) => e.stopPropagation()}>
           <Text style={S.title}>New nebula</Text>
           <View style={S.inlineRow}>
             <TextInput
+              accessibilityLabel="Domain icon"
               value={icon} onChangeText={setIcon}
               placeholder="✨" placeholderTextColor={Palette.warmMuted}
               style={[S.input, S.iconInput]} maxLength={3}
             />
             <TextInput
+              accessibilityLabel="Domain name"
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
               value={name} onChangeText={setName}
               placeholder="Nebula name" placeholderTextColor={Palette.warmMuted}
               style={[S.input, S.nameInput]} autoFocus maxLength={30}
@@ -103,6 +110,7 @@ export function AddConstellationModal({
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

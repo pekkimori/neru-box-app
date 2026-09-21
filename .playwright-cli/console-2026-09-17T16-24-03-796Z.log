@@ -1,0 +1,6 @@
+[    1213ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://127.0.0.1:8084/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:51110
+[    1399ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://127.0.0.1:8084/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:51110
+[    1465ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://127.0.0.1:8084/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app&transform.reactCompiler=true:51110

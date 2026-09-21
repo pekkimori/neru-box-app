@@ -50,7 +50,10 @@ export function useObservatoryData() {
     useDailyPlan(today);
   const { streak: productivityStreak, loaded: streakLoaded } =
     useProductivityStreak(plan, today);
-  const { getQuestsForBlock, isQuestComplete, toggleQuestComplete: rawToggle, loaded: questsLoaded } =
+  const {
+    getQuestsForBlock, isQuestComplete, toggleQuestComplete: rawToggle,
+    addQuest, updateQuest, removeQuest, loaded: questsLoaded,
+  } =
     useRoutineQuests(today);
   const { constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation, loaded: consLoaded } =
     useConstellations();
@@ -64,12 +67,11 @@ export function useObservatoryData() {
   const [editMode, setEditMode] = useState(false);
 
   // Schedule edits can end Sleep while this tab is mounted in the background.
-  // Never leave its hidden Sleep content selected after the window closes.
-  useEffect(() => {
-    if (selectedPeriod === 'sleep' && trueActivePeriod !== 'sleep') {
-      setSelectedPeriod(trueActivePeriod);
-    }
-  }, [selectedPeriod, trueActivePeriod]);
+  // Correct the derived selection during render so hidden Sleep content is
+  // never exposed for an extra effect-driven render.
+  if (selectedPeriod === 'sleep' && trueActivePeriod !== 'sleep') {
+    setSelectedPeriod(trueActivePeriod);
+  }
 
   const periods = useMemo((): PeriodConfig[] => {
     const wakeMin = activeSleep
@@ -204,7 +206,7 @@ export function useObservatoryData() {
     loaded, today, nowMin, coins, addCoins, productivityStreak,
     constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation,
     plan, assignTask, updateTaskStatus, awardCoins, removeTask,
-    getQuestsForBlock, isQuestComplete, toggleQuestComplete,
+    getQuestsForBlock, isQuestComplete, toggleQuestComplete, addQuest, updateQuest, removeQuest,
     schedule, activeSleep, isSleepWindow, sleepReady, sleepModeActive, markSleepReady, resetSleepReady,
     periods, selectedPeriod, setSelectedPeriod, selectedBlock,
     trueActivePeriod, periodStateMap,

@@ -3,8 +3,8 @@ import { playTapFeedback } from '@/utils/interaction-feedback';
 import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { GalaxyPalette } from './galaxy-theme';
 
-const CARD_WIDTH = 286;
-const CARD_HEIGHT = 212;
+const CARD_WIDTH = 760;
+const CARD_HEIGHT = 600;
 const TARGET_SIZE = 40;
 const GAP = 22;
 const MARGIN = 14;
@@ -45,6 +45,16 @@ export function GalaxyHoverTarget({
   const [confirmExclude, setConfirmExclude] = useState(false);
   const [excluding, setExcluding] = useState(false);
   const [excludeError, setExcludeError] = useState(false);
+  const [photoUnavailable, setPhotoUnavailable] = useState(false);
+  const [wasPinned, setWasPinned] = useState(pinned);
+  if (wasPinned !== pinned) {
+    setWasPinned(pinned);
+    if (!pinned) {
+      setConfirmExclude(false);
+      setExcludeError(false);
+      setPhotoUnavailable(false);
+    }
+  }
   const targetLeft = x - TARGET_SIZE / 2;
   const targetTop = y - TARGET_SIZE / 2;
   const opensRight = x + GAP + CARD_WIDTH <= canvasW - MARGIN;
@@ -59,7 +69,6 @@ export function GalaxyHoverTarget({
     MARGIN,
     Math.max(MARGIN, canvasH - CARD_HEIGHT - MARGIN),
   );
-  const anchorY = clamp(y - cardTop, 22, CARD_HEIGHT - 22);
   const recordNumber = String(star.completionOrder + 1).padStart(2, '0');
 
   const handleDismiss = useCallback(() => {
@@ -67,13 +76,6 @@ export function GalaxyHoverTarget({
     if (focused instanceof HTMLElement && sensorRef.current?.contains(focused)) focused.blur();
     onClose();
   }, [onClose]);
-
-  useEffect(() => {
-    if (!pinned) {
-      setConfirmExclude(false);
-      setExcludeError(false);
-    }
-  }, [pinned]);
 
   useEffect(() => {
     if (!pinned) return undefined;
@@ -167,6 +169,14 @@ export function GalaxyHoverTarget({
         }}
       />
 
+      {pinned && (
+        <div
+          className="galaxy-drawer-backdrop"
+          aria-hidden="true"
+          onClick={(event) => { event.stopPropagation(); handleDismiss(); }}
+        />
+      )}
+
       <div
         className="galaxy-hover-popup"
         data-side={opensRight ? 'right' : 'left'}
@@ -181,41 +191,21 @@ export function GalaxyHoverTarget({
           boxSizing: 'border-box',
           overflow: 'visible',
           borderRadius: 18,
-          border: `1px solid ${star.domainColor}42`,
-          background: `linear-gradient(140deg, ${star.domainColor}18 0%, rgba(31, 35, 44, 0.97) 42%, rgba(25, 28, 35, 0.98) 100%)`,
-          boxShadow: `0 24px 64px rgba(0, 0, 0, 0.52), 0 0 34px ${star.domainColor}18, inset 0 1px 0 rgba(255,255,255,.08)`,
+          border: 0,
+          background: GalaxyPalette.translucentSurface,
+          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.28)',
           color: GalaxyPalette.text,
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
         }}
       >
-        <div
-          className="galaxy-popup-connector"
-          style={{
-            position: 'absolute',
-            top: anchorY - 0.5,
-            left: opensRight ? -GAP : 'auto',
-            right: opensRight ? 'auto' : -GAP,
-            width: GAP,
-            height: 1,
-            background: `linear-gradient(${opensRight ? '90deg' : '270deg'}, ${star.domainColor}00, ${star.domainColor}B8)`,
-          }}
-        />
         <div className="galaxy-popup-clip">
-          <div
-            className="galaxy-popup-arc"
-            style={{ borderColor: `${star.domainColor}30`, boxShadow: `0 0 48px ${star.domainColor}1A` }}
-          />
-          <div
-            className="galaxy-popup-accent"
-            style={{ background: star.domainColor, boxShadow: `0 0 14px ${star.domainColor}` }}
-          />
-
+          <div className="galaxy-drawer-handle" />
           <div className="galaxy-popup-content">
             <div className="galaxy-popup-heading">
-              <div className="galaxy-popup-record">ARCHIVE SIGNAL · {recordNumber}</div>
-              <div className="galaxy-popup-heading-actions">
+              <div className="galaxy-popup-heading-copy">
+                <div className="galaxy-popup-record">COMPLETED TASK</div>
                 <div
                   className="galaxy-popup-domain"
                   style={{ borderColor: `${star.domainColor}3D`, background: `${star.domainColor}12` }}
@@ -223,43 +213,44 @@ export function GalaxyHoverTarget({
                   <span style={{ background: star.domainColor, boxShadow: `0 0 8px ${star.domainColor}` }} />
                   <strong>{star.constellationName}</strong>
                 </div>
-                {pinned && (
-                  <button
-                    type="button"
-                    className="galaxy-popup-close"
-                    aria-label={`Close pinned record for ${star.label}`}
-                    onClick={(event) => { event.stopPropagation(); handleDismiss(); }}
-                  >
-                    ×
-                  </button>
-                )}
               </div>
             </div>
 
             <div className="galaxy-popup-title">{star.label}</div>
-            <div className="galaxy-popup-date">Captured {formatCompletionDate(star.completionDate)}</div>
+            <div className="galaxy-popup-date">Completed {formatCompletionDate(star.completionDate)}</div>
 
-            <div className="galaxy-popup-stats">
-              <div className="galaxy-popup-stat">
-                <span>WEEK</span>
-                <strong>{star.isoWeek.split('-')[1]}</strong>
-              </div>
-              <div className="galaxy-popup-stat">
-                <span>REWARD</span>
+            <div className="galaxy-popup-photo">
+              {star.completionPhotoUri && !photoUnavailable ? (
+                <img
+                  src={star.completionPhotoUri}
+                  alt={`Completion proof for ${star.label}`}
+                  onError={() => setPhotoUnavailable(true)}
+                />
+              ) : (
+                <div className="galaxy-popup-photo-empty">
+                  <span className="galaxy-popup-photo-icon" style={{ color: star.domainColor, background: `${star.domainColor}18` }}>▧</span>
+                  <strong>{photoUnavailable ? 'Photo unavailable' : 'No completion photo'}</strong>
+                  <span>{photoUnavailable ? 'This image could not be loaded.' : 'This task was completed without an image.'}</span>
+                </div>
+              )}
+              <div className="galaxy-popup-photo-label">▣ &nbsp; TASK PROOF</div>
+            </div>
+
+            <div className="galaxy-popup-reward">
+              <span className="galaxy-popup-reward-icon" style={{ color: star.domainColor, background: `${star.domainColor}18` }}>✦</span>
+              <span className="galaxy-popup-reward-copy">
+                <small>REWARD EARNED</small>
                 <strong>+{star.coinsEarned} coins</strong>
-              </div>
-              <div className="galaxy-popup-stat">
-                <span>MEMORY</span>
-                <strong>{star.completionPhotoUri ? 'Secured' : 'None'}</strong>
-              </div>
+              </span>
+              <span className="galaxy-popup-order">#{recordNumber}</span>
             </div>
 
             <div className={`galaxy-popup-footer${confirmExclude ? ' is-confirming' : ''}`}>
               {confirmExclude ? (
                 <>
                   <div className="galaxy-popup-confirm-copy">
-                    <strong>{excludeError ? 'Could not exclude' : 'Exclude this star?'}</strong>
-                    <span>{excludeError ? 'Please try again.' : 'Task and coins stay safe.'}</span>
+                    <strong>{excludeError ? 'Could not exclude' : 'Exclude this task?'}</strong>
+                    <span>{excludeError ? 'Please try again.' : 'The task and coins stay safe.'}</span>
                   </div>
                   <div className="galaxy-popup-confirm-actions">
                     <button
@@ -281,20 +272,14 @@ export function GalaxyHoverTarget({
                   </div>
                 </>
               ) : (
-                <>
-                  <span className="galaxy-popup-pin-hint">
-                    <span className="galaxy-popup-pin-dot" style={{ background: pinned ? star.domainColor : GalaxyPalette.textMuted }} />
-                    {pinned ? 'Pinned · click outside to close' : 'Click node to pin'}
-                  </span>
-                  <button
-                    type="button"
-                    className="galaxy-popup-exclude"
-                    aria-label={`Exclude ${star.label} from Archive`}
-                    onClick={(event) => { event.stopPropagation(); handleExcludeRequest(); }}
-                  >
-                    <span>⊘</span> Exclude
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="galaxy-popup-exclude"
+                  aria-label={`Exclude ${star.label} from Sky Observer`}
+                  onClick={(event) => { event.stopPropagation(); handleExcludeRequest(); }}
+                >
+                  <span>◉̸</span> Exclude from Sky Observer
+                </button>
               )}
             </div>
           </div>

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { MotionPressable as Pressable } from "@/components/motion";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { AppMark, SectionLabel, ToggleSwitch } from "../components";
 import {
   EFFECT_ROWS,

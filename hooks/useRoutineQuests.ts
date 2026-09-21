@@ -2,8 +2,8 @@
 import { useCallback, useEffect } from 'react';
 import * as Crypto from 'expo-crypto';
 import { useStorage } from './useStorage';
-import { DEFAULT_ROUTINES } from '../constants/default-routines';
-import type { RoutineQuest, DailyRoutineStatus, BlockType, RoutineBlock } from '../types/tasks';
+import { DEFAULT_ROUTINES } from '@/features/tasks/default-routines';
+import type { RoutineQuest, DailyRoutineStatus, RoutineBlock } from '../types/tasks';
 
 export function useRoutineQuests(date: string) {
   const { value: quests, save: saveQuests, loaded: questsLoaded } =
@@ -57,7 +57,7 @@ export function useRoutineQuests(date: string) {
   );
 
   const addQuest = useCallback(
-    (label: string, icon: string, block: BlockType) => {
+    (label: string, icon: string, block: RoutineBlock) => {
       const id = Crypto.randomUUID();
       const quest: RoutineQuest = { id, label, icon, block, isDefault: false };
       saveQuests((prev) => [...prev, quest]);
@@ -73,6 +73,15 @@ export function useRoutineQuests(date: string) {
     [saveQuests]
   );
 
+  const updateQuest = useCallback(
+    (id: string, updates: Pick<RoutineQuest, 'label' | 'icon'>) => {
+      saveQuests((prev) => prev.map((quest) => (
+        quest.id === id ? { ...quest, ...updates } : quest
+      )));
+    },
+    [saveQuests],
+  );
+
   return {
     quests,
     status,
@@ -82,6 +91,7 @@ export function useRoutineQuests(date: string) {
     isQuestComplete,
     areBlockRoutinesDone,
     addQuest,
+    updateQuest,
     removeQuest,
   };
 }

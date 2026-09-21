@@ -4,7 +4,7 @@
 // The Return/Back control lives in the route shell top-bar — not here.
 
 import { useCallback, useRef } from 'react';
-import { StyleSheet, type View } from 'react-native';
+import { type View } from 'react-native';
 import Svg, { Circle, Line, Rect } from 'react-native-svg';
 import Animated, {
   FadeInDown,
@@ -14,6 +14,8 @@ import { MotionPressable as Pressable } from '@/components/motion';
 import { R } from '../tokens';
 import { GalaxyPalette } from './galaxy-theme';
 import type { GalaxyStar, ViewBox } from './galaxy-geometry';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 
 const TARGET = 44;
 
@@ -38,6 +40,7 @@ export function GalaxyControls({
   onResetView,
   onCenterViewBox,
 }: Props) {
+  const styles = useThemedStyles(themedStyles);
   const minimapRef = useRef<View>(null);
   const mmW = 80;
   const mmH = 80;
@@ -202,7 +205,7 @@ export function GalaxyControls({
                 width={viewportRight - viewportLeft}
                 height={viewportBottom - viewportTop}
                 rx={1.5 / minimapScale}
-                fill="rgba(245, 242, 234, 0.06)"
+                fill={GalaxyPalette.minimapFill}
                 stroke={GalaxyPalette.minimapViewport}
                 strokeWidth={1.4 / minimapScale}
               />
@@ -214,7 +217,7 @@ export function GalaxyControls({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   btn: {
     width: TARGET,
     height: TARGET,
@@ -244,4 +247,4 @@ const styles = StyleSheet.create({
     padding: 2,
     zIndex: 20,
   },
-});
+}));

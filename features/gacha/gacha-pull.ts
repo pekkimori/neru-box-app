@@ -1,4 +1,4 @@
-import type { GachaCreature } from '../../constants/gacha';
+import type { GachaCreature } from '@/features/gacha/pokemon-catalog';
 import type { PokemonMedia } from './pokemon-media';
 import type { GachaResult } from './use-gacha-collection';
 

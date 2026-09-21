@@ -10,7 +10,7 @@ import {
   getGachaRarity,
   getPokemonArtworkUrl,
   getSpeciesRarityData,
-} from '@/constants/gacha';
+} from '@/features/gacha/pokemon-catalog';
 
 const CACHE_KEY = '@neru/pokeapi-catalog-gen-1-5-v4';
 const POKEAPI_ROOT = 'https://pokeapi.co/api/v2';

@@ -1,43 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
-import { NeruRobot } from "@/components/neru-robot";
-import { APP_ACCENT_PRESETS } from "@/constants/editorial-theme";
+import { PageHeader } from "@/components/page-header";
+import { APP_ACCENT_PRESETS } from "@/theme/editorial-theme";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { EditorModal, SectionLabel } from "@/features/control/components";
 import {
-  AppsEditorContent,
-  FocusEditorContent,
-  ModeEditorContent,
-  ScheduleEditorContent,
+    AppsEditorContent,
+    FocusEditorContent,
+    ModeEditorContent,
+    RestPromptContent,
+    ScheduleEditorContent,
 } from "@/features/control/editors";
 import {
-  DEFAULT_EFFECTS,
-  INSTALLED_APPS,
-  clampMinutes,
-  formatDuration,
-  getFocusBlockError,
-  type FocusBlock,
-  type Mode,
-  type ModeEffects,
-  type ControlEditor,
-  type SelectedApp,
+    DEFAULT_EFFECTS,
+    INSTALLED_APPS,
+    clampMinutes,
+    formatDuration,
+    getFocusBlockError,
+    type ControlEditor,
+    type FocusBlock,
+    type Mode,
+    type ModeEffects,
+    type SelectedApp,
 } from "@/features/control/model";
-import { useFocusSession } from "@/features/control/use-focus-session";
 import { controlStyles } from "@/features/control/styles";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { useFocusSession } from "@/features/control/use-focus-session";
 import {
-  useSleepSchedule,
-  type SleepScheduleEntry,
+    useSleepSchedule,
+    type SleepScheduleEntry,
 } from "@/hooks/useSleepSchedule";
 import {
-  durationBetweenTimes as durationBetween,
-  getMinuteOfDay,
-  isMinuteInRange,
-  parseTimeMinutes as timeToMinutes,
-  splitTimeRange as getTimelineSegments,
+    durationBetweenTimes as durationBetween,
+    getMinuteOfDay,
+    splitTimeRange as getTimelineSegments,
+    isMinuteInRange,
+    parseTimeMinutes as timeToMinutes,
 } from "@/utils/time";
 
 export default function ControlScreen() {
@@ -79,8 +80,15 @@ export default function ControlScreen() {
     useSleepSchedule();
   const [editingMode, setEditingMode] = useState<Mode>("focus");
   const [focusDuration, setFocusDuration] = useState("25");
-  const { session, now, remainingSeconds, startSession, endSession } =
-    useFocusSession();
+  const handleFocusComplete = useCallback(() => setEditor("rest"), []);
+  const {
+    session,
+    now,
+    remainingSeconds,
+    startSession,
+    startRestSession,
+    endSession,
+  } = useFocusSession(handleFocusComplete);
 
   const selectedIds = useMemo(
     () => new Set(selectedApps.map((app) => app.id)),
@@ -105,7 +113,9 @@ export default function ControlScreen() {
   const validFocusBlocks = focusBlocks.filter(
     (block) => block.enabled && !blockError(block),
   );
-  const enabledSleepSchedules = schedule.filter((entry) => entry.enabled).length;
+  const enabledSleepSchedules = schedule.filter(
+    (entry) => entry.enabled,
+  ).length;
   const date = new Date(now);
   const currentMinute = getMinuteOfDay(date);
   const isInRange = (start: string, end: string) => {
@@ -122,7 +132,7 @@ export default function ControlScreen() {
     : validFocusBlocks.some((block) => isInRange(block.start, block.end))
       ? "focus"
       : "normal";
-  const activeMode: Mode = session ? "focus" : scheduledMode;
+  const activeMode: Mode | "rest" = session?.kind ?? scheduledMode;
   const scheduledFocusMinutes = validFocusBlocks.reduce(
     (total, block) => total + (durationBetween(block.start, block.end) ?? 0),
     0,
@@ -144,6 +154,11 @@ export default function ControlScreen() {
       label: "Sleep",
       icon: "moon" as const,
       detail: "Your wind-down settings are active.",
+    },
+    rest: {
+      label: "Rest",
+      icon: "cafe" as const,
+      detail: "A short recovery break is running.",
     },
   }[activeMode];
 
@@ -217,52 +232,28 @@ export default function ControlScreen() {
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
+        stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.headerIdentity}>
-            <NeruRobot reactToButtons size={42} tabIndex={0} />
-            <View>
-              <Text style={styles.title}>CONTROL</Text>
-              <Text style={styles.eyebrow}>Digital wellbeing</Text>
-            </View>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={[
-                styles.headerAction,
-                session && styles.headerActionActive,
-              ]}
-              onPress={() => (session ? endSession() : setEditor("focus"))}
-              accessibilityRole="button"
-              accessibilityLabel={
-                session ? "End focus session" : "Start focus session"
-              }
-            >
-              <Ionicons
-                name={session ? "stop" : "play"}
-                size={17}
-                color={session ? Palette.onAccent : Palette.red}
-              />
-              <Text
-                style={[
-                  styles.headerActionText,
-                  session && styles.headerActionTextActive,
-                ]}
-              >
-                {session ? "End" : "Focus"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              onPress={() => setEditor("mode")}
-              accessibilityRole="button"
-              accessibilityLabel="Open mode settings"
-            >
-              <Ionicons name="options" size={20} color={Palette.ink} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <PageHeader
+          title="Control"
+          tabIndex={0}
+          actions={[
+            {
+              accessibilityLabel: session
+                ? `End ${session.kind} session`
+                : "Start focus session",
+              icon: session ? "stop-outline" : "play-outline",
+              active: Boolean(session),
+              onPress: () => (session ? endSession() : setEditor("focus")),
+            },
+            {
+              accessibilityLabel: "Open mode settings",
+              icon: "options-outline",
+              onPress: () => setEditor("mode"),
+            },
+          ]}
+        />
 
         <View style={styles.statusCard}>
           <View style={styles.statusTop}>
@@ -308,8 +299,11 @@ export default function ControlScreen() {
               <TouchableOpacity
                 onPress={endSession}
                 style={styles.secondaryButton}
+                accessibilityLabel={`End ${session.kind} session`}
               >
-                <Text style={styles.secondaryButtonText}>End session</Text>
+                <Text style={styles.secondaryButtonText}>
+                  End {session.kind === "rest" ? "rest" : "session"}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -389,86 +383,6 @@ export default function ControlScreen() {
           </View>
         </View>
 
-        <SectionLabel>Appearance</SectionLabel>
-        <View style={styles.appearanceCard}>
-          <View style={styles.appearanceHeader}>
-            <View style={styles.appearanceIcon}>
-              <Ionicons name="color-palette-outline" size={20} color={Palette.red} />
-            </View>
-            <View style={styles.appearanceCopy}>
-              <Text style={styles.appearanceTitle}>App theme</Text>
-              <Text style={styles.appearanceDetail}>
-                {appearance.mode === "dark" ? "Dark" : "Light"} · {accentPreset.label}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.appearanceFieldLabel}>COLOR MODE</Text>
-          <View style={styles.appearanceModeRow} accessibilityRole="radiogroup">
-            {([
-              { id: "light" as const, label: "Light", icon: "sunny-outline" as const },
-              { id: "dark" as const, label: "Dark", icon: "moon-outline" as const },
-            ]).map((mode) => {
-              const selected = appearance.mode === mode.id;
-              return (
-                <TouchableOpacity
-                  key={mode.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={`${mode.label} mode`}
-                  onPress={() => setMode(mode.id)}
-                  style={[styles.appearanceMode, selected && styles.appearanceModeActive]}
-                >
-                  <Ionicons
-                    name={mode.icon}
-                    size={18}
-                    color={selected ? Palette.onAccent : Palette.secondary}
-                  />
-                  <Text
-                    style={[
-                      styles.appearanceModeText,
-                      selected && styles.appearanceModeTextActive,
-                    ]}
-                  >
-                    {mode.label}
-                  </Text>
-                  {selected ? (
-                    <Ionicons name="checkmark-circle" size={17} color={Palette.onAccent} />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={styles.appearanceFieldLabel}>ACCENT PALETTE</Text>
-          <View style={styles.accentGrid} accessibilityRole="radiogroup">
-            {APP_ACCENT_PRESETS.map((preset) => {
-              const selected = appearance.accentId === preset.id;
-              const swatch = appearance.mode === "dark" ? preset.dark : preset.light;
-              return (
-                <TouchableOpacity
-                  key={preset.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={`${preset.label} accent. ${preset.description}`}
-                  onPress={() => setAccentId(preset.id)}
-                  style={[styles.accentOption, selected && styles.accentOptionActive]}
-                >
-                  <View style={[styles.accentSwatch, { backgroundColor: swatch }]}>
-                    {selected ? (
-                      <Ionicons name="checkmark" size={16} color={Palette.onAccent} />
-                    ) : null}
-                  </View>
-                  <View style={styles.accentCopy}>
-                    <Text style={styles.accentName}>{preset.label}</Text>
-                    <Text style={styles.accentDescription}>{preset.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
         <SectionLabel>Configure</SectionLabel>
         <View style={styles.menuCard}>
           {[
@@ -517,6 +431,119 @@ export default function ControlScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <SectionLabel>Appearance</SectionLabel>
+        <View style={styles.appearanceCard}>
+          <View style={styles.appearanceHeader}>
+            <View style={styles.appearanceIcon}>
+              <Ionicons
+                name="color-palette-outline"
+                size={20}
+                color={Palette.red}
+              />
+            </View>
+            <View style={styles.appearanceCopy}>
+              <Text style={styles.appearanceTitle}>App theme</Text>
+              <Text style={styles.appearanceDetail}>
+                {appearance.mode === "dark" ? "Dark" : "Light"} ·{" "}
+                {accentPreset.label}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.appearanceFieldLabel}>COLOR MODE</Text>
+          <View style={styles.appearanceModeRow} accessibilityRole="radiogroup">
+            {[
+              {
+                id: "light" as const,
+                label: "Light",
+                icon: "sunny-outline" as const,
+              },
+              {
+                id: "dark" as const,
+                label: "Dark",
+                icon: "moon-outline" as const,
+              },
+            ].map((mode) => {
+              const selected = appearance.mode === mode.id;
+              return (
+                <TouchableOpacity
+                  key={mode.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${mode.label} mode`}
+                  onPress={() => setMode(mode.id)}
+                  style={[
+                    styles.appearanceMode,
+                    selected && styles.appearanceModeActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={mode.icon}
+                    size={18}
+                    color={selected ? Palette.onAccent : Palette.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.appearanceModeText,
+                      selected && styles.appearanceModeTextActive,
+                    ]}
+                  >
+                    {mode.label}
+                  </Text>
+                  {selected ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={17}
+                      color={Palette.onAccent}
+                    />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.appearanceFieldLabel}>ACCENT PALETTE</Text>
+          <View style={styles.accentGrid} accessibilityRole="radiogroup">
+            {APP_ACCENT_PRESETS.map((preset) => {
+              const selected = appearance.accentId === preset.id;
+              const swatch =
+                appearance.mode === "dark" ? preset.dark : preset.light;
+              return (
+                <TouchableOpacity
+                  key={preset.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${preset.label} accent. ${preset.description}`}
+                  onPress={() => setAccentId(preset.id)}
+                  style={[
+                    styles.accentOption,
+                    selected && styles.accentOptionActive,
+                  ]}
+                >
+                  <View
+                    style={[styles.accentSwatch, { backgroundColor: swatch }]}
+                  >
+                    {selected ? (
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={Palette.onAccent}
+                      />
+                    ) : null}
+                  </View>
+                  <View style={styles.accentCopy}>
+                    <Text style={styles.accentName}>{preset.label}</Text>
+                    <Text style={styles.accentDescription}>
+                      {preset.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
       </ScrollView>
 
       <EditorModal
@@ -565,6 +592,22 @@ export default function ControlScreen() {
           focusDuration={focusDuration}
           setFocusDuration={setFocusDuration}
           startFocus={startFocus}
+        />
+      </EditorModal>
+
+      <EditorModal
+        visible={editor === "rest"}
+        title="Focus complete"
+        subtitle="Make space to recharge before the next round."
+        onClose={() => setEditor(null)}
+      >
+        <RestPromptContent
+          restMinutes={effects.focus.breakMinutes}
+          startRest={() => {
+            startRestSession(effects.focus.breakMinutes);
+            setEditor(null);
+          }}
+          dismiss={() => setEditor(null)}
         />
       </EditorModal>
 

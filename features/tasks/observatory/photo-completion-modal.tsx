@@ -1,19 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  Image,
-  Linking,
+  Platform,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { useThemedStyles } from '@/theme/app-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
 import { Palette, R, useTasksPalette } from '@/features/tasks/tokens';
+import { persistPhotoProof } from '@/utils/photo-storage';
 
 type PhotoCompletionModalProps = {
   visible: boolean;
@@ -28,16 +31,18 @@ type PhotoSource = 'camera' | 'gallery';
 export function PhotoCompletionModal({
   visible, taskLabel, onComplete, onCancel,
 }: PhotoCompletionModalProps) {
+  const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const [step, setStep] = useState<ModalStep>('choose');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [sourceBusy, setSourceBusy] = useState<PhotoSource | null>(null);
-  const progress = useRef(new Animated.Value(0)).current;
+  const [progress] = useState(() => new Animated.Value(0));
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const photoUriRef = useRef<string | null>(null);
   const isUnmountedRef = useRef(false);
+  const operationRef = useRef(0);
 
   useEffect(() => { photoUriRef.current = photoUri; }, [photoUri]);
 
@@ -49,6 +54,7 @@ export function PhotoCompletionModal({
   }, []);
 
   const reset = useCallback(() => {
+    operationRef.current += 1;
     setStep('choose');
     setPhotoUri(null);
     setSourceBusy(null);
@@ -57,22 +63,29 @@ export function PhotoCompletionModal({
       clearTimeout(processingTimerRef.current);
       processingTimerRef.current = null;
     }
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = null;
+    }
     animationRef.current?.stop();
     animationRef.current = null;
   }, [progress]);
-
-  useEffect(() => { if (!visible) reset(); }, [visible, reset]);
 
   const showPermissionAlert = (source: PhotoSource, canAskAgain: boolean) => {
     const label = source === 'camera' ? 'Camera' : 'Photo library';
     Alert.alert(
       `${label} access needed`,
       `Allow ${label.toLowerCase()} access to add photo proof for this task.`,
-      canAskAgain
+      canAskAgain || Platform.OS === 'web'
         ? [{ text: 'OK' }]
         : [
             { text: 'Not now', style: 'cancel' },
-            { text: 'Open settings', onPress: () => Linking.openSettings() },
+            {
+              text: 'Open settings',
+              onPress: () => {
+                void Linking.openSettings().catch(() => undefined);
+              },
+            },
           ],
     );
   };
@@ -130,6 +143,8 @@ export function PhotoCompletionModal({
 
   const handleProcess = () => {
     if (!photoUri) return;
+    const operation = operationRef.current + 1;
+    operationRef.current = operation;
     if (successTimerRef.current) {
       clearTimeout(successTimerRef.current);
       successTimerRef.current = null;
@@ -139,28 +154,50 @@ export function PhotoCompletionModal({
     animationRef.current = Animated.timing(progress, {
       toValue: 1,
       duration: 1350,
-      useNativeDriver: false,
+      useNativeDriver: true,
     });
     animationRef.current.start();
     processingTimerRef.current = setTimeout(() => {
       if (isUnmountedRef.current) return;
       processingTimerRef.current = null;
       animationRef.current = null;
-      setStep('success');
-      successTimerRef.current = setTimeout(() => {
-        if (isUnmountedRef.current || !photoUriRef.current) return;
-        successTimerRef.current = null;
-        onComplete(photoUriRef.current);
-        reset();
-      }, 550);
+      void persistPhotoProof(photoUri)
+        .then((persistentUri) => {
+          if (isUnmountedRef.current || operationRef.current !== operation) return;
+          photoUriRef.current = persistentUri;
+          setPhotoUri(persistentUri);
+          setStep('success');
+          successTimerRef.current = setTimeout(() => {
+            if (
+              isUnmountedRef.current
+              || operationRef.current !== operation
+              || !photoUriRef.current
+            ) return;
+            successTimerRef.current = null;
+            onComplete(photoUriRef.current);
+            reset();
+          }, 550);
+        })
+        .catch(() => {
+          if (isUnmountedRef.current || operationRef.current !== operation) return;
+          progress.setValue(0);
+          setStep('preview');
+          Alert.alert('Could not save photo', 'The selected photo could not be stored on this device. Please choose another photo and try again.');
+        });
     }, 1350);
   };
 
   const handleClose = () => { reset(); onCancel(); };
-  const progressWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['8%', '100%'] });
+  const progressScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.08, 1] });
 
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={handleClose}>
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onDismiss={reset}
+      onRequestClose={handleClose}
+    >
       <Pressable style={styles.backdrop} onPress={step === 'processing' ? undefined : handleClose}>
         <Pressable style={styles.card} onPress={(event) => event.stopPropagation()}>
           {(step === 'choose' || step === 'preview') && (
@@ -225,7 +262,7 @@ export function PhotoCompletionModal({
 
           {step === 'preview' && photoUri && (
             <>
-              <Image source={{ uri: photoUri }} style={styles.previewImage} />
+              <Image source={{ uri: photoUri }} style={styles.previewImage} contentFit="cover" />
               <View style={styles.previewActions}>
                 <TouchableOpacity style={styles.secondaryButton} onPress={() => { setPhotoUri(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
                   <Ionicons name="refresh" size={17} color={Palette.warmDim} />
@@ -242,7 +279,7 @@ export function PhotoCompletionModal({
           {step === 'processing' && (
             <View style={styles.processing}>
               <View style={styles.processingVisual}>
-                {photoUri && <Image source={{ uri: photoUri }} style={styles.processingImage} />}
+                {photoUri && <Image source={{ uri: photoUri }} style={styles.processingImage} contentFit="cover" />}
                 <View style={styles.processingBadge}><ActivityIndicator size="small" color={Palette.onRed} /></View>
               </View>
               <Text style={styles.processingTitle}>Lighting your star</Text>
@@ -252,7 +289,9 @@ export function PhotoCompletionModal({
                 <View style={styles.stepRow}><ActivityIndicator size="small" color={Palette.red} /><Text style={styles.stepActive}>Saving completion</Text></View>
                 <View style={styles.stepRow}><Ionicons name="ellipse-outline" size={17} color={Palette.gray} /><Text style={styles.stepPending}>Star ready to light</Text></View>
               </View>
-              <View style={styles.progressTrack}><Animated.View style={[styles.progressFill, { width: progressWidth }]} /></View>
+              <View style={styles.progressTrack}>
+                <Animated.View style={[styles.progressFill, { transform: [{ scaleX: progressScale }] }]} />
+              </View>
             </View>
           )}
 
@@ -269,7 +308,7 @@ export function PhotoCompletionModal({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18, backgroundColor: Palette.backdrop },
   card: { width: '100%', maxWidth: 420, padding: 16, gap: 13, borderRadius: R.lg, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgRaised, shadowColor: '#171717', shadowOpacity: 0.12, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -281,10 +320,10 @@ const styles = StyleSheet.create({
   closeButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.graySoft },
   description: { color: Palette.warmDim, fontSize: 12, lineHeight: 17, fontWeight: '600' },
   cameraButton: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, backgroundColor: Palette.red },
-  cameraIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: 'rgba(255,255,255,0.16)' },
+  cameraIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redDark },
   sourceCopy: { flex: 1, minWidth: 0 },
   cameraLabel: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
-  cameraHint: { color: 'rgba(255,255,255,0.78)', fontSize: 10, fontWeight: '600', marginTop: 1 },
+  cameraHint: { color: Palette.onRed, opacity: 0.78, fontSize: 10, fontWeight: '600', marginTop: 1 },
   galleryButton: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
   galleryIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redSoft },
   galleryLabel: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
@@ -308,8 +347,8 @@ const styles = StyleSheet.create({
   stepActive: { color: Palette.warmWhite, fontSize: 11, fontWeight: '800' },
   stepPending: { color: Palette.warmMuted, fontSize: 11, fontWeight: '600' },
   progressTrack: { width: '100%', height: 5, marginTop: 6, overflow: 'hidden', borderRadius: 3, backgroundColor: Palette.graySoft },
-  progressFill: { height: 5, borderRadius: 3, backgroundColor: Palette.red },
+  progressFill: { width: '100%', height: 5, borderRadius: 3, backgroundColor: Palette.red, transformOrigin: 'left center' },
   success: { alignItems: 'center', gap: 10, paddingVertical: 20 },
   successIcon: { width: 68, height: 68, alignItems: 'center', justifyContent: 'center', borderRadius: 34, backgroundColor: Palette.red },
   successTitle: { color: Palette.warmWhite, fontSize: 20, fontWeight: '800' },
-});
+}));

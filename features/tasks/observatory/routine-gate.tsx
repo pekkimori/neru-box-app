@@ -1,10 +1,10 @@
 // features/tasks/observatory/routine-gate.tsx
-import { Text, View, ScrollView } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { Type } from '@/constants/typography';
-import { useThemedStyles } from '@/features/control/app-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { Type } from '@/theme/typography';
+import { useThemedStyles } from '@/theme/app-theme';
 import { Palette, Sp, R, useTasksPalette } from '../tokens';
 import type { RoutineQuest } from '../../../types/tasks';
 
@@ -17,11 +17,12 @@ interface Props {
   readOnly: boolean;
   sleepBlocked: boolean;
   onToggle: (id: string) => void;
+  onEdit: () => void;
 }
 
 export function RoutineGate({
   routines, isComplete, tasksUnlocked,
-  isSleepPeriod, sleepReady, readOnly, sleepBlocked, onToggle,
+  isSleepPeriod, sleepReady, readOnly, sleepBlocked, onToggle, onEdit,
 }: Props) {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
@@ -31,6 +32,7 @@ export function RoutineGate({
   if (sleepBlocked) {
     return (
       <View style={styles.gate}>
+        <EditButton onPress={onEdit} />
         <Text style={styles.lockMessage}>
           Sleep window active. The rest of your sky is paused.
         </Text>
@@ -43,15 +45,16 @@ export function RoutineGate({
       <View style={styles.gate}>
         <View style={styles.gateHeader}>
           <Text style={styles.gateLabel}>Routine gate</Text>
-          <Text style={styles.gateProgress}>
-            {completedCount}/{routines.length}
-          </Text>
+          <View style={styles.headerActions}>
+            <Text style={styles.gateProgress}>{completedCount}/{routines.length}</Text>
+            <EditButton onPress={onEdit} />
+          </View>
         </View>
         <Text style={styles.lockMessage}>This period hasn&apos;t started yet.</Text>
         {routines.length === 0 ? (
           <Text style={styles.lockMessage}>No routines assigned.</Text>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routineRow}>
+          <View style={styles.routineRow}>
             {routines.map((quest) => (
               <View key={quest.id} style={styles.row}>
                 <Ionicons name="ellipse-outline" size={17} color={Palette.warmMuted} />
@@ -60,7 +63,7 @@ export function RoutineGate({
                 </Text>
               </View>
             ))}
-          </ScrollView>
+          </View>
         )}
       </View>
     );
@@ -73,6 +76,7 @@ export function RoutineGate({
         <Text style={styles.openText}>
           {routines.length === 0 ? 'Orbit open. No routines needed.' : 'Orbit open.'}
         </Text>
+        <EditButton onPress={onEdit} />
       </View>
     );
   }
@@ -85,6 +89,7 @@ export function RoutineGate({
           <Text style={styles.sleepReadyText}>Ready for sleep</Text>
           <Text style={styles.sleepReadyHint}>Sleep intent saved. Regular tasks are paused.</Text>
         </View>
+        <EditButton onPress={onEdit} />
       </View>
     );
   }
@@ -95,9 +100,10 @@ export function RoutineGate({
         <Text style={styles.gateLabel}>
           {isSleepPeriod ? 'Sleep routine' : 'Routine gate'}
         </Text>
-        <Text style={styles.gateProgress}>
-          {completedCount}/{routines.length}
-        </Text>
+        <View style={styles.headerActions}>
+          <Text style={styles.gateProgress}>{completedCount}/{routines.length}</Text>
+          <EditButton onPress={onEdit} />
+        </View>
       </View>
       {!tasksUnlocked && (
         <Text style={styles.lockMessage}>
@@ -106,7 +112,7 @@ export function RoutineGate({
             : 'Complete all routines to unlock your stars.'}
         </Text>
       )}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.routineRow}>
+      <View style={styles.routineRow}>
         {routines.map((quest) => {
           const done = isComplete(quest.id);
           return (
@@ -116,8 +122,24 @@ export function RoutineGate({
             />
           );
         })}
-      </ScrollView>
+      </View>
     </View>
+  );
+}
+
+function EditButton({ onPress }: { onPress: () => void }) {
+  const styles = useThemedStyles(themedStyles);
+  const Palette = useTasksPalette();
+  return (
+    <TouchableOpacity
+      style={styles.editButton}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Edit routine tasks"
+    >
+      <Ionicons name="pencil" size={14} color={Palette.red} />
+      <Text style={styles.editButtonText}>Edit</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -141,7 +163,7 @@ function RoutineRow({
         size={17}
         color={done ? Palette.warmDim : Palette.warmMuted}
       />
-      <Text style={[styles.rowText, done && styles.rowTextDone]}>{label}</Text>
+      <Text style={[styles.rowText, done && styles.rowTextDone]} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -154,23 +176,24 @@ const themedStyles = createEditorialStyles(() => ({
   gateHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   gateLabel: { ...Type.bodyStrong, color: Palette.warmWhite },
   gateProgress: { ...Type.captionStrong, color: Palette.warmMuted },
   lockMessage: { ...Type.bodySmall, color: Palette.warmDim },
-  routineRow: { gap: 8, paddingRight: 10 },
+  routineRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 8, height: 40,
     paddingHorizontal: 12, borderRadius: R.full, borderWidth: 1,
-    borderColor: Palette.gray, backgroundColor: Palette.bg,
+    borderColor: Palette.gray, backgroundColor: Palette.bg, maxWidth: '100%',
   },
-  rowText: { ...Type.bodySmall, color: Palette.warmWhite, fontWeight: '700', maxWidth: 170 },
+  rowText: { ...Type.bodySmall, color: Palette.warmWhite, fontWeight: '700', maxWidth: 190, flexShrink: 1 },
   rowTextDone: { color: Palette.warmDim, textDecorationLine: 'line-through', opacity: 0.7 },
   open: {
     flexDirection: 'row', alignItems: 'center', gap: Sp.sm,
     minHeight: 44, borderRadius: R.sm, borderWidth: 1,
     borderColor: Palette.gray, backgroundColor: Palette.bgElevated, paddingHorizontal: 12,
   },
-  openText: { ...Type.button, color: Palette.red },
+  openText: { ...Type.button, color: Palette.red, flex: 1 },
   sleepReady: {
     flexDirection: 'row', alignItems: 'center', gap: Sp.sm,
     minHeight: 44,
@@ -180,4 +203,9 @@ const themedStyles = createEditorialStyles(() => ({
   sleepReadyCopy: { flex: 1, gap: 2 },
   sleepReadyText: { ...Type.bodyStrong, color: Palette.red },
   sleepReadyHint: { ...Type.bodySmall, color: Palette.warmDim },
+  editButton: {
+    minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, borderRadius: R.full, backgroundColor: Palette.redSoft,
+  },
+  editButtonText: { ...Type.buttonSmall, color: Palette.red },
 }));

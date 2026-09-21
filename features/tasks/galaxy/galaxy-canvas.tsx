@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   LayoutChangeEvent,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -26,6 +25,8 @@ import { NetworkEdges, NetworkNodes } from './galaxy-renderers';
 import { GalaxyHoverTarget } from './galaxy-hover-target';
 import { GalaxyHoverStyles } from './galaxy-hover-styles';
 import { TwinkleBackground } from './twinkle-background';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 
 const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.3;
@@ -140,6 +141,7 @@ function actualVisibleViewport(
 
 export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
   const reduceMotion = useReducedMotion();
+  const styles = useThemedStyles(themedStyles);
   const [canvasW, setCanvasW] = useState(0);
   const [canvasH, setCanvasH] = useState(0);
   const [highlightedDomainId, setHighlightedDomainId] = useState<string | null>(null);
@@ -154,9 +156,25 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
   const edges = useMemo(() => buildGalaxyEdges(graphStars), [graphStars]);
   const fullExtent = useMemo(() => extentFromStars(graphStars, 120), [graphStars]);
   const [viewBox, setViewBox] = useState<ViewBox>(fullExtent);
+  const [viewBoxExtent, setViewBoxExtent] = useState(fullExtent);
   const viewBoxRef = useRef(viewBox);
   const cameraFrame = useRef<number | null>(null);
-  viewBoxRef.current = viewBox;
+  if (viewBoxExtent !== fullExtent) {
+    setViewBoxExtent(fullExtent);
+    setViewBox(fullExtent);
+  }
+  if (
+    highlightedDomainId !== null
+    && !domains.some((domain) => domain.constellationId === highlightedDomainId)
+  ) {
+    setHighlightedDomainId(null);
+  }
+  if (pinnedStarKey !== null && !graphStars.some((star) => starKey(star) === pinnedStarKey)) {
+    setPinnedStarKey(null);
+  }
+  useEffect(() => {
+    viewBoxRef.current = viewBox;
+  }, [viewBox]);
   const visibleViewport = useMemo(
     () => actualVisibleViewport(viewBox, canvasW, canvasH),
     [canvasH, canvasW, viewBox],
@@ -204,23 +222,7 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
   useEffect(() => {
     cancelCameraAnimation();
     viewBoxRef.current = fullExtent;
-    setViewBox(fullExtent);
   }, [cancelCameraAnimation, fullExtent]);
-
-  useEffect(() => {
-    if (
-      highlightedDomainId !== null
-      && !domains.some((domain) => domain.constellationId === highlightedDomainId)
-    ) {
-      setHighlightedDomainId(null);
-    }
-  }, [domains, highlightedDomainId]);
-
-  useEffect(() => {
-    if (pinnedStarKey !== null && !graphStars.some((star) => starKey(star) === pinnedStarKey)) {
-      setPinnedStarKey(null);
-    }
-  }, [graphStars, pinnedStarKey]);
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -419,7 +421,7 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   container: { flex: 1, backgroundColor: GalaxyPalette.bg },
   legend: {
     minHeight: 46,
@@ -449,4 +451,4 @@ const styles = StyleSheet.create({
   legendTextActive: { color: GalaxyPalette.text },
   graph: { flex: 1, overflow: 'hidden' },
   svg: { flex: 1 },
-});
+}));

@@ -9,12 +9,13 @@ import {
   Text,
   View,
   TextInput,
-  StyleSheet,
 } from 'react-native';
 import { Sp, R } from '../tokens';
 import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { compareByCompletion } from './galaxy-edges';
 import { GalaxyPalette } from './galaxy-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 
 interface Props { stars: GalaxyStar[]; }
 
@@ -26,6 +27,7 @@ interface Section {
 
 export function GalaxyListView({ stars }: Props) {
   const [query, setQuery] = useState('');
+  const styles = useThemedStyles(themedStyles);
 
   const filtered = useMemo((): GalaxyStar[] => {
     const q = query.trim().toLowerCase();
@@ -89,7 +91,7 @@ export function GalaxyListView({ stars }: Props) {
         <Text style={styles.coins}>{item.coinsEarned}</Text>
       </View>
     ),
-    [],
+    [styles],
   );
 
   const renderHeader = useCallback(
@@ -101,7 +103,7 @@ export function GalaxyListView({ stars }: Props) {
         </Text>
       </View>
     ),
-    [],
+    [styles],
   );
 
   const keyExtractor = useCallback(
@@ -114,7 +116,7 @@ export function GalaxyListView({ stars }: Props) {
       query.trim().length > 0 ? (
         <Text style={styles.emptyText}>No stars match &ldquo;{query}&rdquo;</Text>
       ) : null,
-    [query],
+    [query, styles],
   );
 
   if (stars.length === 0) return null;
@@ -147,7 +149,7 @@ export function GalaxyListView({ stars }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   container: { flex: 1, backgroundColor: GalaxyPalette.bg },
   searchBar: {
     paddingHorizontal: Sp.lg,
@@ -241,4 +243,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: Sp.sm,
   },
-});
+}));

@@ -1,6 +1,7 @@
-import React, { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
+  Platform,
   type ModalProps,
   Pressable,
   type PressableProps,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   ReduceMotion,
   runOnJS,
   useAnimatedStyle,
@@ -84,7 +86,7 @@ export const MotionPressable = forwardRef<View, MotionPressableProps>(function M
       onPressIn={(event) => {
         if (!disabled) {
           setPressed(true);
-          scale.value = withSpring(pressScale, PRESS_SPRING);
+          scale.set(withSpring(pressScale, PRESS_SPRING));
           if (feedback === 'tap' && pressScale !== 1) {
             playTapFeedback();
             emitNeruButtonPress();
@@ -94,7 +96,7 @@ export const MotionPressable = forwardRef<View, MotionPressableProps>(function M
       }}
       onPressOut={(event) => {
         setPressed(false);
-        scale.value = withSpring(1, PRESS_SPRING);
+        scale.set(withSpring(1, PRESS_SPRING));
         onPressOut?.(event);
       }}
       style={[resolvedStyle, animatedStyle]}
@@ -132,7 +134,7 @@ export const MotionTouchableOpacity = forwardRef<View, MotionTouchableOpacityPro
         disabled={disabled}
         onPressIn={(event) => {
           if (!disabled) {
-            scale.value = withSpring(pressScale, PRESS_SPRING);
+            scale.set(withSpring(pressScale, PRESS_SPRING));
             if (feedback === 'tap' && pressScale !== 1) {
               playTapFeedback();
               emitNeruButtonPress();
@@ -141,7 +143,7 @@ export const MotionTouchableOpacity = forwardRef<View, MotionTouchableOpacityPro
           onPressIn?.(event);
         }}
         onPressOut={(event) => {
-          scale.value = withSpring(1, PRESS_SPRING);
+          scale.set(withSpring(1, PRESS_SPRING));
           onPressOut?.(event);
         }}
         style={[style, animatedStyle]}
@@ -161,36 +163,57 @@ export function MotionModal({
   animationType: _animationType,
   children,
   onDismiss,
+  onShow,
   ...props
 }: MotionModalProps) {
   const [present, setPresent] = useState(visible);
   const progress = useSharedValue(visible ? 1 : 0);
-  const retainedChildren = useRef(children);
+  const [retainedChildren, setRetainedChildren] = useState(children);
   const hasPresented = useRef(visible);
+  const visibleRef = useRef(visible);
+  const onDismissRef = useRef(onDismiss);
 
-  if (visible) retainedChildren.current = children;
+  useEffect(() => {
+    visibleRef.current = visible;
+    onDismissRef.current = onDismiss;
+  }, [onDismiss, visible]);
+
+  const handleShow = useCallback<NonNullable<ModalProps['onShow']>>((event) => {
+    setPresent(true);
+    setRetainedChildren(children);
+    onShow?.(event);
+  }, [children, onShow]);
+
+  const notifyDismiss = useCallback(() => {
+    if (!visibleRef.current && hasPresented.current) {
+      hasPresented.current = false;
+      onDismissRef.current?.();
+    }
+  }, []);
 
   const finishDismiss = useCallback(() => {
-    setPresent(false);
-    if (hasPresented.current) {
-      hasPresented.current = false;
-      onDismiss?.();
-    }
-  }, [onDismiss]);
+    // A queued animation callback must not close a modal that has reopened.
+    if (!visibleRef.current) setPresent(false);
+  }, []);
+
+  useEffect(() => {
+    // iOS reports completion after its native view controller is dismissed.
+    // Android/web have no equivalent callback; wait for the hidden commit.
+    if (!present && Platform.OS !== 'ios') notifyDismiss();
+  }, [notifyDismiss, present]);
 
   useEffect(() => {
     if (visible) {
       hasPresented.current = true;
-      setPresent(true);
-      progress.value = withTiming(1, {
+      progress.set(withTiming(1, {
         duration: 220,
         easing: Easing.out(Easing.cubic),
         reduceMotion: ReduceMotion.System,
-      });
-      return;
+      }));
+      return () => cancelAnimation(progress);
     }
 
-    progress.value = withTiming(
+    progress.set(withTiming(
       0,
       {
         duration: 180,
@@ -200,15 +223,22 @@ export function MotionModal({
       (finished) => {
         if (finished) runOnJS(finishDismiss)();
       },
-    );
+    ));
+    return () => cancelAnimation(progress);
   }, [finishDismiss, progress, visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
   return (
-    <Modal {...props} visible={present} animationType="none">
+    <Modal
+      {...props}
+      visible={visible || present}
+      animationType="none"
+      onDismiss={notifyDismiss}
+      onShow={handleShow}
+    >
       <Animated.View style={[styles.modalFill, animatedStyle]} pointerEvents={visible ? 'auto' : 'none'}>
-        {retainedChildren.current}
+        {visible ? children : retainedChildren}
       </Animated.View>
     </Modal>
   );

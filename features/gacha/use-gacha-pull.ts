@@ -8,13 +8,14 @@ import {
   type GachaCreature,
   type Rarity,
   rollFromBanner,
-} from '../../constants/gacha';
+} from '@/features/gacha/pokemon-catalog';
 import {
   getPokemonMedia,
   preparePokemonCry,
   primePokemonCryOnWeb,
 } from './pokemon-media';
 import { getFeaturedPokemon, toGachaResult } from './gacha-pull';
+import { loadPullMedia } from './pull-media';
 import type { GachaResult } from './use-gacha-collection';
 
 interface UseGachaPullOptions {
@@ -56,8 +57,15 @@ export function useGachaPull({
     catchCompleteRef.current = null;
   }, []);
 
+  const completeCatchDismissal = useCallback(() => {
+    if (!mountedRef.current || !pullLockRef.current) return;
+    setPullingCount(null);
+    setShowReveal(true);
+    pullLockRef.current = false;
+  }, []);
+
   const runPull = useCallback((count: 1 | 10) => {
-    if (pullLockRef.current || isPulling || !catalogReady) return;
+    if (pullLockRef.current || isPulling || showReveal || !catalogReady) return;
     const cost = count === 1 ? SINGLE_PULL_COST : TEN_PULL_COST;
     if (!spendCoins(cost)) return;
 
@@ -67,7 +75,7 @@ export function useGachaPull({
       () => rollFromBanner(selectedBanner, catalog),
     );
     const featured = getFeaturedPokemon(results);
-    if (Platform.OS === 'web' && featured) primePokemonCryOnWeb(featured.id);
+    if (Platform.OS === 'web' && featured) primePokemonCryOnWeb(featured.id, featured.name);
     setPullingCount(count);
     setCatchRarity(featured?.rarity ?? 'common');
     setShowCatch(true);
@@ -75,15 +83,12 @@ export function useGachaPull({
     const catchInteraction = new Promise<void>((resolve) => {
       catchCompleteRef.current = resolve;
     });
-    const mediaRequest = Promise.all(
-      results.map((pokemon) => getPokemonMedia(pokemon.id).catch(() => null)),
-    ).then(async (media) => {
-      const featuredIndex = featured ? results.indexOf(featured) : -1;
-      if (featured && featuredIndex >= 0) {
-        await preparePokemonCry(featured.id, media[featuredIndex]?.cry ?? null);
-      }
-      return media;
-    });
+    const mediaRequest = loadPullMedia(results.map((pokemon) => pokemon.id), getPokemonMedia);
+    // Warm the cry while catching, but audio readiness never gates the result.
+    void mediaRequest.then((media) => {
+      if (!mountedRef.current || !featured) return;
+      return preparePokemonCry(featured.id, media[results.indexOf(featured)]?.cry ?? null);
+    }).catch(() => undefined);
 
     void Promise.all([mediaRequest, catchInteraction]).then(([media]) => {
       if (!mountedRef.current) return;
@@ -91,9 +96,7 @@ export function useGachaPull({
         toGachaResult(pokemon, media[index])));
       setPullResults(results);
       setShowCatch(false);
-      setPullingCount(null);
-      setShowReveal(true);
-      pullLockRef.current = false;
+      // Present results only after the catch modal has left the native stack.
     });
   }, [
     addGachaResults,
@@ -101,6 +104,7 @@ export function useGachaPull({
     catalogReady,
     isPulling,
     selectedBanner,
+    showReveal,
     spendCoins,
   ]);
 
@@ -113,6 +117,7 @@ export function useGachaPull({
     isPulling,
     runPull,
     completeCatchInteraction,
+    completeCatchDismissal,
     closeReveal: () => setShowReveal(false),
   } as const;
 }

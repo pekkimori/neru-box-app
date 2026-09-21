@@ -4,7 +4,13 @@ import type { ComponentProps } from "react";
 import { TIME_24_HOUR_PATTERN, timeRangesOverlap } from "../../utils/time";
 
 export type Mode = "normal" | "focus" | "sleep";
-export type ControlEditor = "apps" | "schedule" | "mode" | "focus" | null;
+export type ControlEditor =
+  | "apps"
+  | "schedule"
+  | "mode"
+  | "focus"
+  | "rest"
+  | null;
 
 export interface InstalledApp {
   id: string;

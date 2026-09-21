@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   AccessibilityInfo,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,10 +26,14 @@ import { GalaxyEntrance } from '../../features/tasks/galaxy/galaxy-entrance';
 import { GalaxyListView } from '../../features/tasks/galaxy/galaxy-list-view';
 import { GalaxyPalette } from '../../features/tasks/galaxy/galaxy-theme';
 import type { GalaxyDomain, GalaxyStar } from '../../features/tasks/galaxy/galaxy-geometry';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
 
 export default function GalaxyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { appearance } = useAppTheme();
+  const styles = useThemedStyles(themedStyles);
 
   const [stars, setStars] = useState<GalaxyStar[]>([]);
   const [domains, setDomains] = useState<GalaxyDomain[]>([]);
@@ -79,7 +82,7 @@ export default function GalaxyScreen() {
 
   return (
     <View style={styles.full}>
-      <StatusBar style="light" />
+      <StatusBar style={appearance.mode === 'dark' ? 'light' : 'dark'} />
 
       <View
         style={styles.stage}
@@ -201,7 +204,7 @@ export default function GalaxyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   full: { flex: 1, backgroundColor: GalaxyPalette.bg },
   stage: { flex: 1 },
   archive: { flex: 1 },
@@ -230,4 +233,4 @@ const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: Sp.xs, paddingHorizontal: Sp.sm, paddingVertical: Sp.xs, backgroundColor: GalaxyPalette.surface, borderBottomWidth: 1, borderBottomColor: GalaxyPalette.border, minHeight: 44 },
   bannerText: { color: GalaxyPalette.textDim, fontSize: 12, fontWeight: '600', flex: 1 },
   dismissBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-});
+}));

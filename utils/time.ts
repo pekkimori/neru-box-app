@@ -1,7 +1,7 @@
-export const MINUTES_PER_DAY = 24 * 60;
+const MINUTES_PER_DAY = 24 * 60;
 
 export const TIME_24_HOUR_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-export const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface TimelineSegment {
   start: number;

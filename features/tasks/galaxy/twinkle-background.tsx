@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useAppTheme } from '@/theme/app-theme';
+import { GalaxyPalette } from './galaxy-theme';
 
 const STAR_COUNT = 90;
 const LAYER_COUNT = 3;
@@ -26,8 +28,7 @@ function mixedHash(index: number, seed: number): number {
   return (value ^ (value >>> 16)) >>> 0;
 }
 
-function createStars(width: number, height: number): TwinkleStar[] {
-  const colors = ['#FFFFFF', '#DCEBFF', '#F7F1FF'];
+function createStars(width: number, height: number, colors: readonly string[]): TwinkleStar[] {
   return Array.from({ length: STAR_COUNT }, (_, id) => ({
     id,
     left: ((mixedHash(id, 0x9e3779b9) % 10000) / 10000) * width,
@@ -49,12 +50,16 @@ export function TwinkleBackground({
   offsetX: number;
   offsetY: number;
 }) {
-  const stars = useMemo(() => createStars(width, height), [width, height]);
-  const values = useRef([
+  const { appearance } = useAppTheme();
+  const stars = useMemo(
+    () => createStars(width, height, GalaxyPalette.starColors),
+    [appearance.mode, width, height],
+  );
+  const [values] = useState(() => [
     new Animated.Value(0.16),
     new Animated.Value(0.24),
     new Animated.Value(0.12),
-  ]).current;
+  ]);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -138,11 +143,11 @@ export function TwinkleBackground({
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   star: {
     position: 'absolute',

@@ -1,0 +1,381 @@
+- generic [ref=e4]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic [aria-hidden]:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button
+                                  - generic: CONTROL
+                                - generic:
+                                  - generic:
+                                    - generic: "N"
+                                    - generic: "120"
+                                  - button
+                                  - button
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: Active now
+                                    - generic: Normal
+                                - generic: 01:08 PM
+                              - generic: Your default limits are active.
+                              - generic:
+                                - generic:
+                                  - generic: 2h 30m
+                                  - generic: FOCUS PLANNED
+                                - generic:
+                                  - generic: "4"
+                                  - generic: APPS LIMITED
+                              - generic: Start focus
+                            - generic:
+                              - generic: Today
+                              - generic: Edit schedule
+                            - generic:
+                              - generic:
+                                - generic: "00"
+                                - generic: "06"
+                                - generic: "12"
+                                - generic: "18"
+                                - generic: "24"
+                              - generic:
+                                - generic: Normal
+                                - generic: Focus
+                                - generic: Sleep
+                            - generic: Configure
+                            - generic:
+                              - button:
+                                - generic:
+                                  - generic: Apps & limits
+                                  - generic: 4 selected · shared daily limits
+                              - button:
+                                - generic:
+                                  - generic: Schedule
+                                  - generic: 2 focus blocks · 2 sleep schedules
+                              - button:
+                                - generic:
+                                  - generic: Mode settings
+                                  - generic: Mute, filters, Pomodoro and access
+                            - generic: Appearance
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: App theme
+                                  - generic: Light · NERU
+                              - generic: COLOR MODE
+                              - radiogroup:
+                                - radio:
+                                  - generic: Light
+                                - radio:
+                                  - generic: Dark
+                              - generic: ACCENT PALETTE
+                              - radiogroup:
+                                - radio:
+                                  - generic:
+                                    - generic: NERU
+                                    - generic: Signal red
+                                - radio:
+                                  - generic:
+                                    - generic: Dracula
+                                    - generic: Electric purple
+                                - radio:
+                                  - generic:
+                                    - generic: Catppuccin
+                                    - generic: Mocha mauve
+                                - radio:
+                                  - generic:
+                                    - generic: Nord
+                                    - generic: Frost blue
+                                - radio:
+                                  - generic:
+                                    - generic: Tokyo Night
+                                    - generic: Neon blue
+                                - radio:
+                                  - generic:
+                                    - generic: Gruvbox
+                                    - generic: Retro gold
+                                - radio:
+                                  - generic:
+                                    - generic: Rosé Pine
+                                    - generic: Muted iris
+                                - radio:
+                                  - generic:
+                                    - generic: Solarized
+                                    - generic: Ocean cyan
+                                - radio:
+                                  - generic:
+                                    - generic: One Dark
+                                    - generic: Editor blue
+                                - radio:
+                                  - generic:
+                                    - generic: Everforest
+                                    - generic: Pine green
+                                - radio:
+                                  - generic:
+                                    - generic: Kanagawa
+                                    - generic: Wave blue
+                                - radio:
+                                  - generic:
+                                    - generic: Synthwave
+                                    - generic: Laser pink
+                                - radio:
+                                  - generic:
+                                    - generic: Monokai
+                                    - generic: Terminal lime
+                                - radio:
+                                  - generic:
+                                    - generic: Ayu
+                                    - generic: Warm orange
+                - generic:
+                  - generic [aria-hidden]:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - button
+                                - generic: CHAT
+                              - generic:
+                                - generic:
+                                  - generic: "N"
+                                  - generic: "120"
+                                - button
+                                - button
+                                - button
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic: NERU · 01:08 PM
+                                    - generic: Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?
+                            - generic:
+                              - generic:
+                                - generic: Plan my week
+                                - generic: Find my focus
+                                - generic: I need a break
+                            - generic:
+                              - textbox:
+                                - /placeholder: Tell NERU what's on your mind...
+                              - button [disabled]
+                            - generic: PRIVATE SESSION · STORED ON THIS SCREEN ONLY
+                - generic:
+                  - generic [aria-hidden]:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button
+                                  - generic: GACHA
+                                - generic:
+                                  - generic:
+                                    - generic: "N"
+                                    - generic: "120"
+                                  - button
+                            - generic:
+                              - generic:
+                                - generic: GEN I / ACTIVE
+                                - generic: Kanto Origins
+                                - generic: Generation I · 151 species. Register every encounter in your personal Pokédex.
+                                - generic: SYNCING POKÉAPI CATALOG
+                            - generic:
+                              - generic:
+                                - generic: LIVE RESEARCH
+                                - generic: Choose a banner
+                              - generic: 5 available
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - radio:
+                                    - generic:
+                                      - generic: GEN I
+                                      - generic: Kanto Origins
+                                      - generic: Generation I · 151 species
+                                - generic:
+                                  - radio:
+                                    - generic:
+                                      - generic: GEN II
+                                      - generic: Johto Journeys
+                                      - generic: Generation II · 100 species
+                                - generic:
+                                  - radio:
+                                    - generic:
+                                      - generic: GEN III
+                                      - generic: Hoenn Horizons
+                                      - generic: Generation III · 135 species
+                                - generic:
+                                  - radio:
+                                    - generic:
+                                      - generic: GEN IV
+                                      - generic: Sinnoh Myths
+                                      - generic: Generation IV · 107 species
+                                - generic:
+                                  - radio:
+                                    - generic:
+                                      - generic: GEN V
+                                      - generic: Unova Frontiers
+                                      - generic: Generation V · 156 species
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: SELECTED POOL
+                                  - generic: Kanto Origins
+                                - generic:
+                                  - generic: 1%
+                                  - generic: TOP TIER
+                              - generic:
+                                - generic:
+                                  - generic: Common
+                                  - generic: 84%
+                                - generic:
+                                  - generic: Rare
+                                  - generic: 10%
+                                - generic:
+                                  - generic: Epic
+                                  - generic: 5%
+                                - generic:
+                                  - generic: Legendary+
+                                  - generic: 1%
+                              - generic:
+                                - button [disabled]:
+                                  - generic [ref=e5]: PULL ×1
+                                  - generic [ref=e6]: 20 N
+                                - button [disabled]:
+                                  - generic [ref=e7]: PULL ×10
+                                  - generic [ref=e8]: 180 N · SAVE 20
+                              - generic: Loading Generations I–V from PokéAPI…
+                            - generic:
+                              - generic:
+                                - generic: FIELD ARCHIVE
+                                - generic: Your Pokédex
+                              - button:
+                                - generic: View all
+                            - generic:
+                              - generic:
+                                - generic: "00"
+                                - generic: REGISTERED
+                              - generic:
+                                - generic:
+                                  - generic: 0 of 649 species
+                                  - generic: 0%
+                            - generic:
+                              - generic: RECENTLY COLLECTED
+                              - generic: Newest first
+                            - generic:
+                              - progressbar
+                              - generic: Loading 649 species
+                              - generic: PokéAPI data will be cached for future visits.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Play with NERU"
+                                  - generic: DIARY
+                                - generic:
+                                  - generic "120 coins":
+                                    - generic: "N"
+                                    - generic: "120"
+                                  - 'button "Selected date: Friday, September 18. Choose another date"'
+                                  - button "Open sticker tray"
+                            - generic:
+                              - generic "Previous day"
+                              - generic "Choose diary date":
+                                - generic: Today
+                                - generic: September 18
+                              - generic "Next day"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: SEP
+                                  - generic: "18"
+                                - generic:
+                                  - generic: TODAY'S ENTRY
+                                  - generic: Friday
+                                  - generic: A small place to keep the day.
+                                - 'generic "Mood: Calm. Change mood"'
+                              - generic:
+                                - generic:
+                                  - generic: WHAT DO YOU WANT TO REMEMBER?
+                                  - textbox "Diary entry":
+                                    - /placeholder: Write about the tiny moment, the hard thing, or the thought you want to carry with you…
+                                  - generic:
+                                    - generic: 0 WORDS
+                                    - generic: Saved
+                                  - generic:
+                                    - generic:
+                                      - generic: MOMENTS FROM THE DAY
+                                      - generic: 3 SAVED
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: Physics study
+                                          - generic: LEARNING
+                                      - generic:
+                                        - generic:
+                                          - generic: Deep focus
+                                          - generic: WORK
+                                      - generic:
+                                        - generic:
+                                          - generic: Guitar practice
+                                          - generic: MUSIC
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic: FROM YOUR DATA
+                                      - generic: Day stickers
+                                    - generic "Customize attached stickers"
+                                  - generic: Little keepsakes made from what you tracked.
+                                  - generic:
+                                    - 'generic "TASKS: 0/0. 0% complete"':
+                                      - generic:
+                                        - generic: TASKS
+                                        - generic: 0/0
+                                    - 'generic "STREAK: —. keep the spark"':
+                                      - generic:
+                                        - generic: STREAK
+                                        - generic: —
+                            - generic: Your entry and sticker choices are saved for this date.
+              - tablist [ref=e9]:
+                - tab "Control":
+                  - generic [ref=e10] [cursor=pointer]
+                  - generic: CONTROL
+                - tab "Chat":
+                  - generic [ref=e11] [cursor=pointer]
+                  - generic: CHAT
+                - tab "Tasks":
+                  - generic [ref=e12] [cursor=pointer]
+                  - generic: TASKS
+                - tab "Gacha":
+                  - generic [ref=e13] [cursor=pointer]
+                  - generic: GACHA
+                - tab "Diary":
+                  - generic [ref=e14] [cursor=pointer]
+                  - generic: DIARY
+  - progressbar "Preparing NERU" [ref=e15]:
+    - generic [ref=e32]:
+      - generic [ref=e33]: PERSONAL SYSTEM / 01
+      - generic [ref=e34]: NERU
+      - generic [ref=e51]: ALL MODULES ONLINE

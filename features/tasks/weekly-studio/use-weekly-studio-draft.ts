@@ -144,6 +144,14 @@ export function useWeeklyStudioDraft({
     setHasUnsavedChanges(false);
   };
 
+  const resetDrafts = () => {
+    setDraftPlans({});
+    setDraftConstellations(null);
+    setDraftStars(null);
+    setDeletedStarIds(new Set());
+    setHasUnsavedChanges(false);
+  };
+
   return {
     plan,
     constellations,
@@ -156,6 +164,7 @@ export function useWeeklyStudioDraft({
     moveTask,
     addNebula,
     deleteNebula,
+    resetDrafts,
     saveDrafts,
   } as const;
 }

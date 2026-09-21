@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useThemedStyles } from '@/features/control/app-theme';
-import { Type } from '@/constants/typography';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
+import { Type } from '@/theme/typography';
 import { formatDurationMinutes, minutesUntilClockTime } from '@/utils/time';
 import { Palette, R, useTasksPalette } from '../tokens';
 import type { DisplayPeriod, PeriodConfig, PeriodState } from '../types';
@@ -20,13 +20,22 @@ interface Props {
 
 type RegularPeriod = Exclude<DisplayPeriod, 'sleep'>;
 
-export function PeriodRail({
+export function PeriodRail(props: Props) {
+  return (
+    <PeriodRailContent
+      key={props.trueActivePeriod === 'sleep' ? 'sleep' : 'regular'}
+      {...props}
+    />
+  );
+}
+
+function PeriodRailContent({
   periods, selectedPeriod, periodStateMap, trueActivePeriod, currentMinute, onSelect,
 }: Props) {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const [sleepDismissed, setSleepDismissed] = useState(false);
-  const wasSleepTime = useRef(false);
+  const wasSleepTime = useRef(selectedPeriod === 'sleep');
   const lastRegularPeriod = useRef<RegularPeriod>(
     selectedPeriod === 'sleep'
       ? new Date().getHours() < 12 ? 'morning' : 'evening'
@@ -48,10 +57,8 @@ export function PeriodRail({
 
   useEffect(() => {
     if (isSleepTime && !wasSleepTime.current) {
-      setSleepDismissed(false);
       onSelect('sleep');
     } else if (!isSleepTime) {
-      setSleepDismissed(false);
       if (wasSleepTime.current && selectedPeriod === 'sleep') {
         onSelect(lastRegularPeriod.current);
       }

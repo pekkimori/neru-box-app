@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import type { SleepScheduleEntry } from "../../../hooks/useSleepSchedule";
 import { TIME_24_HOUR_PATTERN, durationBetweenTimes } from "../../../utils/time";
 import { SectionLabel, ToggleSwitch } from "../components";

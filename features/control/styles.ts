@@ -4,13 +4,8 @@ import {
   createEditorialPalette,
   createEditorialStyles,
   editorialOverlay,
-} from "../../constants/editorial-theme";
-import {
-  pageHeaderActionRowStyle,
-  pageHeaderIconControlStyle,
-  pageHeaderLabelControlStyle,
-} from "../../constants/page-header";
-import { Type } from "../../constants/typography";
+} from "@/theme/editorial-theme";
+import { Type } from "@/theme/typography";
 
 const Palette = createEditorialPalette(() => ({
   overlay: editorialOverlay(0.42),
@@ -27,33 +22,6 @@ export const controlStyles = createEditorialStyles(() => ({
     paddingBottom: Platform.OS === "ios" ? 90 : 78,
     gap: 16,
   },
-  header: {
-    minHeight: 72,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.line,
-  },
-  headerIdentity: {
-    minWidth: 0,
-    flexShrink: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  eyebrow: { ...Type.bodySmall, color: Palette.secondary, marginTop: 3 },
-  title: { ...Type.pageTitle, color: Palette.ink },
-  headerActions: pageHeaderActionRowStyle,
-  headerAction: pageHeaderLabelControlStyle(Palette),
-  headerActionActive: {
-    borderColor: Palette.red,
-    backgroundColor: Palette.red,
-  },
-  headerActionText: { ...Type.buttonSmall, color: Palette.red },
-  headerActionTextActive: { color: Palette.onAccent },
-  headerIconButton: pageHeaderIconControlStyle(Palette),
   statusCard: {
     backgroundColor: Palette.inverse,
     borderRadius: 8,
@@ -125,6 +93,11 @@ export const controlStyles = createEditorialStyles(() => ({
     paddingHorizontal: 16,
   },
   secondaryButtonText: { ...Type.buttonSmall, color: Palette.onInverse },
+  restDismissButtonText: {
+    ...Type.buttonSmall,
+    color: Palette.ink,
+    textAlign: "center",
+  },
   sectionHeader: {
     minHeight: 24,
     flexDirection: "row",
@@ -266,7 +239,7 @@ export const controlStyles = createEditorialStyles(() => ({
   menuDetail: { ...Type.bodySmall, color: Palette.secondary },
   editorModalRoot: { flex: 1, justifyContent: "flex-end" },
   editorBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Palette.overlay,
   },
   editorSheet: {
@@ -279,7 +252,8 @@ export const controlStyles = createEditorialStyles(() => ({
     borderTopRightRadius: 18,
     overflow: "hidden",
   },
-  editorDragArea: { paddingTop: 9 },
+  editorDragArea: { paddingTop: 0 },
+  editorGrabArea: { height: 44, justifyContent: 'center' },
   editorHandle: {
     width: 38,
     height: 4,
@@ -300,15 +274,6 @@ export const controlStyles = createEditorialStyles(() => ({
   editorEyebrow: { ...Type.label, color: Palette.red, marginBottom: 5 },
   editorTitle: { ...Type.heroTitle, color: Palette.ink },
   editorSubtitle: { ...Type.body, color: Palette.secondary, marginTop: 3 },
-  editorClose: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: Palette.line,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   editorBody: { flexShrink: 1, overflow: "hidden" },
   editorContent: {
     width: "100%",
@@ -565,25 +530,5 @@ export const controlStyles = createEditorialStyles(() => ({
     padding: 14,
   },
   infoText: { ...Type.bodySmall, flex: 1, color: Palette.secondary },
-  toggleTrack: {
-    width: 42,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Palette.line,
-    padding: 3,
-    justifyContent: "center",
-  },
-  toggleTrackActive: { backgroundColor: Palette.red },
-  toggleThumb: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Palette.surfaceRaised,
-    borderWidth: 1,
-    borderColor: "#D4D4D4",
-  },
-  toggleThumbActive: {
-    transform: [{ translateX: 18 }],
-    borderColor: Palette.onAccent,
-  },
+  nativeSwitch: { transform: [{ scale: 0.86 }] },
 }));

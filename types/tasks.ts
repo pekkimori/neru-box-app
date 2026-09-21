@@ -58,6 +58,7 @@ export type DailyPlan = {
   };
   diaryNote?: string;
   moodSticker?: string;
+  diaryDataStickers?: string[];
   diaryStickers?: DiaryStickerPlacement[];
   diaryPageLayout?: DiaryPageStickerPlacement[];
 };

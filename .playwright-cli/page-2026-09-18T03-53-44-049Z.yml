@@ -1,0 +1,51 @@
+- generic [ref=f1e16]:
+  - generic [ref=f1e17]:
+    - button "Return to Observatory" [ref=f1e18] [cursor=pointer]:
+      - generic [ref=f1e19]: 
+    - generic [ref=f1e20]:
+      - generic [ref=f1e21]: SKY OBSERVER
+      - generic [ref=f1e22]: Archive
+    - generic [ref=f1e23]:
+      - button "Switch to network view" [ref=f1e24] [cursor=pointer]:
+        - generic [ref=f1e25]: 
+        - generic [ref=f1e26]: Network
+      - button "Switch to list view" [ref=f1e27] [cursor=pointer]:
+        - generic [ref=f1e28]: 
+        - generic [ref=f1e29]: List
+  - generic [ref=f1e31]:
+    - generic "Domain color legend" [ref=f1e33]:
+      - generic [ref=f1e34]:
+        - button "Highlight Focus nodes" [ref=f1e35] [cursor=pointer]:
+          - generic [ref=f1e37]: Focus
+        - button "Highlight Health nodes" [ref=f1e38] [cursor=pointer]:
+          - generic [ref=f1e40]: Health
+    - generic [ref=f1e41]:
+      - img "Task network with 4 completed tasks across 2 color-coded domains. Weekly completion structures share one force field, with daily sequence, repeated-domain, and next-day bridge connections." [ref=f1e42]
+      - generic [ref=f1e65]:
+        - button "Pinned archive record for Finish the long-form product strategy review, completed Thu, Sep 17" [expanded] [ref=f1e93] [cursor=pointer]
+        - generic [ref=f1e100]:
+          - generic [ref=f1e101]:
+            - generic [ref=f1e102]:
+              - generic [ref=f1e103]: COMPLETED TASK
+              - strong [ref=f1e106]: Focus
+            - button "Close pinned record for Finish the long-form product strategy review" [ref=f1e108] [cursor=pointer]: ×
+          - generic [ref=f1e109]: Finish the long-form product strategy review
+          - generic [ref=f1e110]: Completed Thu, Sep 17
+          - generic [ref=f1e111]:
+            - img "Completion proof for Finish the long-form product strategy review" [ref=f1e112]
+            - generic [ref=f1e113]: ▣ TASK PROOF
+          - generic [ref=f1e114]:
+            - generic [ref=f1e115]: ✦
+            - generic [ref=f1e116]:
+              - generic [ref=f1e117]: REWARD EARNED
+              - strong [ref=f1e118]: +25 coins
+            - generic [ref=f1e119]: "#02"
+          - button "Exclude Finish the long-form product strategy review from Sky Observer" [ref=f1e121] [cursor=pointer]: ◉̸ Exclude from Sky Observer
+      - button "Pin archive record for Plan tomorrow, completed Thu, Sep 17" [ref=f1e68] [cursor=pointer]
+      - button "Pin archive record for Evening stretch, completed Thu, Sep 17" [ref=f1e70] [cursor=pointer]
+      - button "Pin archive record for Morning walk, completed Thu, Sep 17" [ref=f1e72] [cursor=pointer]
+      - generic [ref=f1e73]:
+        - button "Zoom in" [ref=f1e74] [cursor=pointer]
+        - button "Zoom out" [ref=f1e77] [cursor=pointer]
+        - button "Reset galaxy view" [ref=f1e80] [cursor=pointer]
+      - 'button "Mini-map: tap to center galaxy view" [ref=f1e86] [cursor=pointer]'

@@ -117,11 +117,11 @@ export const APP_ACCENT_PRESETS: readonly AppAccentPreset[] = [
   {
     id: 'everforest',
     label: 'Everforest',
-    description: 'Sage green',
-    light: '#667C1A',
-    lightStrong: '#4A5D10',
-    dark: '#A7C080',
-    darkStrong: '#C4D6A8',
+    description: 'Pine green',
+    light: '#3F6B3A',
+    lightStrong: '#2D512A',
+    dark: '#8DAA6A',
+    darkStrong: '#B1C58F',
   },
   {
     id: 'kanagawa',
@@ -206,10 +206,15 @@ export function getAccentPreset(id: AppAccentId): AppAccentPreset {
   return APP_ACCENT_PRESETS.find((preset) => preset.id === id) ?? APP_ACCENT_PRESETS[0];
 }
 
+const paletteCache = new Map<string, EditorialPalette>();
+
 export function buildEditorialPalette(
   mode: AppColorMode,
   accentId: AppAccentId,
 ): EditorialPalette {
+  const key = `${mode}:${accentId}`;
+  const cached = paletteCache.get(key);
+  if (cached) return cached;
   const preset = getAccentPreset(accentId);
   const accent = mode === 'dark' ? preset.dark : preset.light;
   const accentStrong = mode === 'dark' ? preset.darkStrong : preset.lightStrong;
@@ -228,7 +233,7 @@ export function buildEditorialPalette(
   const onAccent = dark ? '#17131C' : '#FFFFFF';
   const onInverse = text;
 
-  return {
+  const palette: EditorialPalette = {
     mode,
     accent,
     accentStrong,
@@ -255,6 +260,8 @@ export function buildEditorialPalette(
     muted: textMuted,
     white: '#FFFFFF',
   };
+  paletteCache.set(key, palette);
+  return palette;
 }
 
 let activeEditorialPalette = buildEditorialPalette('light', 'neru');
@@ -303,26 +310,34 @@ export function createEditorialPalette<Extra extends Record<string, unknown> = R
 type StyleValue = ViewStyle | TextStyle | ImageStyle;
 type NamedStyles<T> = { [P in keyof T]: StyleValue };
 
-/**
- * Rebuilds a StyleSheet lazily when the active app palette changes. Screens
- * still use regular `styles.foo` access, so layout code stays unchanged.
- */
-export function createEditorialStyles<T extends NamedStyles<T>>(
-  factory: () => T,
+const styleResolvers = new WeakMap<object, (palette: EditorialPalette) => object>();
+
+/** Return one stable stylesheet per palette, shared by all component instances. */
+export function resolveEditorialStyles<T extends Record<string, unknown>>(
+  styles: T,
+  palette: EditorialPalette,
 ): T {
-  let lastPalette: EditorialPalette | null = null;
-  let sheet: T | null = null;
+  return (styleResolvers.get(styles)?.(palette) ?? styles) as T;
+}
 
-  const resolve = () => {
-    const palette = getActiveEditorialPalette();
-    if (lastPalette !== palette || !sheet) {
-      lastPalette = palette;
-      sheet = StyleSheet.create(factory()) as T;
+export function createEditorialStyles<T extends NamedStyles<T>>(factory: () => T): T {
+  const sheets = new WeakMap<EditorialPalette, T>();
+  const resolve = (palette = getActiveEditorialPalette()) => {
+    const cached = sheets.get(palette);
+    if (cached) return cached;
+    const previous = activeEditorialPalette;
+    try {
+      // Factories use compatibility palette proxies. Scope their reads to this
+      // materialization so a preview cannot change the app's active palette.
+      activeEditorialPalette = palette;
+      const sheet = StyleSheet.create(factory()) as T;
+      sheets.set(palette, sheet);
+      return sheet;
+    } finally {
+      activeEditorialPalette = previous;
     }
-    return sheet;
   };
-
-  return new Proxy({} as T, {
+  const proxy = new Proxy({} as T, {
     get: (_target, property) => resolve()[property as keyof T],
     ownKeys: () => Reflect.ownKeys(resolve()),
     getOwnPropertyDescriptor: (_target, property) => ({
@@ -331,6 +346,8 @@ export function createEditorialStyles<T extends NamedStyles<T>>(
       value: resolve()[property as keyof T],
     }),
   });
+  styleResolvers.set(proxy, resolve);
+  return proxy;
 }
 
 export function editorialOverlay(opacity = 0.5): string {

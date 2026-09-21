@@ -1,33 +1,51 @@
-import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
-import { File, Paths } from 'expo-file-system';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+} from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+
+import { createFeedbackPlayer } from '@/utils/audio-player';
 
 type InteractionSound = 'tap' | 'catch' | 'success';
 
 type PlayerPool = {
   next: number;
-  players: AudioPlayer[];
+  players: ReturnType<typeof createFeedbackPlayer>[];
 };
 
 const SAMPLE_RATE = 22_050;
-const SOUND_FILE_VERSION = 1;
-const UI_SOUND_VOLUME = 0.24;
+const NATIVE_SOUND_SOURCES: Record<InteractionSound, number> = {
+  // The Android player path that reliably handles Pokémon cries is MP3-based.
+  // A slightly longer MP3 also avoids phone speaker/DSP startup swallowing a
+  // tiny WAV transient before it becomes audible.
+  tap: require('../assets/audio/tap.mp3'),
+  catch: require('../assets/audio/catch.wav'),
+  success: require('../assets/audio/success.wav'),
+};
+const SOUND_VOLUME: Record<InteractionSound, number> = {
+  // Phone speakers tend to swallow very short, quiet transients. Keep the tap
+  // crisp, but give it enough level to remain audible on Android hardware.
+  tap: 0.9,
+  catch: 0.38,
+  success: 0.38,
+};
 
 // Pokémon cries are intentionally kept near the UI sound level so opening a
 // result never produces a sudden volume jump after the capture clicks.
-export const POKEMON_CRY_VOLUME = 0.24;
+export const POKEMON_CRY_VOLUME = 0.34;
 
 const SOUND_DURATION: Record<InteractionSound, number> = {
-  tap: 0.075,
+  tap: 0.24,
   catch: 0.11,
   success: 0.34,
 };
 
 const POOL_SIZE: Record<InteractionSound, number> = {
-  tap: 4,
-  catch: 3,
-  success: 2,
+  tap: 3,
+  catch: 2,
+  success: 1,
 };
 
 // Close enough to feel like one sound family, but far enough apart that a run
@@ -39,11 +57,13 @@ const PLAYBACK_RATES: Record<InteractionSound, readonly number[]> = {
 };
 
 const nativePools = new Map<InteractionSound, PlayerPool>();
+const INTERACTION_SOUNDS = Object.keys(SOUND_DURATION) as InteractionSound[];
 const sampleCache = new Map<InteractionSound, Float32Array>();
 const webBufferCache = new Map<InteractionSound, AudioBuffer>();
 const lastPlayedAt: Record<InteractionSound, number> = { tap: 0, catch: 0, success: 0 };
 const lastVariantIndex: Record<InteractionSound, number> = { tap: -1, catch: -1, success: -1 };
 let nativePrepared = false;
+let nativePreparePromise: Promise<boolean> | null = null;
 let webAudioContext: AudioContext | null = null;
 
 function sweptSine(t: number, duration: number, startHz: number, endHz: number) {
@@ -72,10 +92,16 @@ function createSamples(kind: InteractionSound) {
     let sample = 0;
 
     if (kind === 'tap') {
-      const attack = Math.min(1, t / 0.0025);
-      sample = attack * (
-        sweptSine(t, duration, 1_050, 520) * Math.exp(-t * 47) * 0.82
-        + Math.sin(Math.PI * 2 * 185 * t) * Math.exp(-t * 31) * 0.34
+      const clickStart = 0.018;
+      const localTime = Math.max(0, t - clickStart);
+      const preRoll = t < clickStart
+        ? Math.sin(Math.PI * 2 * 240 * t) * (t / clickStart) * 0.07
+        : 0;
+      const attack = Math.min(1, localTime / 0.003);
+      sample = preRoll + attack * (
+        sweptSine(localTime, duration - clickStart, 1_250, 520) * Math.exp(-localTime * 18) * 0.82
+        + Math.sin(Math.PI * 2 * 260 * localTime) * Math.exp(-localTime * 11) * 0.46
+        + Math.sin(Math.PI * 2 * 1_900 * localTime) * Math.exp(-localTime * 42) * 0.16
       );
     } else if (kind === 'catch') {
       const attack = Math.min(1, t / 0.003);
@@ -103,57 +129,74 @@ function createSamples(kind: InteractionSound) {
   return samples;
 }
 
-function writeAscii(view: DataView, offset: number, text: string) {
-  for (let index = 0; index < text.length; index += 1) {
-    view.setUint8(offset + index, text.charCodeAt(index));
-  }
+function createNativePlayer(kind: InteractionSound, source: number) {
+  const player = createAudioPlayer(source, {
+    downloadFirst: true,
+    keepAudioSessionActive: true,
+    updateInterval: 50,
+  });
+  player.volume = SOUND_VOLUME[kind];
+  return createFeedbackPlayer(player, Math.ceil(SOUND_DURATION[kind] * 1_000) + 120);
 }
 
-function createWav(kind: InteractionSound) {
-  const samples = createSamples(kind);
-  const bytes = new Uint8Array(44 + samples.length * 2);
-  const view = new DataView(bytes.buffer);
-
-  writeAscii(view, 0, 'RIFF');
-  view.setUint32(4, bytes.length - 8, true);
-  writeAscii(view, 8, 'WAVE');
-  writeAscii(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, SAMPLE_RATE, true);
-  view.setUint32(28, SAMPLE_RATE * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeAscii(view, 36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-
-  for (let index = 0; index < samples.length; index += 1) {
-    view.setInt16(44 + index * 2, Math.round(samples[index] * 0x7fff), true);
-  }
-
-  return bytes;
+function clearNativePools() {
+  nativePools.forEach((pool) => pool.players.forEach((player) => player.remove()));
+  nativePools.clear();
 }
 
-export function prepareInteractionFeedback() {
-  if (Platform.OS === 'web' || nativePrepared) return;
-  nativePrepared = true;
+function hasReadyPlayerForEverySound() {
+  return INTERACTION_SOUNDS.every((kind) =>
+    nativePools.get(kind)?.players.some((player) => player.isReady),
+  );
+}
+
+export async function prepareInteractionFeedback() {
+  if (Platform.OS === 'web') return true;
+  if (nativePrepared && hasReadyPlayerForEverySound()) {
+    await setIsAudioActiveAsync(true).catch(() => undefined);
+    return true;
+  }
+  if (nativePreparePromise) return nativePreparePromise;
+
+  nativePreparePromise = (async () => {
+    try {
+      nativePrepared = false;
+      await setAudioModeAsync({
+        interruptionMode: 'mixWithOthers',
+        playsInSilentMode: true,
+      });
+      await setIsAudioActiveAsync(true);
+      clearNativePools();
+
+      INTERACTION_SOUNDS.forEach((kind) => {
+        const players = Array.from(
+          { length: POOL_SIZE[kind] },
+          () => createNativePlayer(
+            kind,
+            NATIVE_SOUND_SOURCES[kind],
+          ),
+        );
+        nativePools.set(kind, { next: 0, players });
+      });
+
+      await Promise.all([...nativePools.values()].flatMap((pool) =>
+        pool.players.map((player) => player.prepare()),
+      ));
+
+      nativePrepared = hasReadyPlayerForEverySound();
+      return nativePrepared;
+    } catch (error) {
+      clearNativePools();
+      nativePrepared = false;
+      if (__DEV__) console.warn('Unable to initialize NERU audio feedback.', error);
+      return false;
+    }
+  })();
 
   try {
-    (Object.keys(SOUND_DURATION) as InteractionSound[]).forEach((kind) => {
-      const file = new File(Paths.cache, `neru-${kind}-${SOUND_FILE_VERSION}.wav`);
-      if (!file.exists) file.write(createWav(kind));
-
-      const players = Array.from({ length: POOL_SIZE[kind] }, () => {
-        const player = createAudioPlayer(file.uri, { keepAudioSessionActive: true });
-        player.volume = UI_SOUND_VOLUME;
-        return player;
-      });
-      nativePools.set(kind, { next: 0, players });
-    });
-  } catch {
-    // Haptics remain available if a device cannot initialize the audio cache.
-    nativePrepared = false;
+    return await nativePreparePromise;
+  } finally {
+    nativePreparePromise = null;
   }
 }
 
@@ -186,10 +229,11 @@ function choosePlaybackRate(kind: InteractionSound, preferBright = false) {
   return rates[next];
 }
 
-function playWebSound(kind: InteractionSound, playbackRate: number) {
+async function playWebSound(kind: InteractionSound, playbackRate: number) {
   const context = getWebAudioContext();
   if (!context) return;
-  if (context.state === 'suspended') void context.resume().catch(() => undefined);
+  if (context.state === 'suspended') await context.resume();
+  if (context.state !== 'running') return;
 
   let buffer = webBufferCache.get(kind);
   if (!buffer) {
@@ -203,39 +247,36 @@ function playWebSound(kind: InteractionSound, playbackRate: number) {
   const gain = context.createGain();
   source.buffer = buffer;
   source.playbackRate.value = playbackRate;
-  gain.gain.value = UI_SOUND_VOLUME;
+  gain.gain.value = SOUND_VOLUME[kind];
   source.connect(gain);
   gain.connect(context.destination);
   source.start();
 }
 
-function playNativeSound(kind: InteractionSound, playbackRate: number) {
-  prepareInteractionFeedback();
+function takeNextNativePlayer(kind: InteractionSound) {
   const pool = nativePools.get(kind);
-  if (!pool) return;
+  if (!pool) return null;
 
-  const player = pool.players[pool.next];
-  pool.next = (pool.next + 1) % pool.players.length;
-
-  const play = () => {
-    player.volume = UI_SOUND_VOLUME;
-    player.shouldCorrectPitch = false;
-    player.setPlaybackRate(playbackRate);
-    player.pause();
-    void player.seekTo(0).then(() => player.play()).catch(() => undefined);
-  };
-
-  if (player.isLoaded) {
-    play();
-    return;
+  for (let offset = 0; offset < pool.players.length; offset += 1) {
+    const playerIndex = (pool.next + offset) % pool.players.length;
+    const player = pool.players[playerIndex];
+    if (!player.isReady) continue;
+    pool.next = (playerIndex + 1) % pool.players.length;
+    return { player, playerIndex, pool };
   }
 
-  const subscription = player.addListener('playbackStatusUpdate', (status) => {
-    if (!status.isLoaded) return;
-    subscription.remove();
-    play();
-  });
-  setTimeout(() => subscription.remove(), 1_000);
+  return null;
+}
+
+function playNativeSound(kind: InteractionSound) {
+  const selection = takeNextNativePlayer(kind);
+  if (selection) {
+    selection.player.play();
+    return;
+  }
+  // Never queue a late click behind loading/seek operations. Startup and
+  // foreground resume warm the pool; overlapping taps use its ready siblings.
+  if (!nativePrepared) void prepareInteractionFeedback();
 }
 
 function playSound(kind: InteractionSound, preferBright = false) {
@@ -245,8 +286,8 @@ function playSound(kind: InteractionSound, preferBright = false) {
   lastPlayedAt[kind] = now;
   const playbackRate = choosePlaybackRate(kind, preferBright);
 
-  if (Platform.OS === 'web') playWebSound(kind, playbackRate);
-  else playNativeSound(kind, playbackRate);
+  if (Platform.OS === 'web') void playWebSound(kind, playbackRate).catch(() => undefined);
+  else playNativeSound(kind);
 }
 
 function performTapHaptic() {
@@ -257,8 +298,10 @@ function performTapHaptic() {
 }
 
 export function playTapFeedback() {
-  if (Platform.OS !== 'web') void performTapHaptic().catch(() => undefined);
+  // Dispatch audio first so Android's haptic bridge call cannot delay the
+  // beginning of this very short effect.
   playSound('tap');
+  if (Platform.OS !== 'web') void performTapHaptic().catch(() => undefined);
 }
 
 export function playCatchFeedback(finalTap: boolean) {

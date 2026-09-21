@@ -1,0 +1,212 @@
+- generic [ref=e1]:
+  - generic [ref=e263]:
+    - generic [ref=e270]:
+      - generic [ref=e271]:
+        - generic [ref=e272]:
+          - generic [ref=e273]: DIARY
+          - 'button "Selected date: Thursday, September 17. Choose another date" [disabled]':
+            - generic [ref=e275]: Thursday, September 17
+        - generic [ref=e277]:
+          - button "Choose Pokémon stickers" [ref=e515] [cursor=pointer]:
+            - generic [ref=e516]: 
+            - generic [ref=e517]: STICKERS
+          - button "Finish editing diary" [ref=e518] [cursor=pointer]:
+            - generic [ref=e279]: 
+            - generic [ref=e280]: DONE
+      - generic [ref=e519]:
+        - generic [ref=e520]:
+          - generic [ref=e521]: daily signal
+          - generic [ref=e522]: Drag to move · pinch to resize · twist to rotate
+        - button "Reset selected sticker" [ref=e523] [cursor=pointer]:
+          - generic [ref=e524]: 
+      - generic [ref=e286]:
+        - generic:
+          - slider "Select archive date sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: THU
+                    - generic: "17"
+                  - generic:
+                    - generic: DAILY ARCHIVE / 2026
+                    - generic: September 17
+                    - generic: LIVE ENTRY
+                  - generic: KEEP THIS DAY
+        - generic:
+          - slider "Select quest scorecard sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: QUEST REPORT
+                    - generic: 
+                  - generic:
+                    - generic: "0"
+                    - generic: /0
+                  - generic: 0% OF TODAY CLEARED
+        - generic:
+          - slider "Select daily signal sticker to arrange":
+            - generic:
+              - button "Mood 😌. Change mood":
+                - generic:
+                  - generic: 
+                  - generic: CALM
+            - generic: PINCH · TWIST
+        - generic:
+          - slider "Select coin receipt sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: ✦
+                  - generic:
+                    - generic: TODAY'S LOOT
+                    - generic: +0 COINS
+        - generic:
+          - slider "Select streak matchbox sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic:
+                    - generic: KEEP THE SPARK
+                    - generic: 0 DAY STREAK
+        - generic:
+          - slider "Select first completed task photo sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: LEARNING
+                  - generic:
+                    - generic: Physics study
+                    - generic: ✦
+        - generic:
+          - slider "Select second completed task photo sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: WORK
+                  - generic:
+                    - generic: Deep focus
+                    - generic: ✦
+        - generic:
+          - slider "Select third completed task photo sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: MUSIC
+                  - generic:
+                    - generic: Guitar practice
+                    - generic: ✦
+        - generic:
+          - slider "Select note to yourself sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: Dear future me,
+                    - generic: 
+                  - textbox "Diary note to yourself":
+                    - /placeholder: Write the tiny thing you never want to forget...
+                  - generic: ARCHIVED ✓
+        - generic:
+          - slider "Select tasks completed badge sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: TASKS
+        - generic:
+          - slider "Select habits completed badge sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: HABITS
+        - generic:
+          - slider "Select day completion badge sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: 0%
+                  - generic: COMPLETE
+        - generic:
+          - slider "Select good signal sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: GOOD SIGNAL
+        - generic:
+          - slider "Select momentum sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: MOMENTUM
+        - generic:
+          - slider "Select yes sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: YES!
+        - generic:
+          - slider "Select proud heart sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: PROUD OF U
+        - generic:
+          - slider "Select onward sticker to arrange":
+            - generic:
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: ONWARD
+    - tablist [ref=e494]:
+      - tab "Control" [ref=e495] [cursor=pointer]:
+        - generic [ref=e496]: 
+        - generic [ref=e498]: CONTROL
+      - tab "Chat" [ref=e499] [cursor=pointer]:
+        - generic [ref=e500]: 
+        - generic [ref=e502]: CHAT
+      - tab "Tasks" [ref=e503] [cursor=pointer]:
+        - generic [ref=e504]: 
+        - generic [ref=e506]: TASKS
+      - tab "Gacha" [ref=e507] [cursor=pointer]:
+        - generic [ref=e508]: 
+        - generic [ref=e510]: GACHA
+      - tab "Diary" [ref=e511] [cursor=pointer]:
+        - generic [ref=e512]: 
+        - generic [ref=e514]: DIARY
+  - dialog [ref=e808]:
+    - generic [ref=e811]:
+      - generic [active] [ref=e812] [cursor=pointer]
+      - generic [ref=e813]:
+        - generic [ref=e814]: FEELS
+        - generic [ref=e816]: PICK TODAY'S FACE
+        - generic [ref=e817]: What kind of day was it?
+        - generic [ref=e818]:
+          - button "Choose mood calm" [ref=e819] [cursor=pointer]:
+            - generic [ref=e820]: 
+            - generic [ref=e822]: CALM
+          - button "Choose mood charged" [ref=e823] [cursor=pointer]:
+            - generic [ref=e824]: 
+            - generic [ref=e826]: CHARGED
+          - button "Choose mood glowing" [ref=e827] [cursor=pointer]:
+            - generic [ref=e828]: 
+            - generic [ref=e830]: GLOWING
+          - button "Choose mood melty" [ref=e831] [cursor=pointer]:
+            - generic [ref=e832]: 
+            - generic [ref=e834]: MELTY
+          - button "Choose mood dreamy" [ref=e835] [cursor=pointer]:
+            - generic [ref=e836]: 
+            - generic [ref=e838]: DREAMY
+          - button "Choose mood on fire" [ref=e839] [cursor=pointer]:
+            - generic [ref=e840]: 
+            - generic [ref=e842]: ON FIRE

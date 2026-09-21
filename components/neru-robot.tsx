@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useIsFocused } from '@react-navigation/native';
+import { useCallback, useEffect, useState } from 'react';
+import { useIsFocused } from 'expo-router/react-navigation';
 import {
   AccessibilityInfo,
   Animated,
@@ -11,9 +11,13 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import { useAppTheme } from '@/features/control/app-theme';
+import { useAppTheme } from '@/theme/app-theme';
 import { playTapFeedback } from '@/utils/interaction-feedback';
-import { subscribeToNeruButtonPress } from '@/utils/neru-reactions';
+import {
+  subscribeToNeruButtonPress,
+  subscribeToNeruMascotPress,
+  subscribeToNeruTabSwitch,
+} from '@/utils/neru-reactions';
 
 export type NeruRobotState = 'idle' | 'listening' | 'responding';
 
@@ -26,7 +30,6 @@ type NeruRobotProps = {
 };
 
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
-let lastFocusedTabIndex: number | undefined;
 const BOOP_PARTICLES = [
   { x: -13, y: -11, round: true },
   { x: 0, y: -16, round: false },
@@ -99,76 +102,60 @@ export function NeruRobot({
   const { colors } = useAppTheme();
   const isFocused = useIsFocused();
   const reduceMotion = useReduceMotion();
-  const blink = useRef(new Animated.Value(1)).current;
-  const gazeX = useRef(new Animated.Value(0)).current;
-  const gazeY = useRef(new Animated.Value(0)).current;
-  const activity = useRef(new Animated.Value(0)).current;
-  const buttonReaction = useRef(new Animated.Value(0)).current;
-  const typingReaction = useRef(new Animated.Value(0)).current;
-  const boopReaction = useRef(new Animated.Value(0)).current;
-  const boopBurst = useRef(new Animated.Value(0)).current;
-  const boopWiggle = useRef(new Animated.Value(0)).current;
-  const tabJump = useRef(new Animated.Value(0)).current;
-  const tabCounterShift = useRef(new Animated.Value(0)).current;
+  const [blink] = useState(() => new Animated.Value(1));
+  const [gazeX] = useState(() => new Animated.Value(0));
+  const [gazeY] = useState(() => new Animated.Value(0));
+  const [activity] = useState(() => new Animated.Value(0));
+  const [buttonReaction] = useState(() => new Animated.Value(0));
+  const [typingReaction] = useState(() => new Animated.Value(0));
+  const [boopReaction] = useState(() => new Animated.Value(0));
+  const [boopBurst] = useState(() => new Animated.Value(0));
+  const [boopWiggle] = useState(() => new Animated.Value(0));
+  const [tabJump] = useState(() => new Animated.Value(0));
 
-  useEffect(() => {
-    if (!isFocused || tabIndex === undefined) return;
-
-    const previousIndex = lastFocusedTabIndex;
-    lastFocusedTabIndex = tabIndex;
+  const playTabJump = useCallback(() => {
     tabJump.stopAnimation();
-    tabCounterShift.stopAnimation();
-
-    if (reduceMotion || previousIndex === undefined || previousIndex === tabIndex) {
-      tabJump.setValue(0);
-      tabCounterShift.setValue(0);
-      return;
-    }
-
-    const direction = Math.sign(tabIndex - previousIndex);
     tabJump.setValue(0);
-    // The scene enters from 46px away. Applying the inverse offset makes NERU
-    // appear anchored while the page moves underneath, then the jump takes over.
-    tabCounterShift.setValue(-direction * 46);
+    if (reduceMotion) return;
 
-    Animated.parallel([
-      Animated.timing(tabCounterShift, {
-        toValue: 0,
-        duration: 310,
-        easing: Easing.bezier(0.22, 1, 0.36, 1),
+    const animation = Animated.sequence([
+      Animated.timing(tabJump, {
+        toValue: 0.16,
+        duration: 50,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: USE_NATIVE_DRIVER,
       }),
-      Animated.sequence([
-        Animated.timing(tabJump, {
-          toValue: 0.16,
-          duration: 55,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-        Animated.timing(tabJump, {
-          toValue: 0.58,
-          duration: 130,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-        Animated.timing(tabJump, {
-          toValue: 0.86,
-          duration: 105,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-        Animated.timing(tabJump, {
-          toValue: 1,
-          duration: 90,
-          easing: Easing.out(Easing.back(1.6)),
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-      ]),
-    ]).start();
-  }, [isFocused, reduceMotion, tabCounterShift, tabIndex, tabJump]);
+      Animated.timing(tabJump, {
+        toValue: 0.58,
+        duration: 115,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+      Animated.timing(tabJump, {
+        toValue: 0.86,
+        duration: 90,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+      Animated.timing(tabJump, {
+        toValue: 1,
+        duration: 80,
+        easing: Easing.out(Easing.back(1.6)),
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }),
+    ]);
+    animation.start();
+  }, [reduceMotion, tabJump]);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (tabIndex === undefined) return;
+    return subscribeToNeruTabSwitch((destinationTabIndex) => {
+      if (destinationTabIndex === tabIndex) playTabJump();
+    });
+  }, [playTabJump, tabIndex]);
+
+  useEffect(() => {
+    if (!isFocused || reduceMotion) {
       blink.setValue(1);
       gazeX.setValue(0);
       gazeY.setValue(0);
@@ -215,26 +202,28 @@ export function NeruRobot({
       ]),
     );
 
-    const activityAnimation = Animated.loop(
-      Animated.timing(activity, {
-        toValue: 1,
-        duration: state === 'responding' ? 720 : 980,
-        easing: Easing.linear,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }),
-    );
+    const activityAnimation = state === 'idle'
+      ? null
+      : Animated.loop(
+          Animated.timing(activity, {
+            toValue: 1,
+            duration: state === 'responding' ? 720 : 980,
+            easing: Easing.linear,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+        );
 
     blinkAnimation.start();
     gazeAnimation.start();
-    activityAnimation.start();
+    activityAnimation?.start();
 
     return () => {
       blinkAnimation.stop();
       gazeAnimation.stop();
-      activityAnimation.stop();
+      activityAnimation?.stop();
       activity.setValue(0);
     };
-  }, [activity, blink, gazeX, gazeY, reduceMotion, state]);
+  }, [activity, blink, gazeX, gazeY, isFocused, reduceMotion, state]);
 
   const reactToButtonPress = useCallback(() => {
     buttonReaction.stopAnimation();
@@ -261,12 +250,12 @@ export function NeruRobot({
   }, [buttonReaction, reduceMotion]);
 
   useEffect(() => {
-    if (!reactToButtons) return;
+    if (!isFocused || !reactToButtons) return;
     return subscribeToNeruButtonPress(reactToButtonPress);
-  }, [reactToButtonPress, reactToButtons]);
+  }, [isFocused, reactToButtonPress, reactToButtons]);
 
   useEffect(() => {
-    if (state !== 'listening' || typingPulse === 0 || reduceMotion) return;
+    if (!isFocused || state !== 'listening' || typingPulse === 0 || reduceMotion) return;
     typingReaction.stopAnimation();
     typingReaction.setValue(0);
     Animated.sequence([
@@ -285,7 +274,7 @@ export function NeruRobot({
         useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
-  }, [reduceMotion, state, typingPulse, typingReaction]);
+  }, [isFocused, reduceMotion, state, typingPulse, typingReaction]);
 
   const handleRobotPress = useCallback(() => {
     playTapFeedback();
@@ -362,6 +351,11 @@ export function NeruRobot({
     });
   }, [boopBurst, boopReaction, boopWiggle, reactToButtonPress, reduceMotion]);
 
+  useEffect(() => {
+    if (!isFocused || !reactToButtons) return;
+    return subscribeToNeruMascotPress(handleRobotPress);
+  }, [handleRobotPress, isFocused, reactToButtons]);
+
   const eyeWidth = size * 0.148;
   const eyeHeight = size * 0.23;
   const label = state === 'responding'
@@ -412,6 +406,14 @@ export function NeruRobot({
     Animated.multiply(blink, buttonEyeScaleY),
     boopEyeScale,
   );
+  const boopWiggleX = boopWiggle.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-size * 0.045, 0, size * 0.045],
+  });
+  const boopWiggleRotate = boopWiggle.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-4.5deg', '0deg', '4.5deg'],
+  });
   const tabJumpY = tabJump.interpolate({
     inputRange: [0, 0.16, 0.58, 0.86, 1],
     outputRange: [0, size * 0.055, -size * 0.34, -size * 0.08, 0],
@@ -424,23 +426,13 @@ export function NeruRobot({
     inputRange: [0, 0.16, 0.58, 0.86, 1],
     outputRange: [1, 0.9, 1.08, 0.96, 1],
   });
-  const boopWiggleX = boopWiggle.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [-size * 0.045, 0, size * 0.045],
-  });
-  const boopWiggleRotate = boopWiggle.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ['-4.5deg', '0deg', '4.5deg'],
-  });
-  const robotTranslateX = Animated.add(tabCounterShift, boopWiggleX);
-
   return (
     <Animated.View
       style={{
         width: size,
         height: size,
         transform: [
-          { translateX: robotTranslateX },
+          { translateX: boopWiggleX },
           { translateY: tabJumpY },
           { rotateZ: boopWiggleRotate },
           { scaleX: tabJumpScaleX },
@@ -542,7 +534,7 @@ export function NeruRobot({
           )}
           <Animated.View
             style={[
-              StyleSheet.absoluteFillObject,
+              StyleSheet.absoluteFill,
               {
                 backgroundColor: eyeStar,
                 opacity: boopBurst.interpolate({
@@ -762,7 +754,7 @@ export function NeruRobot({
 
 const styles = StyleSheet.create({
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   noPointerEvents: {
     pointerEvents: 'none',
@@ -772,7 +764,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   robotPressTarget: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 10,
   },
   replyDots: {

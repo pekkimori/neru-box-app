@@ -14,6 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { GalaxyPalette } from './galaxy-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 
 const SCENE_DURATION = 1120;
 const CONTENT_REVEAL_DELAY = 360;
@@ -43,6 +45,7 @@ export function GalaxyEntrance({
   onFinish,
 }: GalaxyEntranceProps) {
   const reduceMotion = useReducedMotion();
+  const styles = useThemedStyles(themedStyles);
   const started = useRef(false);
   const progress = useSharedValue(0);
   const scan = useSharedValue(0);
@@ -214,16 +217,16 @@ export function GalaxyEntrance({
   );
 }
 
-const styles = StyleSheet.create({
+const themedStyles = createEditorialStyles(() => ({
   veil: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
     elevation: 100,
     overflow: 'hidden',
     backgroundColor: GalaxyPalette.bg,
   },
   field: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   fieldStar: {
     position: 'absolute',
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
   orbit: {
     position: 'absolute',
     borderWidth: 1,
-    borderColor: 'rgba(168, 173, 186, 0.32)',
+    borderColor: GalaxyPalette.dayEdge,
   },
   orbitOuter: {
     width: 188,
@@ -256,13 +259,13 @@ const styles = StyleSheet.create({
     width: 132,
     height: 132,
     borderRadius: 66,
-    borderColor: 'rgba(168, 173, 186, 0.48)',
+    borderColor: GalaxyPalette.minimapViewport,
   },
   orbitPulse: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    borderColor: 'rgba(245, 242, 234, 0.66)',
+    borderColor: GalaxyPalette.minimapViewport,
   },
   cardinalTick: {
     position: 'absolute',
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 116,
     height: 1,
-    backgroundColor: 'rgba(245, 242, 234, 0.74)',
+    backgroundColor: GalaxyPalette.minimapViewport,
   },
   flareHorizontal: {
     position: 'absolute',
@@ -296,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(245, 242, 234, 0.14)',
+    backgroundColor: GalaxyPalette.weekRule,
   },
   core: {
     width: 7,
@@ -345,4 +348,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.1,
   },
-});
+}));

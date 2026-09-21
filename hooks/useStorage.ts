@@ -34,9 +34,11 @@ export function useStorage<T>(
   const valueRef = useRef(value);
   const revisionRef = useRef(0);
   const mountedRef = useRef(true);
-  initialValueRef.current = initialValue;
-  validateRef.current = options?.validate;
-  valueRef.current = value;
+  useEffect(() => {
+    initialValueRef.current = initialValue;
+    validateRef.current = options?.validate;
+    valueRef.current = value;
+  }, [initialValue, options?.validate, value]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -51,6 +53,9 @@ export function useStorage<T>(
       revisionRef.current += 1;
       valueRef.current = next as T;
       setValue(next as T);
+      // A sibling may publish before our initial read completes. That value
+      // supersedes the read and also completes hydration for this subscriber.
+      setLoaded(true);
     };
     const listeners = listenersByKey.get(key) ?? new Set<StorageListener>();
     listeners.add(listener);
@@ -105,6 +110,7 @@ export function useStorage<T>(
       revisionRef.current += 1;
       valueRef.current = resolved;
       setValue(resolved);
+      setLoaded(true);
       publishStorageValue(key, resolved);
       return resolved;
     },

@@ -8,7 +8,6 @@ import {
   getMinuteOfDay,
   isMinuteInRange,
   parseTimeMinutes,
-  parseLocalDate,
 } from '../../utils/time';
 
 export {
@@ -21,16 +20,6 @@ export {
 /** Local-calendar YYYY-MM-DD for today. Convenience alias for formatLocalDate(new Date()). */
 export function todayString(): string {
   return formatLocalDate(new Date());
-}
-
-export function formatDate(dateStr: string): string {
-  const d = parseLocalDate(dateStr);
-  if (!d) return dateStr;
-  return d.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 /**

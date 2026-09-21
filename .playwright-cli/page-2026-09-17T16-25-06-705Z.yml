@@ -1,0 +1,95 @@
+- generic [ref=e263]:
+  - generic [ref=e848]:
+    - generic [ref=e849]:
+      - generic [ref=e850]:
+        - generic [ref=e851]:
+          - button "Play with NERU" [ref=e862] [cursor=pointer]
+          - generic [ref=e863]:
+            - generic [ref=e864]: TASKS
+            - generic [ref=e865]: Thursday, September 17
+        - generic [ref=e866]:
+          - button "Manage week plan" [ref=e867] [cursor=pointer]:
+            - generic [ref=e868]: 
+            - generic [ref=e869]: Plan
+          - button "Open completed stars archive" [ref=e870] [cursor=pointer]:
+            - generic [ref=e871]: 
+      - generic [ref=e872]:
+        - generic [ref=e873]:
+          - generic [ref=e874]:
+            - generic [ref=e875]: 
+            - generic [ref=e876]: 0/0
+          - generic [ref=e877]: Stars lit
+        - generic [ref=e879]:
+          - generic [ref=e880]:
+            - generic [ref=e881]: "N"
+            - generic [ref=e883]: "1000"
+          - generic [ref=e884]: Coins
+        - generic [ref=e886]:
+          - generic [ref=e887]:
+            - generic [ref=e888]: 
+            - generic [ref=e889]: "0"
+          - generic [ref=e890]: Day streak
+    - tablist [ref=e891]:
+      - tab "Morning, locked" [ref=e892] [cursor=pointer]:
+        - generic [ref=e893]: 
+        - generic [ref=e894]: Morning
+      - tab "Afternoon, active, 4h 35m left" [ref=e895] [cursor=pointer]:
+        - generic [ref=e896]: 
+        - generic [ref=e897]: Afternoon · 4h 35m
+      - tab "Evening, upcoming" [ref=e898] [cursor=pointer]:
+        - generic [ref=e899]: 
+        - generic [ref=e900]: Evening
+    - generic [ref=e901]:
+      - generic [ref=e902]:
+        - generic [ref=e903]: Routine gate
+        - generic [ref=e904]: 0/4
+      - generic [ref=e905]: Complete all routines to unlock your stars.
+      - generic [ref=e906]:
+        - checkbox "Tidy workspace, not complete" [ref=e907] [cursor=pointer]:
+          - generic [ref=e908]: 
+          - generic [ref=e909]: Tidy workspace
+        - checkbox "Drink water, not complete" [ref=e910] [cursor=pointer]:
+          - generic [ref=e911]: 
+          - generic [ref=e912]: Drink water
+        - checkbox "Quick stretch, not complete" [ref=e913] [cursor=pointer]:
+          - generic [ref=e914]: 
+          - generic [ref=e915]: Quick stretch
+        - checkbox "Eat a snack, not complete" [ref=e916] [cursor=pointer]:
+          - generic [ref=e917]: 
+          - generic [ref=e918]: Eat a snack
+    - generic [ref=e919]:
+      - generic [ref=e920]:
+        - generic [ref=e921]: Afternoon tasks
+        - generic [ref=e922]: Complete the routine checklist to unlock
+      - generic [ref=e923]: 0/0
+    - generic [ref=e926]:
+      - generic [ref=e927]: 
+      - generic [ref=e928]:
+        - generic [ref=e929]: Nothing planned for afternoon
+        - generic [ref=e930]: Add tasks for any domain in Weekly Studio.
+      - button "Open Weekly Studio" [ref=e931] [cursor=pointer]:
+        - generic [ref=e932]: Plan
+    - generic [ref=e933]:
+      - generic [ref=e934]:
+        - generic [ref=e935]: Your sky
+        - generic [ref=e936]: Completed tasks stay lit in place
+      - button "Open completed stars archive" [ref=e937] [cursor=pointer]:
+        - generic [ref=e938]: 
+        - generic [ref=e939]: Archive
+    - generic [ref=e940]: Create your first nebula to start mapping your sky.
+  - tablist [ref=e494]:
+    - tab "Control" [ref=e495] [cursor=pointer]:
+      - generic [ref=e496]: 
+      - generic [ref=e498]: CONTROL
+    - tab "Chat" [ref=e499] [cursor=pointer]:
+      - generic [ref=e500]: 
+      - generic [ref=e502]: CHAT
+    - tab "Tasks" [active] [ref=e503] [cursor=pointer]:
+      - generic [ref=e504]: 
+      - generic [ref=e506]: TASKS
+    - tab "Gacha" [ref=e507] [cursor=pointer]:
+      - generic [ref=e508]: 
+      - generic [ref=e510]: GACHA
+    - tab "Diary" [ref=e511] [cursor=pointer]:
+      - generic [ref=e512]: 
+      - generic [ref=e514]: DIARY

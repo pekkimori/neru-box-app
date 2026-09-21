@@ -2,9 +2,9 @@
 import { Text, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useThemedStyles } from '@/features/control/app-theme';
-import { Type } from '@/constants/typography';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
+import { Type } from '@/theme/typography';
 import { Palette, Sp, R, useTasksPalette } from '../tokens';
 import type { BlockType, Star, Constellation, PlannedTask } from '../../../types/tasks';
 

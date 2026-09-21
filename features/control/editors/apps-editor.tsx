@@ -5,7 +5,7 @@ import {
   MotionPressable as Pressable,
   MotionTouchableOpacity as TouchableOpacity,
 } from "@/components/motion";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { AppMark } from "../components";
 import type { InstalledApp, SelectedApp } from "../model";
 import { controlStyles } from "../styles";

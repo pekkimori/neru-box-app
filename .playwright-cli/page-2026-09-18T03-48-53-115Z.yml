@@ -1,0 +1,57 @@
+- generic [ref=f2e16]:
+  - generic [ref=f2e17]:
+    - button "Return to Observatory" [ref=f2e18] [cursor=pointer]:
+      - generic [ref=f2e19]: 
+    - generic [ref=f2e20]:
+      - generic [ref=f2e21]: SKY OBSERVER
+      - generic [ref=f2e22]: Archive
+    - generic [ref=f2e23]:
+      - button "Switch to network view" [ref=f2e24] [cursor=pointer]:
+        - generic [ref=f2e25]: 
+        - generic [ref=f2e26]: Network
+      - button "Switch to list view" [ref=f2e27] [cursor=pointer]:
+        - generic [ref=f2e28]: 
+        - generic [ref=f2e29]: List
+  - generic [ref=f2e31]:
+    - generic "Domain color legend" [ref=f2e33]:
+      - generic [ref=f2e34]:
+        - button "Highlight Focus nodes" [ref=f2e35] [cursor=pointer]:
+          - generic [ref=f2e37]: Focus
+        - button "Highlight Health nodes" [ref=f2e38] [cursor=pointer]:
+          - generic [ref=f2e40]: Health
+    - generic [ref=f2e41]:
+      - img "Task network with 4 completed tasks across 2 color-coded domains. Weekly completion structures share one force field, with daily sequence, repeated-domain, and next-day bridge connections." [ref=f2e42]
+      - generic [ref=f2e65]:
+        - button "Pinned archive record for Finish the long-form product strategy review, completed Thu, Sep 17" [expanded] [ref=f2e93] [cursor=pointer]
+        - generic [ref=f2e98]:
+          - generic [ref=f2e99]:
+            - generic [ref=f2e100]:
+              - generic [ref=f2e101]: COMPLETED TASK
+              - strong [ref=f2e104]: Focus
+            - button "Close pinned record for Finish the long-form product strategy review" [ref=f2e106] [cursor=pointer]: ×
+          - generic [ref=f2e107]: Finish the long-form product strategy review
+          - generic [ref=f2e108]: Completed Thu, Sep 17
+          - generic [ref=f2e109]:
+            - img "Completion proof for Finish the long-form product strategy review" [ref=f2e110]
+            - generic [ref=f2e111]: ▣ TASK PROOF
+          - generic [ref=f2e112]:
+            - generic [ref=f2e113]: ✦
+            - generic [ref=f2e114]:
+              - generic [ref=f2e115]: REWARD EARNED
+              - strong [ref=f2e116]: +25 coins
+            - generic [ref=f2e117]: "#02"
+          - generic [ref=f2e118]:
+            - generic [ref=f2e120]:
+              - strong [ref=f2e121]: Exclude this task?
+              - generic [ref=f2e122]: The task and coins stay safe.
+            - generic [ref=f2e123]:
+              - button "Keep" [ref=f2e124] [cursor=pointer]
+              - button "Exclude" [ref=f2e125] [cursor=pointer]
+      - button "Pin archive record for Plan tomorrow, completed Thu, Sep 17" [ref=f2e68] [cursor=pointer]
+      - button "Pin archive record for Evening stretch, completed Thu, Sep 17" [ref=f2e70] [cursor=pointer]
+      - button "Pin archive record for Morning walk, completed Thu, Sep 17" [ref=f2e72] [cursor=pointer]
+      - generic [ref=f2e73]:
+        - button "Zoom in" [ref=f2e74] [cursor=pointer]
+        - button "Zoom out" [ref=f2e77] [cursor=pointer]
+        - button "Reset galaxy view" [ref=f2e80] [cursor=pointer]
+      - 'button "Mini-map: tap to center galaxy view" [ref=f2e86] [cursor=pointer]'

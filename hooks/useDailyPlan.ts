@@ -136,6 +136,13 @@ export function useDailyPlan(date: string) {
     [savePlan],
   );
 
+  const saveDiaryDataStickers = useCallback(
+    (stickers: string[]) => {
+      savePlan((prev) => ({ ...prev, diaryDataStickers: stickers.slice(0, 6) }));
+    },
+    [savePlan],
+  );
+
   const saveDiaryPageLayout = useCallback(
     (layout: DiaryPageStickerPlacement[]) => {
       savePlan((prev) => ({ ...prev, diaryPageLayout: layout.slice(0, 32) }));
@@ -152,6 +159,7 @@ export function useDailyPlan(date: string) {
     updateTaskStatus,
     awardCoins,
     saveDiaryNote,
+    saveDiaryDataStickers,
     saveDiaryPageLayout,
     saveDiaryStickers,
     setMoodSticker,

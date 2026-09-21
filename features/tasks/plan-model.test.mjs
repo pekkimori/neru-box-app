@@ -79,3 +79,12 @@ test('parses a bounded unique diary page sticker layout', () => {
     { id: 'mood', x: 0.9, y: 0.1, rotation: 180, scale: 1.8 },
   ]);
 });
+
+test('keeps only known unique diary data stickers', () => {
+  const parsed = parseDailyPlanJson(JSON.stringify({
+    ...createEmptyPlan('2026-07-13'),
+    diaryDataStickers: ['tasks', 'routines', 'tasks', 'unknown', 4, 'coins'],
+  }), '2026-07-13');
+
+  assert.deepEqual(parsed?.diaryDataStickers, ['tasks', 'routines', 'coins']);
+});

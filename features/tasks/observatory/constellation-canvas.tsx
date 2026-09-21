@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { type ComponentProps, useEffect, useMemo, useRef } from 'react';
+import { useIsFocused } from 'expo-router/react-navigation';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import Animated, {
+  cancelAnimation,
   Easing,
   interpolate,
   ReduceMotion,
@@ -16,9 +18,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Type } from '@/constants/typography';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useThemedStyles } from '@/features/control/app-theme';
+import { Type } from '@/theme/typography';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 import { playTapFeedback } from '@/utils/interaction-feedback';
 import { Palette, R, Sp, useTasksPalette } from '../tokens';
 import type {
@@ -254,13 +256,14 @@ function AnimatedSkyNode({
   );
 }
 
-function SkyAtmosphere() {
+function SkyAtmosphere({ active }: { active: boolean }) {
   const styles = useThemedStyles(themedStyles);
   const reduceMotion = useReducedMotion();
   const phase = useSharedValue(0);
 
   useEffect(() => {
-    if (reduceMotion) {
+    cancelAnimation(phase);
+    if (!active || reduceMotion) {
       phase.value = 0.5;
       return;
     }
@@ -273,7 +276,8 @@ function SkyAtmosphere() {
       -1,
       true,
     );
-  }, [phase, reduceMotion]);
+    return () => cancelAnimation(phase);
+  }, [active, phase, reduceMotion]);
 
   const firstOrbitStyle = useAnimatedStyle(() => ({
     opacity: interpolate(phase.value, [0, 1], [0.22, 0.5]),
@@ -292,14 +296,15 @@ function SkyAtmosphere() {
   );
 }
 
-function EmptySkyOrbit() {
+function EmptySkyOrbit({ active }: { active: boolean }) {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const reduceMotion = useReducedMotion();
   const phase = useSharedValue(0);
 
   useEffect(() => {
-    if (reduceMotion) {
+    cancelAnimation(phase);
+    if (!active || reduceMotion) {
       phase.value = 0.5;
       return;
     }
@@ -312,7 +317,8 @@ function EmptySkyOrbit() {
       -1,
       false,
     );
-  }, [phase, reduceMotion]);
+    return () => cancelAnimation(phase);
+  }, [active, phase, reduceMotion]);
 
   const orbitStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${phase.value * 360}deg` }],
@@ -344,12 +350,14 @@ function EmptySkyOrbit() {
 
 function AnimatedStarTarget({
   pos,
+  active,
   available,
   label,
   order,
   onPress,
 }: {
   pos: Point;
+  active: boolean;
   available: boolean;
   label: string;
   order: number;
@@ -361,7 +369,8 @@ function AnimatedStarTarget({
   const pressed = useSharedValue(1);
 
   useEffect(() => {
-    if (!available || reduceMotion) {
+    cancelAnimation(pulse);
+    if (!active || !available || reduceMotion) {
       pulse.value = available ? 0.5 : 0;
       return;
     }
@@ -377,12 +386,23 @@ function AnimatedStarTarget({
         true,
       ),
     );
-  }, [available, order, pulse, reduceMotion]);
+    return () => cancelAnimation(pulse);
+  }, [active, available, order, pulse, reduceMotion]);
 
   const haloProps = useAnimatedProps(() => ({
     r: 14 * pressed.value * interpolate(pulse.value, [0, 1], [0.68, 1.15]),
     opacity: available ? interpolate(pulse.value, [0, 1], [0.12, 0.38]) : 0,
   }));
+  const interactionProps = Platform.OS === 'web'
+    ? ({ onPress: null, onClick: onPress } as unknown as ComponentProps<typeof Circle>)
+    : {
+        onPress,
+        onPressIn: () => {
+          pressed.value = withSpring(0.72, SKY_SPRING);
+          playTapFeedback();
+        },
+        onPressOut: () => { pressed.value = withSpring(1, SKY_SPRING); },
+      };
 
   return (
     <>
@@ -402,13 +422,8 @@ function AnimatedStarTarget({
         r={22}
         fill={Palette.red}
         fillOpacity={0.001}
-        onPress={onPress}
-        onPressIn={() => {
-          pressed.value = withSpring(0.72, SKY_SPRING);
-          playTapFeedback();
-        }}
-        onPressOut={() => { pressed.value = withSpring(1, SKY_SPRING); }}
-        accessible
+        {...interactionProps}
+        accessible={Platform.OS === 'web' ? undefined : true}
         accessibilityLabel={`${label}, ${available ? 'available' : 'unavailable'}`}
       />
     </>
@@ -424,6 +439,7 @@ export function ConstellationCanvas({
   height = Sp.canvas,
 }: Props) {
   const styles = useThemedStyles(themedStyles);
+  const isFocused = useIsFocused();
   const canvasProgress = useSharedValue(0);
   const nodes = useMemo(() => tasks.map((entry, index) => ({
     ...entry,
@@ -445,13 +461,19 @@ export function ConstellationCanvas({
     }), [nodes]);
 
   useEffect(() => {
+    cancelAnimation(canvasProgress);
+    if (!isFocused) {
+      canvasProgress.value = 1;
+      return;
+    }
     canvasProgress.value = 0;
     canvasProgress.value = withTiming(1, {
       duration: 420,
       easing: Easing.out(Easing.cubic),
       reduceMotion: ReduceMotion.System,
     });
-  }, [canvasProgress, selectedBlock, tasks.length]);
+    return () => cancelAnimation(canvasProgress);
+  }, [canvasProgress, isFocused, selectedBlock, tasks.length]);
 
   const canvasStyle = useAnimatedStyle(() => ({
     opacity: canvasProgress.value,
@@ -461,9 +483,9 @@ export function ConstellationCanvas({
   if (tasks.length === 0) {
     return (
       <Animated.View style={[styles.canvas, { height }, canvasStyle]}>
-        <SkyAtmosphere />
+        <SkyAtmosphere active={isFocused} />
         <View style={styles.empty}>
-          <EmptySkyOrbit />
+          <EmptySkyOrbit active={isFocused} />
           <Text style={styles.emptyText}>
             {constellations.length === 0
               ? 'Create your first nebula to start mapping your sky.'
@@ -487,7 +509,7 @@ export function ConstellationCanvas({
         `${litCount} completed, ${availableCount} available, ${lockedCount} unavailable tasks today`
       }
     >
-      <SkyAtmosphere />
+      <SkyAtmosphere active={isFocused} />
       <Svg width="100%" height={height} viewBox={`0 0 340 ${height}`}>
         {completed.slice(1).map((node, index) => {
           const previous = completed[index];
@@ -526,6 +548,7 @@ export function ConstellationCanvas({
             <AnimatedStarTarget
               key={`touch-${block}-${task.starId}`}
               pos={pos}
+              active={isFocused}
               available={available}
               label={star.label}
               order={order}

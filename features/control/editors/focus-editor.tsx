@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { clampMinutes } from "../model";
 import { controlStyles } from "../styles";
 
@@ -82,5 +82,47 @@ export function FocusEditorContent({
         <Text style={styles.primaryButtonText}>Start focus</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+export function RestPromptContent({
+  restMinutes,
+  startRest,
+  dismiss,
+}: {
+  restMinutes: number;
+  startRest: () => void;
+  dismiss: () => void;
+}) {
+  const styles = useThemedStyles(controlStyles);
+  const { colors: EditorialColors } = useAppTheme();
+
+  return (
+    <View style={styles.editorContent}>
+      <View style={styles.focusHero}>
+        <View style={styles.focusHeroIcon}>
+          <Ionicons name="cafe" size={28} color={EditorialColors.red} />
+        </View>
+        <Text style={styles.focusHeroTitle}>Nice work. Take a breather?</Text>
+        <Text style={styles.focusHeroCopy}>
+          Step away for {restMinutes} {restMinutes === 1 ? "minute" : "minutes"}
+          {" "}
+          before beginning another focus session.
+        </Text>
+      </View>
+      <TouchableOpacity onPress={startRest} style={styles.primaryButton}>
+        <Ionicons
+          name="timer-outline"
+          size={17}
+          color={EditorialColors.onAccent}
+        />
+        <Text style={styles.primaryButtonText}>
+          Start {restMinutes} min rest
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={dismiss} style={styles.secondaryButton}>
+        <Text style={styles.restDismissButtonText}>Not now</Text>
+      </TouchableOpacity>
+    </View>
   );
 }

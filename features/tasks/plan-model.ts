@@ -163,6 +163,14 @@ function parseDiaryPageLayout(value: unknown): DiaryPageStickerPlacement[] | und
     .slice(0, 32);
 }
 
+function parseDiaryDataStickers(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const allowed = new Set(['tasks', 'routines', 'coins', 'streak']);
+  return [...new Set(value.filter((item): item is string => (
+    typeof item === 'string' && allowed.has(item)
+  )))].slice(0, 6);
+}
+
 function parseDailyPlanValue(value: unknown, fallbackDate: string): DailyPlan | null {
   if (!isRecord(value) || !isRecord(value.blocks)) return null;
 
@@ -174,6 +182,7 @@ function parseDailyPlanValue(value: unknown, fallbackDate: string): DailyPlan | 
   const reflections = isRecord(value.reflections) ? value.reflections : {};
   const diaryStickers = parseDiaryStickers(value.diaryStickers);
   const diaryPageLayout = parseDiaryPageLayout(value.diaryPageLayout);
+  const diaryDataStickers = parseDiaryDataStickers(value.diaryDataStickers);
   return {
     date: typeof value.date === 'string' && value.date ? value.date : fallbackDate,
     blocks: { morning, afternoon, evening },
@@ -184,6 +193,7 @@ function parseDailyPlanValue(value: unknown, fallbackDate: string): DailyPlan | 
     },
     ...(typeof value.diaryNote === 'string' ? { diaryNote: value.diaryNote } : {}),
     ...(typeof value.moodSticker === 'string' ? { moodSticker: value.moodSticker } : {}),
+    ...(diaryDataStickers !== undefined ? { diaryDataStickers } : {}),
     ...(diaryStickers !== undefined ? { diaryStickers } : {}),
     ...(diaryPageLayout !== undefined ? { diaryPageLayout } : {}),
   };

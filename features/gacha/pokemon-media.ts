@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 
+import { restartAudioPlayer, waitForAudioPlayer } from '@/utils/audio-player';
+import { getPokemonCryUrl } from './pokemon-cry';
 import { POKEMON_CRY_VOLUME } from '@/utils/interaction-feedback';
 
 export type PokemonMedia = {
@@ -13,6 +15,7 @@ export type PokemonMedia = {
 
 type PokemonResponse = {
   id: number;
+  species: { name: string };
   sprites: {
     front_default: string | null;
     back_default: string | null;
@@ -29,7 +32,7 @@ const webAudioPlayers = new Map<number, HTMLAudioElement>();
 let preparedNativeCry: { id: number; cry: string; player: AudioPlayer } | null = null;
 
 function cacheKey(id: number) {
-  return `@neru/pokemon-media/${id}`;
+  return `@neru/pokemon-media/v2/${id}`;
 }
 
 function isPokemonMedia(value: unknown, id: number): value is PokemonMedia {
@@ -67,7 +70,7 @@ export async function getPokemonMedia(id: number, signal?: AbortSignal): Promise
     id,
     frontSprite: pokemon.sprites.front_default,
     backSprite: pokemon.sprites.back_default,
-    cry: pokemon.cries?.latest ?? pokemon.cries?.legacy ?? null,
+    cry: getPokemonCryUrl(pokemon.species.name),
   };
 
   memoryCache.set(id, media);
@@ -75,12 +78,12 @@ export async function getPokemonMedia(id: number, signal?: AbortSignal): Promise
   return media;
 }
 
-export function primePokemonCryOnWeb(id: number) {
+export function primePokemonCryOnWeb(id: number, speciesName: string) {
   if (typeof Audio === 'undefined') return;
   const existing = webAudioPlayers.get(id);
   if (existing) return;
 
-  const audio = new Audio(`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`);
+  const audio = new Audio(getPokemonCryUrl(speciesName));
   audio.preload = 'auto';
   audio.volume = 0;
   webAudioPlayers.set(id, audio);
@@ -121,31 +124,24 @@ export async function preparePokemonCry(id: number, cry: string | null) {
     if (preparedNativeCry.player.isLoaded) return;
   } else {
     preparedNativeCry?.player.remove();
-    const player = createAudioPlayer(cry, { downloadFirst: true, updateInterval: 100 });
+    const player = createAudioPlayer(cry, { downloadFirst: true, updateInterval: 100, keepAudioSessionActive: true });
     player.volume = POKEMON_CRY_VOLUME;
+    player.addListener('playbackStatusUpdate', (status) => {
+      if (!status.didJustFinish) return;
+      player.pause();
+    });
     preparedNativeCry = { id, cry, player };
   }
 
   const player = preparedNativeCry.player;
   if (player.isLoaded) return;
-  await new Promise<void>((resolve) => {
-    const subscription = player.addListener('playbackStatusUpdate', (status) => {
-      if (!status.isLoaded) return;
-      subscription.remove();
-      resolve();
-    });
-    setTimeout(() => {
-      subscription.remove();
-      resolve();
-    }, 4000);
-  });
+  await waitForAudioPlayer(player, 4_000);
 }
 
 export function playPreparedPokemonCry(id: number, cry: string | null | undefined) {
   if (!cry || Platform.OS === 'web') return false;
   if (!preparedNativeCry || preparedNativeCry.id !== id || preparedNativeCry.cry !== cry || !preparedNativeCry.player.isLoaded) return false;
-  preparedNativeCry.player.volume = POKEMON_CRY_VOLUME;
-  void preparedNativeCry.player.seekTo(0).then(() => preparedNativeCry?.player.play());
+  void restartAudioPlayer(preparedNativeCry.player, { volume: POKEMON_CRY_VOLUME });
   return true;
 }
 

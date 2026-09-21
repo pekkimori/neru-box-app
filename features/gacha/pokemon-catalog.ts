@@ -1,4 +1,4 @@
-import speciesRarityRecords from './pokemon-species-rarity.json';
+import speciesRarityRecords from '@/constants/pokemon-species-rarity.json';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -79,43 +79,6 @@ export function getGachaRarity(id: number): Rarity {
   return 'common';
 }
 
-function fallbackPokemon(id: number, name: string, generation: number): GachaCreature {
-  const speciesRarity = getSpeciesRarityData(id);
-  return {
-    id,
-    name,
-    generation,
-    rarity: getGachaRarity(id),
-    captureRate: speciesRarity.captureRate,
-    isLegendary: speciesRarity.isLegendary,
-    isMythical: speciesRarity.isMythical,
-    types: [],
-    image: getPokemonArtworkUrl(id),
-    bannerIds: [`generation-${generation}`],
-    description: speciesRarity.flavorText || `A Generation ${GENERATION_ROMAN[generation]} Pokémon from the ${GENERATION_NAMES[generation]} region.`,
-  };
-}
-
-// Featured fallback records keep banner artwork available before the API catalog
-// finishes loading. The complete 649-species collection comes from PokéAPI.
-export const GACHA_CREATURES: GachaCreature[] = [
-  fallbackPokemon(3, 'Venusaur', 1),
-  fallbackPokemon(6, 'Charizard', 1),
-  fallbackPokemon(9, 'Blastoise', 1),
-  fallbackPokemon(154, 'Meganium', 2),
-  fallbackPokemon(157, 'Typhlosion', 2),
-  fallbackPokemon(160, 'Feraligatr', 2),
-  fallbackPokemon(254, 'Sceptile', 3),
-  fallbackPokemon(257, 'Blaziken', 3),
-  fallbackPokemon(260, 'Swampert', 3),
-  fallbackPokemon(389, 'Torterra', 4),
-  fallbackPokemon(392, 'Infernape', 4),
-  fallbackPokemon(395, 'Empoleon', 4),
-  fallbackPokemon(497, 'Serperior', 5),
-  fallbackPokemon(500, 'Emboar', 5),
-  fallbackPokemon(503, 'Samurott', 5),
-];
-
 export const GACHA_BANNERS: GachaBanner[] = [
   { id: 'generation-1', code: 'GEN I', title: 'Kanto Origins', subtitle: 'Generation I · 151 species', accent: '#E21D2F', generation: 1, featuredIds: [6, 9, 3] },
   { id: 'generation-2', code: 'GEN II', title: 'Johto Journeys', subtitle: 'Generation II · 100 species', accent: '#B66A08', generation: 2, featuredIds: [157, 160, 154] },
@@ -153,11 +116,7 @@ export const RARITY_WEIGHTS: Record<Rarity, number> = {
 export const SINGLE_PULL_COST = 20;
 export const TEN_PULL_COST = 180;
 
-export function getPokemonById(id: number, catalog: GachaCreature[] = GACHA_CREATURES) {
-  return catalog.find((pokemon) => pokemon.id === id);
-}
-
-export function getBannerPool(banner: GachaBanner, catalog: GachaCreature[] = GACHA_CREATURES) {
+export function getBannerPool(banner: GachaBanner, catalog: GachaCreature[]) {
   return catalog.filter((pokemon) => pokemon.generation === banner.generation);
 }
 

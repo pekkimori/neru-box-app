@@ -1,6 +1,6 @@
 // Animated SVG primitives for the completed-task network.
 
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Circle, G, Line } from 'react-native-svg';
 import Animated, {
   Easing,
@@ -14,9 +14,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { GalaxyPalette } from './galaxy-theme';
 import type { GalaxyStar } from './galaxy-geometry';
 import type { GalaxyEdge } from './galaxy-edges';
+import { useAppTheme } from '@/theme/app-theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
@@ -27,6 +27,37 @@ const NODE_SPRING = {
   mass: 0.7,
   reduceMotion: ReduceMotion.System,
 } as const;
+
+type EntranceState = {
+  keys: string[];
+  seen: Set<string>;
+  flags: Map<string, boolean>;
+};
+
+function sameKeys(left: string[], right: string[]) {
+  return left.length === right.length && left.every((key, index) => key === right[index]);
+}
+
+function nextEntranceState(previous: EntranceState | null, keys: string[]): EntranceState {
+  const seen = new Set(previous?.seen);
+  const flags = new Map<string, boolean>();
+  for (const key of keys) {
+    const playEntrance = previous?.flags.get(key) ?? !seen.has(key);
+    flags.set(key, playEntrance);
+    seen.add(key);
+  }
+  return { keys, seen, flags };
+}
+
+function useEntranceFlags(keys: string[]) {
+  const [state, setState] = useState<EntranceState>(() => nextEntranceState(null, keys));
+  if (!sameKeys(state.keys, keys)) {
+    const next = nextEntranceState(state, keys);
+    setState(next);
+    return next.flags;
+  }
+  return state.flags;
+}
 
 const AnimatedNetworkNode = memo(function AnimatedNetworkNode({
   star,
@@ -117,6 +148,10 @@ const AnimatedNetworkEdge = memo(function AnimatedNetworkEdge({
   highlightedDomainId: string | null;
   reduceMotion: boolean;
 }) {
+  const { appearance } = useAppTheme();
+  const dayEdge = appearance.mode === 'dark'
+    ? 'rgba(196, 202, 216, 0.23)'
+    : 'rgba(62, 78, 105, 0.24)';
   const appeared = useSharedValue(reduceMotion || !playEntrance ? 1 : 0);
   const targetOpacity = edge.kind === 'domain-repeat'
     ? highlightedDomainId === null
@@ -173,7 +208,7 @@ const AnimatedNetworkEdge = memo(function AnimatedNetworkEdge({
       y1={edge.from.y}
       x2={edge.to.x}
       y2={edge.to.y}
-      stroke={edge.kind === 'domain-repeat' ? edge.color : GalaxyPalette.dayEdge}
+      stroke={edge.kind === 'domain-repeat' ? edge.color : dayEdge}
       strokeWidth={edge.kind === 'domain-repeat' ? 2 : 1.15}
       animatedProps={animatedProps}
     />
@@ -188,28 +223,10 @@ export function NetworkNodes({
   highlightedDomainId: string | null;
 }) {
   const reduceMotion = useReducedMotion();
-  const seenNodeKeys = useRef(new Set<string>());
-  const activeEntranceFlags = useRef(new Map<string, boolean>());
-  const entranceFlags = useMemo(() => {
-    const currentKeys = new Set(stars.map((star) => (
-      `${star.starId}:${star.completionDate}:${star.completionOrder}`
-    )));
-    for (const key of activeEntranceFlags.current.keys()) {
-      if (!currentKeys.has(key)) activeEntranceFlags.current.delete(key);
-    }
-
-    const flags = new Map<string, boolean>();
-    for (const key of currentKeys) {
-      let playEntrance = activeEntranceFlags.current.get(key);
-      if (playEntrance === undefined) {
-        playEntrance = !seenNodeKeys.current.has(key);
-        activeEntranceFlags.current.set(key, playEntrance);
-        seenNodeKeys.current.add(key);
-      }
-      flags.set(key, playEntrance);
-    }
-    return flags;
-  }, [stars]);
+  const nodeKeys = useMemo(() => stars.map((star) => (
+    `${star.starId}:${star.completionDate}:${star.completionOrder}`
+  )), [stars]);
+  const entranceFlags = useEntranceFlags(nodeKeys);
 
   return (
     <G>
@@ -244,26 +261,8 @@ export function NetworkEdges({
     ...edges.filter((edge) => edge.kind !== 'domain-repeat'),
     ...edges.filter((edge) => edge.kind === 'domain-repeat'),
   ], [edges]);
-  const seenEdgeKeys = useRef(new Set<string>());
-  const activeEntranceFlags = useRef(new Map<string, boolean>());
-  const entranceFlags = useMemo(() => {
-    const currentKeys = new Set(ordered.map((edge) => edge.key));
-    for (const key of activeEntranceFlags.current.keys()) {
-      if (!currentKeys.has(key)) activeEntranceFlags.current.delete(key);
-    }
-
-    const flags = new Map<string, boolean>();
-    for (const edge of ordered) {
-      let playEntrance = activeEntranceFlags.current.get(edge.key);
-      if (playEntrance === undefined) {
-        playEntrance = !seenEdgeKeys.current.has(edge.key);
-        activeEntranceFlags.current.set(edge.key, playEntrance);
-        seenEdgeKeys.current.add(edge.key);
-      }
-      flags.set(edge.key, playEntrance);
-    }
-    return flags;
-  }, [ordered]);
+  const edgeKeys = useMemo(() => ordered.map((edge) => edge.key), [ordered]);
+  const entranceFlags = useEntranceFlags(edgeKeys);
 
   return (
     <G>

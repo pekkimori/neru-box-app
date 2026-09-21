@@ -1,0 +1,503 @@
+- generic [ref=e56]:
+  - generic [ref=e57]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e65]:
+          - button [ref=e879] [cursor=pointer]
+          - generic [ref=e77]:
+            - generic [ref=e78]: CONTROL
+            - generic [ref=e79]: Digital wellbeing
+        - generic [ref=e80]:
+          - button [ref=e880] [cursor=pointer]:
+            - generic [ref=e82]: 
+            - generic [ref=e83]: Focus
+          - button [ref=e881] [cursor=pointer]:
+            - generic [ref=e85]: 
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]: 
+            - generic [ref=e91]:
+              - generic [ref=e92]: Active now
+              - generic [ref=e93]: Normal
+          - generic [ref=e94]: 12:16 PM
+        - generic [ref=e95]: Your default limits are active.
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e98]: 2h 30m
+            - generic [ref=e99]: FOCUS PLANNED
+          - generic [ref=e101]:
+            - generic [ref=e102]: "4"
+            - generic [ref=e103]: APPS LIMITED
+        - generic [ref=e104] [cursor=pointer]:
+          - generic [ref=e105]: 
+          - generic [ref=e106]: Start focus
+      - generic [ref=e107]:
+        - generic [ref=e108]: Today
+        - generic [ref=e109] [cursor=pointer]: Edit schedule
+      - generic [ref=e111]:
+        - generic [ref=e117]:
+          - generic [ref=e118]: "00"
+          - generic [ref=e119]: "06"
+          - generic [ref=e120]: "12"
+          - generic [ref=e121]: "18"
+          - generic [ref=e122]: "24"
+        - generic [ref=e123]:
+          - generic [ref=e124]: Normal
+          - generic [ref=e127]: Focus
+          - generic [ref=e130]: Sleep
+      - generic [ref=e133]: Appearance
+      - generic [ref=e134]:
+        - generic [ref=e135]:
+          - generic [ref=e136]: 
+          - generic [ref=e138]:
+            - generic [ref=e139]: App theme
+            - generic [ref=e140]: Light · NERU
+        - generic [ref=e141]: COLOR MODE
+        - radiogroup [ref=e142]:
+          - radio [ref=e882] [cursor=pointer]:
+            - generic [ref=e144]: 
+            - generic [ref=e145]: Light
+            - generic [ref=e146]: 
+          - radio [ref=e883] [cursor=pointer]:
+            - generic [ref=e148]: 
+            - generic [ref=e149]: Dark
+        - generic [ref=e150]: ACCENT PALETTE
+        - radiogroup [ref=e151]:
+          - radio [ref=e884] [cursor=pointer]:
+            - generic [ref=e153]: 
+            - generic [ref=e155]:
+              - generic [ref=e156]: NERU
+              - generic [ref=e157]: Signal red
+          - radio [ref=e885] [cursor=pointer]:
+            - generic [ref=e160]:
+              - generic [ref=e161]: Dracula
+              - generic [ref=e162]: Electric purple
+          - radio [ref=e886] [cursor=pointer]:
+            - generic [ref=e165]:
+              - generic [ref=e166]: Catppuccin
+              - generic [ref=e167]: Mocha mauve
+          - radio [ref=e887] [cursor=pointer]:
+            - generic [ref=e170]:
+              - generic [ref=e171]: Nord
+              - generic [ref=e172]: Frost blue
+          - radio [ref=e888] [cursor=pointer]:
+            - generic [ref=e175]:
+              - generic [ref=e176]: Tokyo Night
+              - generic [ref=e177]: Neon blue
+          - radio [ref=e889] [cursor=pointer]:
+            - generic [ref=e180]:
+              - generic [ref=e181]: Gruvbox
+              - generic [ref=e182]: Retro gold
+          - radio [ref=e890] [cursor=pointer]:
+            - generic [ref=e185]:
+              - generic [ref=e186]: Rosé Pine
+              - generic [ref=e187]: Muted iris
+          - radio [ref=e891] [cursor=pointer]:
+            - generic [ref=e190]:
+              - generic [ref=e191]: Solarized
+              - generic [ref=e192]: Ocean cyan
+          - radio [ref=e892] [cursor=pointer]:
+            - generic [ref=e195]:
+              - generic [ref=e196]: One Dark
+              - generic [ref=e197]: Editor blue
+          - radio [ref=e893] [cursor=pointer]:
+            - generic [ref=e200]:
+              - generic [ref=e201]: Everforest
+              - generic [ref=e202]: Sage green
+          - radio [ref=e894] [cursor=pointer]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: Kanagawa
+              - generic [ref=e207]: Wave blue
+          - radio [ref=e895] [cursor=pointer]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: Synthwave
+              - generic [ref=e212]: Laser pink
+          - radio [ref=e896] [cursor=pointer]:
+            - generic [ref=e215]:
+              - generic [ref=e216]: Monokai
+              - generic [ref=e217]: Terminal lime
+          - radio [ref=e897] [cursor=pointer]:
+            - generic [ref=e220]:
+              - generic [ref=e221]: Ayu
+              - generic [ref=e222]: Warm orange
+      - generic [ref=e223]: Configure
+      - generic [ref=e224]:
+        - button [ref=e898] [cursor=pointer]:
+          - generic [ref=e226]: 
+          - generic [ref=e228]:
+            - generic [ref=e229]: Apps & limits
+            - generic [ref=e230]: 4 selected · shared daily limits
+          - generic [ref=e231]: 
+        - button [ref=e899] [cursor=pointer]:
+          - generic [ref=e233]: 
+          - generic [ref=e235]:
+            - generic [ref=e236]: Schedule
+            - generic [ref=e237]: 2 focus blocks · 2 sleep schedules
+          - generic [ref=e238]: 
+        - button [ref=e900] [cursor=pointer]:
+          - generic [ref=e240]: 
+          - generic [ref=e242]:
+            - generic [ref=e243]: Mode settings
+            - generic [ref=e244]: Mute, filters, Pomodoro and access
+          - generic [ref=e245]: 
+    - generic [ref=e251]:
+      - generic [ref=e252]:
+        - generic [ref=e253]:
+          - button [ref=e937] [cursor=pointer]
+          - generic [ref=e265]:
+            - generic [ref=e266]:
+              - generic [ref=e267]: CHAT
+              - generic [ref=e269]: READY
+            - generic [ref=e270]: Warm mode
+        - generic [ref=e271]:
+          - button [ref=e938] [cursor=pointer]:
+            - generic [ref=e273]: 
+          - button [ref=e939] [cursor=pointer]:
+            - generic [ref=e275]: 
+          - button [ref=e940] [cursor=pointer]:
+            - generic [ref=e277]: 
+      - generic [ref=e278]: CONVERSATION / 01
+      - generic [ref=e282]:
+        - generic [ref=e284]:
+          - generic [ref=e285]: NERU · 12:16 PM
+          - generic [ref=e287]: Hi, I'm NERU. I'm here to help you make today feel a little lighter. What's on your mind?
+        - generic [ref=e909]:
+          - generic [ref=e910]: YOU · 12:17 PM
+          - generic [ref=e912]: Help me plan a focused afternoon
+        - generic [ref=e932]:
+          - generic [ref=e933]: NERU · 12:17 PM
+          - generic [ref=e935]: "Absolutely. Let's keep the week realistic: choose one important outcome, give it two focused sessions, and leave breathing room between them. What matters most?"
+      - generic [ref=e290]:
+        - generic [ref=e291] [cursor=pointer]:
+          - generic [ref=e292]: Plan my week
+          - generic [ref=e293]: 
+        - generic [ref=e294] [cursor=pointer]:
+          - generic [ref=e295]: Find my focus
+          - generic [ref=e296]: 
+        - generic [ref=e297] [cursor=pointer]:
+          - generic [ref=e298]: I need a break
+          - generic [ref=e299]: 
+      - generic [ref=e300]:
+        - textbox [ref=e941]:
+          - /placeholder: Tell NERU what's on your mind...
+        - button [disabled]:
+          - generic [ref=e302]: 
+      - generic [ref=e303]: PRIVATE SESSION · STORED ON THIS SCREEN ONLY
+    - generic [ref=e309]:
+      - generic [ref=e310]:
+        - generic [ref=e311]:
+          - generic [ref=e312]:
+            - button [ref=e957] [cursor=pointer]
+            - generic [ref=e324]:
+              - generic [ref=e325]: TASKS
+              - generic [ref=e326]: Thursday, September 17
+          - generic [ref=e327]:
+            - button [ref=e958] [cursor=pointer]:
+              - generic [ref=e329]: 
+              - generic [ref=e330]: Plan
+            - button [ref=e959] [cursor=pointer]:
+              - generic [ref=e332]: 
+        - generic [ref=e333]:
+          - generic [ref=e334]:
+            - generic [ref=e335]:
+              - generic [ref=e336]: 
+              - generic [ref=e337]: 0/0
+            - generic [ref=e338]: Stars lit
+          - generic [ref=e340]:
+            - generic [ref=e341]:
+              - generic [ref=e342]: "N"
+              - generic [ref=e344]: "1000"
+            - generic [ref=e345]: Coins
+          - generic [ref=e347]:
+            - generic [ref=e348]:
+              - generic [ref=e349]: 
+              - generic [ref=e350]: "0"
+            - generic [ref=e351]: Day streak
+      - tablist [ref=e352]:
+        - tab [ref=e960] [cursor=pointer]:
+          - generic [ref=e354]: 
+          - generic [ref=e355]: Morning
+        - tab [ref=e961] [cursor=pointer]:
+          - generic [ref=e357]: 
+          - generic [ref=e358]: Afternoon · 5h 42m
+        - tab [ref=e962] [cursor=pointer]:
+          - generic [ref=e360]: 
+          - generic [ref=e361]: Evening
+      - generic [ref=e362]:
+        - generic [ref=e363]:
+          - generic [ref=e364]: Routine gate
+          - generic [ref=e365]: 0/4
+        - generic [ref=e366]: Complete all routines to unlock your stars.
+        - generic [ref=e367]:
+          - checkbox [ref=e963] [cursor=pointer]:
+            - generic [ref=e369]: 
+            - generic [ref=e370]: Tidy workspace
+          - checkbox [ref=e964] [cursor=pointer]:
+            - generic [ref=e372]: 
+            - generic [ref=e373]: Drink water
+          - checkbox [ref=e965] [cursor=pointer]:
+            - generic [ref=e375]: 
+            - generic [ref=e376]: Quick stretch
+          - checkbox [ref=e966] [cursor=pointer]:
+            - generic [ref=e378]: 
+            - generic [ref=e379]: Eat a snack
+      - generic [ref=e380]:
+        - generic [ref=e381]:
+          - generic [ref=e382]: Afternoon tasks
+          - generic [ref=e383]: Complete the routine checklist to unlock
+        - generic [ref=e384]: 0/0
+      - generic [ref=e387]:
+        - generic [ref=e388]: 
+        - generic [ref=e389]:
+          - generic [ref=e390]: Nothing planned for afternoon
+          - generic [ref=e391]: Add tasks for any domain in Weekly Studio.
+        - button [ref=e967] [cursor=pointer]:
+          - generic [ref=e393]: Plan
+      - generic [ref=e394]:
+        - generic [ref=e395]:
+          - generic [ref=e396]: Your sky
+          - generic [ref=e397]: Completed tasks stay lit in place
+        - button [ref=e968] [cursor=pointer]:
+          - generic [ref=e399]: 
+          - generic [ref=e400]: Archive
+      - generic [ref=e401]: Create your first nebula to start mapping your sky.
+    - generic [ref=e414]:
+      - generic [ref=e415]:
+        - generic [ref=e416]:
+          - button [ref=e980] [cursor=pointer]
+          - generic [ref=e428]:
+            - generic [ref=e429]: GACHA
+            - generic [ref=e430]: Neru research lab
+        - generic [ref=e431]:
+          - generic [ref=e981]:
+            - generic [ref=e433]: "N"
+            - generic [ref=e435]: "1000"
+          - button [ref=e982] [cursor=pointer]:
+            - generic [ref=e437]: 
+      - generic [ref=e439]:
+        - generic [ref=e440]: GEN I / ACTIVE
+        - generic [ref=e441]: Kanto Origins
+        - generic [ref=e442]: Generation I · 151 species. Register every encounter in your personal Pokédex.
+        - generic [ref=e443]: 151 SPECIES IN CURRENT POOL
+      - generic [ref=e446]:
+        - generic [ref=e447]:
+          - generic [ref=e448]: LIVE RESEARCH
+          - generic [ref=e449]: Choose a banner
+        - generic [ref=e450]: 5 available
+      - generic [ref=e452]:
+        - radio [ref=e983] [cursor=pointer]:
+          - generic [ref=e455]:
+            - generic [ref=e456]: GEN I
+            - generic [ref=e457]: Kanto Origins
+            - generic [ref=e458]: Generation I · 151 species
+        - radio [ref=e984] [cursor=pointer]:
+          - generic [ref=e462]:
+            - generic [ref=e463]: GEN II
+            - generic [ref=e464]: Johto Journeys
+            - generic [ref=e465]: Generation II · 100 species
+        - radio [ref=e985] [cursor=pointer]:
+          - generic [ref=e469]:
+            - generic [ref=e470]: GEN III
+            - generic [ref=e471]: Hoenn Horizons
+            - generic [ref=e472]: Generation III · 135 species
+        - radio [ref=e986] [cursor=pointer]:
+          - generic [ref=e476]:
+            - generic [ref=e477]: GEN IV
+            - generic [ref=e478]: Sinnoh Myths
+            - generic [ref=e479]: Generation IV · 107 species
+        - radio [ref=e987] [cursor=pointer]:
+          - generic [ref=e483]:
+            - generic [ref=e484]: GEN V
+            - generic [ref=e485]: Unova Frontiers
+            - generic [ref=e486]: Generation V · 156 species
+      - generic [ref=e488]:
+        - generic [ref=e489]:
+          - generic [ref=e490]:
+            - generic [ref=e491]: SELECTED POOL
+            - generic [ref=e492]: Kanto Origins
+          - generic [ref=e493]:
+            - generic [ref=e494]: 1%
+            - generic [ref=e495]: TOP TIER
+        - generic [ref=e496]:
+          - generic [ref=e497]:
+            - generic [ref=e499]: Common
+            - generic [ref=e500]: 84%
+          - generic [ref=e501]:
+            - generic [ref=e503]: Rare
+            - generic [ref=e504]: 10%
+          - generic [ref=e505]:
+            - generic [ref=e507]: Epic
+            - generic [ref=e508]: 5%
+          - generic [ref=e509]:
+            - generic [ref=e511]: Legendary+
+            - generic [ref=e512]: 1%
+        - generic [ref=e513]:
+          - button [ref=e988] [cursor=pointer]:
+            - generic [ref=e515]: PULL ×1
+            - generic [ref=e516]: 20 N
+          - button [ref=e989] [cursor=pointer]:
+            - generic [ref=e518]: PULL ×10
+            - generic [ref=e519]: 180 N · SAVE 20
+      - generic [ref=e520]:
+        - generic [ref=e521]:
+          - generic [ref=e522]: FIELD ARCHIVE
+          - generic [ref=e523]: Your Pokédex
+        - button [ref=e990] [cursor=pointer]:
+          - generic [ref=e525]: View all
+          - generic [ref=e526]: 
+      - generic [ref=e527]:
+        - generic [ref=e528]:
+          - generic [ref=e529]: "00"
+          - generic [ref=e530]: REGISTERED
+        - generic [ref=e533]:
+          - generic [ref=e534]: 0 of 649 species
+          - generic [ref=e535]: 0%
+      - generic [ref=e537]:
+        - generic [ref=e538]: RECENTLY COLLECTED
+        - generic [ref=e539]: Newest first
+      - generic [ref=e540]:
+        - generic [ref=e541]: 
+        - generic [ref=e542]: No encounters registered
+        - generic [ref=e543]: Choose a live banner and make your first pull to begin the Pokédex.
+    - generic [ref=e550]:
+      - generic [ref=e551]:
+        - generic [ref=e552]:
+          - button "Play with NERU" [ref=e991] [cursor=pointer]
+          - generic [ref=e564]:
+            - generic [ref=e565]: DIARY
+            - generic [ref=e566]: Daily archive
+        - 'generic "Selected date: Thursday, September 17" [ref=e992]':
+          - generic [ref=e568]: Sep
+          - generic [ref=e569]: "17"
+      - generic [ref=e571]:
+        - generic [ref=e572]:
+          - generic [ref=e573]: 
+          - generic [ref=e575]:
+            - generic [ref=e576]: STICKER LAB
+            - generic [ref=e577]: Everything on the page can move, spin and resize.
+        - generic [ref=e578]:
+          - button "Choose Pokémon stickers" [ref=e993] [cursor=pointer]:
+            - generic [ref=e580]: 
+            - generic [ref=e581]: ADD
+          - button "Arrange all stickers" [ref=e994] [cursor=pointer]:
+            - generic [ref=e583]: 
+            - generic [ref=e584]: ARRANGE
+      - generic [ref=e585]:
+        - generic [ref=e586]:
+          - generic [ref=e587]:
+            - generic [ref=e588]: 
+            - generic [ref=e590]:
+              - generic [ref=e591]: OPEN ENTRY
+              - generic [ref=e592]: Thursday, September 17
+          - generic [ref=e593]:
+            - generic [ref=e594]:
+              - generic [ref=e595]: 
+              - generic [ref=e596]: SWIPE TO TURN
+            - generic [ref=e598]:
+              - generic [ref=e599]: 
+              - generic [ref=e600]: HOLD A CORNER
+        - generic [ref=e602]:
+          - generic [ref=e605]:
+            - generic [ref=e610]:
+              - generic [ref=e612]:
+                - generic [ref=e613]: THU
+                - generic [ref=e614]: "17"
+              - generic [ref=e616]:
+                - generic [ref=e617]: DAILY ARCHIVE / 2026
+                - generic [ref=e618]: September 17
+                - generic [ref=e619]: LIVE ENTRY
+              - generic [ref=e620]: KEEP THIS DAY
+            - generic [ref=e625]:
+              - generic [ref=e626]:
+                - generic [ref=e627]: QUEST REPORT
+                - generic [ref=e628]: 
+              - generic [ref=e630]:
+                - generic [ref=e631]: "0"
+                - generic [ref=e632]: /0
+              - generic [ref=e635]: 0% OF TODAY CLEARED
+            - button "Mood 😌. Change mood" [ref=e995] [cursor=pointer]:
+              - generic [ref=e639]:
+                - generic [ref=e644]: 
+                - generic [ref=e646]: CALM
+            - generic [ref=e651]:
+              - generic [ref=e652]: ✦
+              - generic [ref=e656]:
+                - generic [ref=e657]: TODAY'S LOOT
+                - generic [ref=e658]: +0 COINS
+            - generic [ref=e663]:
+              - generic [ref=e670]: 
+              - generic [ref=e672]:
+                - generic [ref=e673]: KEEP THE SPARK
+                - generic [ref=e674]: 0 DAY STREAK
+            - generic [ref=e679]:
+              - generic [ref=e680]: LEARNING
+              - generic [ref=e691]:
+                - generic [ref=e692]: Physics study
+                - generic [ref=e693]: ✦
+            - generic [ref=e698]:
+              - generic [ref=e699]: WORK
+              - generic [ref=e710]:
+                - generic [ref=e711]: Deep focus
+                - generic [ref=e712]: ✦
+            - generic [ref=e717]:
+              - generic [ref=e718]: MUSIC
+              - generic [ref=e729]:
+                - generic [ref=e730]: Guitar practice
+                - generic [ref=e731]: ✦
+            - generic [ref=e736]:
+              - generic [ref=e746]:
+                - generic [ref=e747]: Dear future me,
+                - generic [ref=e748]: 
+              - textbox "Diary note to yourself" [ref=e996]:
+                - /placeholder: Write the tiny thing you never want to forget...
+              - generic [ref=e751]: ARCHIVED ✓
+            - generic [ref=e759]:
+              - generic [ref=e762]: 
+              - generic [ref=e764]: "0"
+              - generic [ref=e765]: TASKS
+            - generic [ref=e770]:
+              - generic [ref=e773]: 
+              - generic [ref=e775]: "0"
+              - generic [ref=e776]: HABITS
+            - generic [ref=e781]:
+              - generic [ref=e784]: 
+              - generic [ref=e786]: 0%
+              - generic [ref=e787]: COMPLETE
+            - generic [ref=e791]:
+              - generic [ref=e792]: 
+              - generic [ref=e793]: GOOD SIGNAL
+            - generic [ref=e797]:
+              - generic [ref=e798]: 
+              - generic [ref=e799]: MOMENTUM
+            - generic [ref=e803]:
+              - generic [ref=e804]: 
+              - generic [ref=e805]: YES!
+            - generic [ref=e809]:
+              - generic [ref=e810]: 
+              - generic [ref=e811]: PROUD OF U
+            - generic [ref=e815]:
+              - generic [ref=e816]: 
+              - generic [ref=e817]: ONWARD
+          - button "Previous diary day" [ref=e997] [cursor=pointer]:
+            - generic [ref=e819]: 
+            - generic [ref=e820]: HOLD
+          - button "Choose another diary date" [ref=e998] [cursor=pointer]:
+            - generic [ref=e822]: 
+            - generic [ref=e823]: HOLD
+  - tablist [ref=e824]:
+    - tab "Control" [ref=e825] [cursor=pointer]:
+      - generic [ref=e826]: 
+      - generic [ref=e828]: CONTROL
+    - tab "Chat" [ref=e829] [cursor=pointer]:
+      - generic [ref=e830]: 
+      - generic [ref=e832]: CHAT
+    - tab "Tasks" [ref=e833] [cursor=pointer]:
+      - generic [ref=e834]: 
+      - generic [ref=e836]: TASKS
+    - tab "Gacha" [ref=e837] [cursor=pointer]:
+      - generic [ref=e838]: 
+      - generic [ref=e840]: GACHA
+    - tab "Diary" [active] [ref=e841] [cursor=pointer]:
+      - generic [ref=e842]: 
+      - generic [ref=e844]: DIARY

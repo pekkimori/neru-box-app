@@ -1,15 +1,18 @@
+import Animated from 'react-native-reanimated';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Animated,
+  Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
 
-import { MotionModal as Modal, MotionPressable } from "@/components/motion";
-import { useAppTheme, useThemedStyles } from "@/features/control/app-theme";
+import { MotionModal as Modal } from "@/components/motion";
+import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { useDraggableDrawer } from "@/hooks/useDraggableDrawer";
 import type { InstalledApp } from "./model";
 import { controlStyles } from "./styles";
@@ -28,8 +31,7 @@ export function EditorModal({
   children: React.ReactNode;
 }) {
   const styles = useThemedStyles(controlStyles);
-  const { colors: Palette } = useAppTheme();
-  const { backdropOpacity, closeDrawer, panHandlers, translateY } =
+  const { backdropStyle, closeDrawer, panGesture, sheetStyle } =
     useDraggableDrawer({
       visible,
       onClose,
@@ -42,10 +44,10 @@ export function EditorModal({
       transparent
       onRequestClose={closeDrawer}
     >
-      <View style={styles.editorModalRoot}>
+      <GestureHandlerRootView style={styles.editorModalRoot}>
         <Animated.View
           pointerEvents="box-none"
-          style={[styles.editorBackdrop, { opacity: backdropOpacity }]}
+          style={[styles.editorBackdrop, backdropStyle]}
         >
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -57,39 +59,29 @@ export function EditorModal({
           accessibilityViewIsModal
           style={[
             styles.editorSheet,
-            { transform: [{ translateY }] },
+            sheetStyle,
           ]}
         >
-          <View
-            {...panHandlers}
-            collapsable={false}
-            style={styles.editorDragArea}
-          >
-            <View style={styles.editorHandle} />
-            <View style={styles.editorHeader}>
-              <View style={styles.editorTitleGroup}>
-                <Text style={styles.editorEyebrow}>CONTROL / SETTINGS</Text>
-                <Text style={styles.editorTitle}>{title}</Text>
-                {subtitle ? (
-                  <Text style={styles.editorSubtitle}>{subtitle}</Text>
-                ) : null}
+          <GestureDetector gesture={panGesture}>
+            <View
+              collapsable={false}
+              style={styles.editorDragArea}
+            >
+              <View style={styles.editorGrabArea}><View style={styles.editorHandle} /></View>
+              <View style={styles.editorHeader}>
+                <View style={styles.editorTitleGroup}>
+                  <Text style={styles.editorEyebrow}>CONTROL / SETTINGS</Text>
+                  <Text style={styles.editorTitle}>{title}</Text>
+                  {subtitle ? (
+                    <Text style={styles.editorSubtitle}>{subtitle}</Text>
+                  ) : null}
+                </View>
               </View>
-              <MotionPressable
-                accessibilityRole="button"
-                accessibilityLabel={`Close ${title}`}
-                onPress={closeDrawer}
-                style={({ pressed }) => [
-                  styles.editorClose,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="close" size={22} color={Palette.ink} />
-              </MotionPressable>
             </View>
-          </View>
+          </GestureDetector>
           <View style={styles.editorBody}>{children}</View>
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -107,16 +99,22 @@ export function ToggleSwitch({
   onValueChange: (value: boolean) => void;
 }) {
   const styles = useThemedStyles(controlStyles);
+  const { colors } = useAppTheme();
 
   return (
-    <MotionPressable
+    <Switch
+      {...(Platform.OS === "web"
+        ? { activeThumbColor: colors.onAccent }
+        : {})}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
-      onPress={() => onValueChange(!value)}
-      style={[styles.toggleTrack, value && styles.toggleTrackActive]}
-    >
-      <View style={[styles.toggleThumb, value && styles.toggleThumbActive]} />
-    </MotionPressable>
+      ios_backgroundColor={colors.line}
+      onValueChange={onValueChange}
+      thumbColor={value ? colors.onAccent : colors.surfaceRaised}
+      trackColor={{ false: colors.line, true: colors.accent }}
+      value={value}
+      style={styles.nativeSwitch}
+    />
   );
 }
 

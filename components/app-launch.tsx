@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   Extrapolation,
   ReduceMotion,
@@ -14,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import type { EditorialPalette } from '@/constants/editorial-theme';
+import type { EditorialPalette } from '@/theme/editorial-theme';
 
 const LAUNCH_DURATION = 1350;
 const MODULES = ['CONTROL', 'CHAT', 'TASKS', 'GACHA', 'DIARY'] as const;
@@ -97,6 +98,7 @@ export function AppLaunch({ colors, ready, onFinish }: AppLaunchProps) {
       -1,
       true,
     );
+    return () => cancelAnimation(idle);
   }, [idle]);
 
   useEffect(() => {
@@ -392,7 +394,7 @@ export function AppLaunch({ colors, ready, onFinish }: AppLaunchProps) {
 
 const styles = StyleSheet.create({
   veil: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1000,
     elevation: 1000,
     overflow: 'hidden',
@@ -523,11 +525,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   moduleTrack: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 2,
   },
   moduleSignal: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 2,
   },
   statusRow: {

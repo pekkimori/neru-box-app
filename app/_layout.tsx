@@ -1,12 +1,12 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { AppLaunch } from '@/components/app-launch';
-import { AppThemeProvider, useAppTheme } from '@/features/control/app-theme';
+import { AppThemeProvider, useAppTheme } from '@/theme/app-theme';
 import { prepareInteractionFeedback } from '@/utils/interaction-feedback';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -18,9 +18,20 @@ export const unstable_settings = {
 function ThemedRootLayout() {
   const { appearance, colors, loaded } = useAppTheme();
   const [launchVisible, setLaunchVisible] = useState(true);
+  const [feedbackReady, setFeedbackReady] = useState(false);
 
   useEffect(() => {
-    prepareInteractionFeedback();
+    let mounted = true;
+    void prepareInteractionFeedback().finally(() => {
+      if (mounted) setFeedbackReady(true);
+    });
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void prepareInteractionFeedback();
+    });
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -63,7 +74,7 @@ function ThemedRootLayout() {
         </View>
 
         {launchVisible && (
-          <AppLaunch colors={colors} ready={loaded} onFinish={finishLaunch} />
+          <AppLaunch colors={colors} ready={loaded && feedbackReady} onFinish={finishLaunch} />
         )}
 
         <StatusBar style={appearance.mode === 'dark' ? 'light' : 'dark'} />

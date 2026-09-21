@@ -5,15 +5,13 @@ import { loadAllStoredPlans } from '../plan-repository';
 import { calculateProductivityStreak } from './productivity-streak';
 
 export function useProductivityStreak(livePlan: DailyPlan, liveToday: string) {
-  const [savedProductiveDates, setSavedProductiveDates] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [loaded, setLoaded] = useState(false);
+  const [history, setHistory] = useState<{
+    dates: Set<string>;
+    loaded: boolean;
+  }>(() => ({ dates: new Set(), loaded: false }));
 
   useEffect(() => {
     let cancelled = false;
-    setLoaded(false);
-
     const loadProductiveDates = async () => {
       const productiveDates = new Set<string>();
       try {
@@ -26,22 +24,21 @@ export function useProductivityStreak(livePlan: DailyPlan, liveToday: string) {
         // Start from an empty history if storage cannot be read.
       } finally {
         if (!cancelled) {
-          setSavedProductiveDates(productiveDates);
-          setLoaded(true);
+          setHistory({ dates: productiveDates, loaded: true });
         }
       }
     };
 
     void loadProductiveDates();
     return () => { cancelled = true; };
-  }, [liveToday]);
+  }, []);
 
   const streak = useMemo(() => {
-    const productiveDates = new Set(savedProductiveDates);
+    const productiveDates = new Set(history.dates);
     if (planHasLitTask(livePlan)) productiveDates.add(liveToday);
     else productiveDates.delete(liveToday);
     return calculateProductivityStreak(productiveDates, liveToday);
-  }, [livePlan, liveToday, savedProductiveDates]);
+  }, [history.dates, livePlan, liveToday]);
 
-  return { streak, loaded } as const;
+  return { streak, loaded: history.loaded } as const;
 }

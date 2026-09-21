@@ -67,7 +67,9 @@ export function useGalaxyPanZoom({
   screenH,
 }: UseGalaxyPanZoomOpts) {
   const viewBoxRef = useRef(viewBox);
-  viewBoxRef.current = viewBox;
+  useEffect(() => {
+    viewBoxRef.current = viewBox;
+  }, [viewBox]);
 
   const pinchBase = useRef<number | null>(null);
   const pinchVb = useRef<ViewBox | null>(null);
@@ -82,6 +84,9 @@ export function useGalaxyPanZoom({
     if (tapTimer.current) clearTimeout(tapTimer.current);
   }, []);
 
+  // PanResponder stores callbacks without running them during render. The
+  // refs and clock access below are used only in native gesture events.
+  /* eslint-disable react-hooks/refs, react-hooks/purity */
   const panResponder = useMemo(
     () => {
       const beginPinch = (touches: readonly TouchState[]) => {
@@ -93,7 +98,7 @@ export function useGalaxyPanZoom({
         const baseViewBox = { ...viewBoxRef.current };
 
         gestureMoved.current = true;
-        pinchBase.current = touchDist(a, b);
+        pinchBase.current = Math.max(1, touchDist(a, b));
         pinchVb.current = baseViewBox;
         pinchAnchorSVG.current = screenToSvg(
           baseViewBox,
@@ -148,24 +153,27 @@ export function useGalaxyPanZoom({
             gestureMoved.current = true;
             const a = touches[0];
             const b = touches[1];
-            const d = touchDist(a, b);
-            const scale = pinchBase.current / d;
+            const d = Math.max(1, touchDist(a, b));
+            // React may apply a state update after the release callback has
+            // cleared these refs. Snapshot every gesture value synchronously
+            // instead of reading nullable refs inside the queued updater.
+            const baseDistance = pinchBase.current;
+            const anchor = pinchAnchorSVG.current;
+            const vb = pinchVb.current;
+            if (baseDistance === null || !anchor || !vb || vb.w <= 0) return;
 
-            setViewBox(() => {
-              const anchor = pinchAnchorSVG.current!;
-              const vb = pinchVb.current!;
-              const nextW = Math.min(
-                Math.max(vb.w * scale, fullExtent.w * 0.3),
-                fullExtent.w * 3,
-              );
-              const nextH = nextW * (vb.h / vb.w);
-              const ratio = nextW / vb.w;
-              return {
-                x: anchor.x - (anchor.x - vb.x) * ratio,
-                y: anchor.y - (anchor.y - vb.y) * ratio,
-                w: nextW,
-                h: nextH,
-              };
+            const scale = baseDistance / d;
+            const nextW = Math.min(
+              Math.max(vb.w * scale, fullExtent.w * 0.3),
+              fullExtent.w * 3,
+            );
+            const nextH = nextW * (vb.h / vb.w);
+            const ratio = nextW / vb.w;
+            setViewBox({
+              x: anchor.x - (anchor.x - vb.x) * ratio,
+              y: anchor.y - (anchor.y - vb.y) * ratio,
+              w: nextW,
+              h: nextH,
             });
           } else if (panStart.current && screenW > 0 && screenH > 0) {
             if (
@@ -243,6 +251,7 @@ export function useGalaxyPanZoom({
     },
     [fullExtent.w, screenW, screenH, setViewBox, onTapStar, onDoubleTap, onInteractionStart],
   );
+  /* eslint-enable react-hooks/refs, react-hooks/purity */
 
   return panResponder;
 }

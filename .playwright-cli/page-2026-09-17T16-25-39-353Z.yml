@@ -1,0 +1,126 @@
+- generic [ref=e1]:
+  - generic [ref=e263]:
+    - generic [ref=e270]:
+      - generic [ref=e271]:
+        - generic [ref=e272]:
+          - generic [ref=e273]: DIARY
+          - 'button "Selected date: Thursday, September 17. Choose another date" [ref=e274] [cursor=pointer]':
+            - generic [ref=e275]: Thursday, September 17
+            - generic [ref=e1031]: 
+        - button "Edit diary" [ref=e1032] [cursor=pointer]:
+          - generic [ref=e279]: 
+          - generic [ref=e280]: EDIT
+      - generic [ref=e286]:
+        - generic [ref=e291]:
+          - generic [ref=e293]:
+            - generic [ref=e294]: THU
+            - generic [ref=e295]: "17"
+          - generic [ref=e297]:
+            - generic [ref=e298]: DAILY ARCHIVE / 2026
+            - generic [ref=e299]: September 17
+            - generic [ref=e300]: LIVE ENTRY
+          - generic [ref=e301]: KEEP THIS DAY
+        - generic [ref=e306]:
+          - generic [ref=e307]:
+            - generic [ref=e308]: QUEST REPORT
+            - generic [ref=e309]: 
+          - generic [ref=e311]:
+            - generic [ref=e312]: "0"
+            - generic [ref=e313]: /0
+          - generic [ref=e315]: 0% OF TODAY CLEARED
+        - generic [ref=e317]:
+          - button "Mood 😌. Change mood" [disabled]:
+            - generic [ref=e318]:
+              - generic [ref=e323]: 
+              - generic [ref=e325]: CALM
+        - generic [ref=e330]:
+          - generic [ref=e331]: ✦
+          - generic [ref=e335]:
+            - generic [ref=e336]: TODAY'S LOOT
+            - generic [ref=e337]: +0 COINS
+        - generic [ref=e342]:
+          - generic [ref=e349]: 
+          - generic [ref=e351]:
+            - generic [ref=e352]: KEEP THE SPARK
+            - generic [ref=e353]: 0 DAY STREAK
+        - generic [ref=e358]:
+          - generic [ref=e359]: LEARNING
+          - generic [ref=e369]:
+            - generic [ref=e370]: Physics study
+            - generic [ref=e371]: ✦
+        - generic [ref=e376]:
+          - generic [ref=e377]: WORK
+          - generic [ref=e387]:
+            - generic [ref=e388]: Deep focus
+            - generic [ref=e389]: ✦
+        - generic [ref=e394]:
+          - generic [ref=e395]: MUSIC
+          - generic [ref=e405]:
+            - generic [ref=e406]: Guitar practice
+            - generic [ref=e407]: ✦
+        - generic [ref=e412]:
+          - generic [ref=e422]:
+            - generic [ref=e423]: Dear future me,
+            - generic [ref=e424]: 
+          - textbox "Diary note to yourself" [ref=e426]:
+            - /placeholder: Write the tiny thing you never want to forget...
+          - generic [ref=e427]: ARCHIVED ✓
+        - generic [ref=e435]:
+          - generic [ref=e438]: 
+          - generic [ref=e440]: "0"
+          - generic [ref=e441]: TASKS
+        - generic [ref=e446]:
+          - generic [ref=e449]: 
+          - generic [ref=e451]: "0"
+          - generic [ref=e452]: HABITS
+        - generic [ref=e457]:
+          - generic [ref=e460]: 
+          - generic [ref=e462]: 0%
+          - generic [ref=e463]: COMPLETE
+        - generic [ref=e467]:
+          - generic [ref=e468]: 
+          - generic [ref=e469]: GOOD SIGNAL
+        - generic [ref=e473]:
+          - generic [ref=e474]: 
+          - generic [ref=e475]: MOMENTUM
+        - generic [ref=e479]:
+          - generic [ref=e480]: 
+          - generic [ref=e481]: YES!
+        - generic [ref=e485]:
+          - generic [ref=e486]: 
+          - generic [ref=e487]: PROUD OF U
+        - generic [ref=e491]:
+          - generic [ref=e492]: 
+          - generic [ref=e493]: ONWARD
+    - tablist [ref=e494]:
+      - tab "Control" [ref=e495] [cursor=pointer]:
+        - generic [ref=e496]: 
+        - generic [ref=e498]: CONTROL
+      - tab "Chat" [ref=e499] [cursor=pointer]:
+        - generic [ref=e500]: 
+        - generic [ref=e502]: CHAT
+      - tab "Tasks" [ref=e503] [cursor=pointer]:
+        - generic [ref=e504]: 
+        - generic [ref=e506]: TASKS
+      - tab "Gacha" [ref=e507] [cursor=pointer]:
+        - generic [ref=e508]: 
+        - generic [ref=e510]: GACHA
+      - tab "Diary" [ref=e511] [cursor=pointer]:
+        - generic [ref=e512]: 
+        - generic [ref=e514]: DIARY
+  - dialog [ref=e1034]:
+    - generic [ref=e1037]:
+      - generic [active] [ref=e1038] [cursor=pointer]
+      - generic [ref=e1039]:
+        - generic [ref=e1040]: 
+        - generic [ref=e1042]: JUMP THROUGH YOUR DIARY
+        - generic [ref=e1043]: Which day do you want to visit?
+        - generic [ref=e1044]: Enter any day up to today.
+        - textbox "Diary date" [ref=e1045]:
+          - /placeholder: YYYY-MM-DD
+          - text: 2026-09-17
+        - generic [ref=e1046]:
+          - generic [ref=e1047] [cursor=pointer]: CANCEL
+          - generic [ref=e1049] [cursor=pointer]:
+            - generic [ref=e1050]: VISIT DAY
+            - generic [ref=e1051]: 

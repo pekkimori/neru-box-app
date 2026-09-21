@@ -1,6 +1,6 @@
 import { Platform, type TextStyle } from 'react-native';
 
-export const Fonts = Platform.select({
+const Fonts = Platform.select({
   ios: {
     sans: 'system-ui',
     serif: 'ui-serif',

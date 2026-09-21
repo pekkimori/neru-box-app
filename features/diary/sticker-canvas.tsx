@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
@@ -48,9 +48,29 @@ type TransformableStickerProps = {
   hitShape?: StickerHitShape;
   zIndex?: number;
   children: React.ReactNode;
+  onActivate?: () => void;
   onSelect: (id: string) => void;
   onChange: (id: string, patch: Partial<StickerTransform>) => void;
 };
+
+type TouchPoint = { pageX: number; pageY: number };
+
+function getTwoFingerTransform(touches: readonly TouchPoint[]) {
+  if (touches.length < 2) return null;
+  const [first, second] = touches;
+  const deltaX = second.pageX - first.pageX;
+  const deltaY = second.pageY - first.pageY;
+  return {
+    angle: Math.atan2(deltaY, deltaX),
+    centerX: (first.pageX + second.pageX) / 2,
+    centerY: (first.pageY + second.pageY) / 2,
+    distance: Math.max(1, Math.hypot(deltaX, deltaY)),
+  };
+}
+
+function normalizeRotation(value: number) {
+  return ((((value + 180) % 360) + 360) % 360) - 180;
+}
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.max(minimum, Math.min(maximum, value));
@@ -217,22 +237,40 @@ export function TransformableSticker({
   hitShape = DEFAULT_HIT_SHAPE,
   zIndex = 1,
   children,
+  onActivate,
   onSelect,
   onChange,
 }: TransformableStickerProps) {
-  const position = useRef(new Animated.ValueXY()).current;
+  const [position] = useState(() => new Animated.ValueXY());
+  const [rotation] = useState(() => new Animated.Value(transform.rotation));
+  const [stickerScale] = useState(() => new Animated.Value(transform.scale));
   const pixelPosition = useRef({ x: 0, y: 0 });
   const dragOrigin = useRef({ x: 0, y: 0 });
-  const halfExtents = transformedHalfExtents(
-    width,
-    height,
-    transform.rotation,
-    transform.scale,
-    hitShape,
-  );
+  const liveTransform = useRef({ rotation: transform.rotation, scale: transform.scale });
+  const usedMultiTouch = useRef(false);
+  const multiTouchStart = useRef<{
+    angle: number;
+    centerX: number;
+    centerY: number;
+    distance: number;
+    position: { x: number; y: number };
+    rotation: number;
+    scale: number;
+  } | null>(null);
   const hitTiles = createHitTiles(width, height, hitShape);
 
-  const constrainTopLeft = useCallback((topLeft: { x: number; y: number }) => {
+  const constrainTopLeft = useCallback((
+    topLeft: { x: number; y: number },
+    nextRotation = transform.rotation,
+    nextScale = transform.scale,
+  ) => {
+    const halfExtents = transformedHalfExtents(
+      width,
+      height,
+      nextRotation,
+      nextScale,
+      hitShape,
+    );
     const requestedCenterX = topLeft.x + (width / 2);
     const requestedCenterY = topLeft.y + (height / 2);
     const centerX = halfExtents.x * 2 >= DIARY_ARTBOARD_WIDTH
@@ -245,7 +283,7 @@ export function TransformableSticker({
       x: centerX - (width / 2),
       y: centerY - (height / 2),
     };
-  }, [halfExtents.x, halfExtents.y, height, width]);
+  }, [height, hitShape, transform.rotation, transform.scale, width]);
 
   useEffect(() => {
     const legacyMaxX = Math.max(0, DIARY_ARTBOARD_WIDTH - width);
@@ -262,8 +300,13 @@ export function TransformableSticker({
     });
     pixelPosition.current = next;
     position.setValue(next);
-  }, [constrainTopLeft, height, position, transform.anchor, transform.x, transform.y, width]);
+    liveTransform.current = { rotation: transform.rotation, scale: transform.scale };
+    rotation.setValue(transform.rotation);
+    stickerScale.setValue(transform.scale);
+  }, [constrainTopLeft, height, position, rotation, stickerScale, transform.anchor, transform.rotation, transform.scale, transform.x, transform.y, width]);
 
+  // PanResponder stores these handlers; ref reads occur only after a gesture.
+  /* eslint-disable react-hooks/refs */
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponderCapture: () => arranging,
     onStartShouldSetPanResponder: () => arranging,
@@ -271,38 +314,87 @@ export function TransformableSticker({
       arranging
       && (Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3)
     ),
-    onPanResponderGrant: () => {
+    onPanResponderGrant: (event) => {
       playTapFeedback();
       dragOrigin.current = pixelPosition.current;
+      usedMultiTouch.current = false;
+      liveTransform.current = { rotation: transform.rotation, scale: transform.scale };
+      const twoFinger = getTwoFingerTransform(event.nativeEvent.touches);
+      multiTouchStart.current = twoFinger
+        ? {
+          ...twoFinger,
+          position: pixelPosition.current,
+          rotation: transform.rotation,
+          scale: transform.scale,
+        }
+        : null;
       onSelect(id);
     },
-    onPanResponderMove: (_, gestureState) => {
+    onPanResponderMove: (event, gestureState) => {
       if (!arranging) return;
-      const scale = Math.max(0.1, interactionScale);
+      const interaction = Math.max(0.1, interactionScale);
+      const twoFinger = getTwoFingerTransform(event.nativeEvent.touches);
+      if (twoFinger) {
+        usedMultiTouch.current = true;
+        if (!multiTouchStart.current) {
+          multiTouchStart.current = {
+            ...twoFinger,
+            position: pixelPosition.current,
+            rotation: liveTransform.current.rotation,
+            scale: liveTransform.current.scale,
+          };
+        }
+        const start = multiTouchStart.current;
+        const nextScale = clamp(start.scale * (twoFinger.distance / start.distance), 0.55, 1.8);
+        const nextRotation = normalizeRotation(
+          start.rotation + ((twoFinger.angle - start.angle) * 180) / Math.PI,
+        );
+        const next = constrainTopLeft({
+          x: start.position.x + ((twoFinger.centerX - start.centerX) / interaction),
+          y: start.position.y + ((twoFinger.centerY - start.centerY) / interaction),
+        }, nextRotation, nextScale);
+        liveTransform.current = { rotation: nextRotation, scale: nextScale };
+        pixelPosition.current = next;
+        position.setValue(next);
+        rotation.setValue(nextRotation);
+        stickerScale.setValue(nextScale);
+        return;
+      }
+      if (usedMultiTouch.current) return;
+      multiTouchStart.current = null;
       const next = constrainTopLeft({
-        x: dragOrigin.current.x + (gestureState.dx / scale),
-        y: dragOrigin.current.y + (gestureState.dy / scale),
-      });
+        x: dragOrigin.current.x + (gestureState.dx / interaction),
+        y: dragOrigin.current.y + (gestureState.dy / interaction),
+      }, liveTransform.current.rotation, liveTransform.current.scale);
       pixelPosition.current = next;
       position.setValue(next);
     },
     onPanResponderRelease: (_, gestureState) => {
-      const scale = Math.max(0.1, interactionScale);
-      const next = constrainTopLeft({
-        x: dragOrigin.current.x + (gestureState.dx / scale),
-        y: dragOrigin.current.y + (gestureState.dy / scale),
-      });
+      const wasMultiTouch = usedMultiTouch.current;
+      const next = constrainTopLeft(
+        pixelPosition.current,
+        liveTransform.current.rotation,
+        liveTransform.current.scale,
+      );
+      multiTouchStart.current = null;
+      usedMultiTouch.current = false;
       pixelPosition.current = next;
       position.setValue(next);
+      if (!wasMultiTouch && Math.abs(gestureState.dx) < 4 && Math.abs(gestureState.dy) < 4) {
+        onActivate?.();
+      }
       onChange(id, {
         x: (next.x + (width / 2)) / DIARY_ARTBOARD_WIDTH,
         y: (next.y + (height / 2)) / DIARY_ARTBOARD_HEIGHT,
         anchor: 'center',
+        rotation: liveTransform.current.rotation,
+        scale: liveTransform.current.scale,
       });
     },
     onPanResponderTerminationRequest: () => !arranging,
     onShouldBlockNativeResponder: () => arranging,
-  }), [arranging, constrainTopLeft, height, id, interactionScale, onChange, onSelect, position, width]);
+  }), [arranging, constrainTopLeft, height, id, interactionScale, onActivate, onChange, onSelect, position, rotation, stickerScale, transform.rotation, transform.scale, width]);
+  /* eslint-enable react-hooks/refs */
 
   return (
     <Animated.View
@@ -320,7 +412,7 @@ export function TransformableSticker({
         },
       ]}
     >
-      <View
+      <Animated.View
         pointerEvents={arranging ? 'box-none' : 'auto'}
         accessible={arranging}
         accessibilityLabel={arranging ? `Select ${label} sticker to arrange` : undefined}
@@ -331,8 +423,13 @@ export function TransformableSticker({
             width,
             height,
             transform: [
-              { rotate: `${transform.rotation}deg` },
-              { scale: transform.scale },
+              {
+                rotate: rotation.interpolate({
+                  inputRange: [-180, 180],
+                  outputRange: ['-180deg', '180deg'],
+                }),
+              },
+              { scale: stickerScale },
             ],
           },
         ]}
@@ -354,7 +451,7 @@ export function TransformableSticker({
                 <View style={[styles.selectionDot, styles.selectionDotBottomLeft]} />
                 <View style={[styles.selectionDot, styles.selectionDotBottomRight]} />
                 <View style={styles.movePill}>
-                  <Text style={styles.movePillText}>MOVE</Text>
+                  <Text style={styles.movePillText}>PINCH · TWIST</Text>
                 </View>
               </>
             ) : null}
@@ -370,7 +467,7 @@ export function TransformableSticker({
             style={[styles.hitTile, tile]}
           />
         )) : null}
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -386,7 +483,7 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   stickerContent: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   hitTile: {
     position: 'absolute',
@@ -394,10 +491,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   selectionLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 50,
   },
-  selectionOutline: { ...StyleSheet.absoluteFillObject },
+  selectionOutline: { ...StyleSheet.absoluteFill },
   selectionDot: {
     position: 'absolute',
     width: 10,
@@ -415,9 +512,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -25,
     left: '50%',
-    minWidth: 46,
+    minWidth: 88,
     height: 20,
-    marginLeft: -23,
+    marginLeft: -44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,

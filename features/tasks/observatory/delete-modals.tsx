@@ -2,8 +2,8 @@
 import { Pressable, Text, View } from 'react-native';
 import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
 import { Ionicons } from '@expo/vector-icons';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { useThemedStyles } from '@/features/control/app-theme';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 import { Palette, Sp, R, useTasksPalette } from '../tokens';
 
 // ── Shared styles ─────────────────────────────────────────────────────

@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Keyboard, useWindowDimensions } from 'react-native';
+import { Gesture } from 'react-native-gesture-handler';
 import {
-  Animated,
+  cancelAnimation,
   Easing,
-  Keyboard,
-  PanResponder,
-  useWindowDimensions,
-} from 'react-native';
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
-const DRAWER_DISMISS_DISTANCE = 110;
-const DRAWER_DISMISS_VELOCITY = 0.9;
+const OPEN_SPRING = { damping: 24, stiffness: 260, mass: 0.9, overshootClamping: true };
 
 export function useDraggableDrawer({
   visible,
@@ -21,116 +24,86 @@ export function useDraggableDrawer({
 }) {
   const { height: windowHeight } = useWindowDimensions();
   const closedOffset = Math.max(windowHeight, 640);
-  const translateY = useRef(new Animated.Value(closedOffset)).current;
-  const closing = useRef(false);
+  const translateY = useSharedValue(closedOffset);
+  const dragStart = useSharedValue(0);
+  const closing = useSharedValue(false);
+  const visibleRef = useRef(visible);
+  const closedOffsetRef = useRef(closedOffset);
   const onCloseRef = useRef(onClose);
   const onBeforeCloseRef = useRef(onBeforeClose);
-
   useEffect(() => {
+    visibleRef.current = visible;
+    closedOffsetRef.current = closedOffset;
     onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
     onBeforeCloseRef.current = onBeforeClose;
-  }, [onBeforeClose]);
+  }, [closedOffset, onBeforeClose, onClose, visible]);
 
   useEffect(() => {
-    translateY.stopAnimation();
-
+    closing.set(false);
     if (visible) {
-      closing.current = false;
-      translateY.setValue(closedOffset);
-      Animated.spring(translateY, {
-        toValue: 0,
-        damping: 24,
-        stiffness: 260,
-        mass: 0.9,
-        overshootClamping: true,
-        useNativeDriver: true,
-      }).start();
-      return;
+      translateY.set(closedOffsetRef.current);
+      translateY.set(withSpring(0, OPEN_SPRING));
+    } else {
+      translateY.set(closedOffsetRef.current);
     }
+    return () => cancelAnimation(translateY);
+    // Keyboard/rotation height changes must not restart the entrance mid-drag.
+  }, [closing, translateY, visible]);
 
-    Animated.timing(translateY, {
-      toValue: closedOffset,
-      duration: 180,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [closedOffset, translateY, visible]);
-
-  const snapOpen = useCallback(() => {
-    Animated.spring(translateY, {
-      toValue: 0,
-      damping: 22,
-      stiffness: 300,
-      mass: 0.85,
-      overshootClamping: true,
-      useNativeDriver: true,
-    }).start();
-  }, [translateY]);
+  const finishClose = useCallback(() => {
+    if (visibleRef.current) onCloseRef.current();
+  }, []);
 
   const closeDrawer = useCallback(() => {
-    if (!visible || closing.current) return;
+    if (!visibleRef.current || closing.get()) return;
     if (onBeforeCloseRef.current && !onBeforeCloseRef.current()) {
-      snapOpen();
+      translateY.set(withSpring(0, OPEN_SPRING));
       return;
     }
-
-    closing.current = true;
+    closing.set(true);
     Keyboard.dismiss();
-    translateY.stopAnimation();
-    Animated.timing(translateY, {
-      toValue: closedOffset,
+    translateY.set(withTiming(closedOffsetRef.current, {
       duration: 220,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        onCloseRef.current();
+    }, (finished) => {
+      if (finished) runOnJS(finishClose)();
+    }));
+  }, [closing, finishClose, translateY]);
+
+  const dismissKeyboard = useCallback(() => Keyboard.dismiss(), []);
+  // Gesture.Pan stores worklet callbacks; it does not invoke them while the
+  // gesture object is assembled during render.
+  /* eslint-disable react-hooks/refs */
+  const panGesture = useMemo(() => Gesture.Pan()
+    .enabled(visible)
+    .activeOffsetY(5)
+    .failOffsetX([-20, 20])
+    .onStart(() => {
+      if (closing.get()) return;
+      cancelAnimation(translateY);
+      dragStart.set(translateY.get());
+      runOnJS(dismissKeyboard)();
+    })
+    .onUpdate((event) => {
+      if (!closing.get()) translateY.set(Math.max(0, dragStart.get() + event.translationY));
+    })
+    .onEnd((event) => {
+      if (closing.get()) return;
+      if (event.translationY > 110 || (event.translationY > 0 && event.velocityY > 900)) {
+        runOnJS(closeDrawer)();
       } else {
-        closing.current = false;
+        translateY.set(withSpring(0, OPEN_SPRING));
       }
-    });
-  }, [closedOffset, snapOpen, translateY, visible]);
+    })
+    .onFinalize((_event, success) => {
+      if (!success && !closing.get()) translateY.set(withSpring(0, OPEN_SPRING));
+    }), [closeDrawer, closing, dismissKeyboard, dragStart, translateY, visible]);
+  /* eslint-enable react-hooks/refs */
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-        onPanResponderGrant: () => {
-          Keyboard.dismiss();
-          translateY.stopAnimation();
-        },
-        onPanResponderMove: (_, gesture) => {
-          translateY.setValue(Math.max(0, gesture.dy));
-        },
-        onPanResponderRelease: (_, gesture) => {
-          if (
-            gesture.dy > DRAWER_DISMISS_DISTANCE ||
-            gesture.vy > DRAWER_DISMISS_VELOCITY
-          ) {
-            closeDrawer();
-            return;
-          }
-          snapOpen();
-        },
-        onPanResponderTerminate: snapOpen,
-      }),
-    [closeDrawer, snapOpen, translateY],
-  );
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: Math.max(0, Math.min(1, 1 - translateY.value / closedOffset)),
+  }));
 
-  const backdropOpacity = translateY.interpolate({
-    inputRange: [0, closedOffset],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  return {
-    backdropOpacity,
-    closeDrawer,
-    panHandlers: panResponder.panHandlers,
-    translateY,
-  };
+  return { backdropStyle, closeDrawer, panGesture, sheetStyle };
 }

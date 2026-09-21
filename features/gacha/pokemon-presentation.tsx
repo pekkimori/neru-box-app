@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View, type ImageStyle } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/motion';
 
-import type { GachaCreature } from '@/constants/gacha';
+import type { GachaCreature } from '@/features/gacha/pokemon-catalog';
+import { replaceAudioPlayerSource, restartAudioPlayer } from '@/utils/audio-player';
 import { POKEMON_CRY_VOLUME } from '@/utils/interaction-feedback';
 import { getPokemonMedia, playPokemonCryOnWeb, playPreparedPokemonCry, type PokemonMedia } from './pokemon-media';
 
@@ -21,16 +22,30 @@ export function PokemonPresentation({
   size: number;
   autoPlayCry?: boolean;
 }) {
-  const player = useAudioPlayer(null, { downloadFirst: true });
+  const player = useAudioPlayer(null, { downloadFirst: true, keepAudioSessionActive: true });
   const playerStatus = useAudioPlayerStatus(player);
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
   const sessionRef = useRef(0);
+  const nativeCryRef = useRef<string | null>(null);
+  const nativePlayRequestRef = useRef(0);
   const handledNativePlayRef = useRef(0);
   const [media, setMedia] = useState<PokemonMedia | null>(null);
   const [side, setSide] = useState<PokemonSpriteSide>('front');
   const [loading, setLoading] = useState(active);
   const [error, setError] = useState(false);
-  const [nativePlayRequest, setNativePlayRequest] = useState(0);
+  const [renderedInput, setRenderedInput] = useState({ id: pokemon.id, active });
+  if (renderedInput.id !== pokemon.id || renderedInput.active !== active) {
+    const pokemonChanged = renderedInput.id !== pokemon.id;
+    setRenderedInput({ id: pokemon.id, active });
+    if (pokemonChanged) {
+      setMedia(null);
+      setSide('front');
+    }
+    if (active) {
+      setLoading(true);
+      setError(false);
+    }
+  }
 
   const animateTo = useCallback((value: number, duration: number) => {
     return new Promise<boolean>((resolve) => {
@@ -53,9 +68,13 @@ export function PokemonPresentation({
       if (Platform.OS === 'web') {
         playPokemonCryOnWeb(nextMedia.cry, pokemon.id);
       } else if (!playPreparedPokemonCry(pokemon.id, nextMedia.cry)) {
-        player.replace(nextMedia.cry);
-        player.volume = POKEMON_CRY_VOLUME;
-        setNativePlayRequest((current) => current + 1);
+        if (nativeCryRef.current === nextMedia.cry && player.isLoaded) {
+          void restartAudioPlayer(player, { volume: POKEMON_CRY_VOLUME });
+        } else {
+          nativeCryRef.current = nextMedia.cry;
+          nativePlayRequestRef.current += 1;
+          replaceAudioPlayerSource(player, nextMedia.cry, POKEMON_CRY_VOLUME);
+        }
       }
     }
 
@@ -72,10 +91,20 @@ export function PokemonPresentation({
   }, [animateTo, player, pokemon.id, rotation]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !playerStatus.isLoaded || nativePlayRequest <= handledNativePlayRef.current) return;
-    handledNativePlayRef.current = nativePlayRequest;
-    void player.seekTo(0).then(() => player.play());
-  }, [nativePlayRequest, player, playerStatus.isLoaded]);
+    if (Platform.OS === 'web') return;
+    const subscription = player.addListener('playbackStatusUpdate', (status) => {
+      const request = nativePlayRequestRef.current;
+      if (!status.isLoaded || request <= handledNativePlayRef.current) return;
+      handledNativePlayRef.current = request;
+      void restartAudioPlayer(player, { volume: POKEMON_CRY_VOLUME });
+    });
+    return () => subscription.remove();
+  }, [player]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !playerStatus.didJustFinish) return;
+    player.pause();
+  }, [player, playerStatus.didJustFinish]);
 
   useEffect(() => {
     if (!active) {
@@ -86,9 +115,6 @@ export function PokemonPresentation({
 
     const controller = new AbortController();
     let mounted = true;
-    setLoading(true);
-    setError(false);
-
     getPokemonMedia(pokemon.id, controller.signal)
       .then((nextMedia) => {
         if (!mounted) return;
@@ -133,7 +159,8 @@ export function PokemonPresentation({
           <Image
             source={{ uri: sprite }}
             style={spriteStyle}
-            contentFit={Platform.OS === 'web' ? 'contain' : 'none'}
+            contentFit="contain"
+            contentPosition="center"
             transition={0}
           />
         </Animated.View>

@@ -1,0 +1,15 @@
+- generic [ref=e4]:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - link "(tabs), back" [ref=e6] [cursor=pointer]:
+                - /url: /chat
+              - heading "index" [level=1] [ref=e9]
+  - progressbar "Preparing NERU" [ref=e10]:
+    - generic [ref=e27]:
+      - generic [ref=e28]: PERSONAL SYSTEM / 01
+      - generic [ref=e29]: NERU
+      - generic [ref=e46]: ALL MODULES ONLINE

@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { MotionModal as Modal } from '@/components/motion';
-import { RARITY_COLORS, type Rarity } from '@/constants/gacha';
+import { RARITY_COLORS, type Rarity } from '@/features/gacha/pokemon-catalog';
 import { playCatchFeedback, playCatchSuccessFeedback } from '@/utils/interaction-feedback';
 
 const CATCH_TAPS_REQUIRED = 3;
@@ -22,18 +22,20 @@ export function CatchAnimationModal({
   rarity,
   pullCount,
   onComplete,
+  onDismiss,
 }: {
   visible: boolean;
   rarity: Rarity;
   pullCount: number;
   onComplete: () => void;
+  onDismiss: () => void;
 }) {
-  const drop = useRef(new Animated.Value(-260)).current;
-  const shake = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
-  const ballScale = useRef(new Animated.Value(0.78)).current;
-  const flash = useRef(new Animated.Value(0)).current;
-  const open = useRef(new Animated.Value(0)).current;
+  const [drop] = useState(() => new Animated.Value(-260));
+  const [shake] = useState(() => new Animated.Value(0));
+  const [glow] = useState(() => new Animated.Value(0));
+  const [ballScale] = useState(() => new Animated.Value(0.78));
+  const [flash] = useState(() => new Animated.Value(0));
+  const [open] = useState(() => new Animated.Value(0));
   const activeAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const completedRef = useRef(false);
   const tapsRef = useRef(0);
@@ -59,9 +61,6 @@ export function CatchAnimationModal({
 
     completedRef.current = false;
     tapsRef.current = 0;
-    setFocused(false);
-    setTapCount(0);
-    setOpened(false);
     drop.setValue(-110);
     shake.setValue(0);
     glow.setValue(0);
@@ -82,6 +81,13 @@ export function CatchAnimationModal({
       activeAnimationRef.current = null;
     };
   }, [ballScale, drop, flash, glow, open, shake, useNativeDriver, visible]);
+
+  const handleDismiss = useCallback(() => {
+    setFocused(false);
+    setTapCount(0);
+    setOpened(false);
+    onDismiss();
+  }, [onDismiss]);
 
   const finishCatch = useCallback(() => {
     setOpened(true);
@@ -166,7 +172,7 @@ export function CatchAnimationModal({
   const chargedBatchMarkers = isBatch ? Math.min(pullCount, Math.floor((tapCount / visibleStepCount) * pullCount)) : 0;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onDismiss={handleDismiss} onRequestClose={onComplete}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={opened ? 'Poké Ball opened' : `Catching ${pullCount === 1 ? 'one Pokémon' : `${pullCount} Pokémon`}, ${announcedRemainingTaps} ${announcedRemainingTaps === 1 ? 'tap' : 'taps'} remaining`}
@@ -245,7 +251,7 @@ export function CatchAnimationModal({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: '#101010', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingHorizontal: 24 },
   noPointerEvents: { pointerEvents: 'none' },
-  flash: { ...StyleSheet.absoluteFillObject },
+  flash: { ...StyleSheet.absoluteFill },
   stage: { width: 280, height: 250, alignItems: 'center', justifyContent: 'center', outlineWidth: 0 },
   focusRing: { position: 'absolute', width: 138, height: 138, borderRadius: 69, borderWidth: 2, opacity: 0.62 },
   batchGlowRing: { position: 'absolute', width: 236, height: 216, borderRadius: 108, borderWidth: 1, borderStyle: 'dashed' },

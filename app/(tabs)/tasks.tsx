@@ -1,24 +1,27 @@
-import { PhotoCompletionModal } from '@/components/photo-completion-modal';
+import { PhotoCompletionModal } from '@/features/tasks/observatory/photo-completion-modal';
+import { CoinRewardCelebration } from '@/features/tasks/observatory/coin-reward-celebration';
+import { calculateTaskReward, type TaskReward } from '@/features/tasks/observatory/task-reward';
 import {
   MotionModal as Modal,
   MotionTouchableOpacity as TouchableOpacity,
 } from '@/components/motion';
-import { createEditorialStyles } from '@/constants/editorial-theme';
-import { Type } from '@/constants/typography';
-import { useThemedStyles } from '@/features/control/app-theme';
+import { PageHeader } from '@/components/page-header';
+import { createEditorialStyles } from '@/theme/editorial-theme';
+import { Type } from '@/theme/typography';
+import { useThemedStyles } from '@/theme/app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConstellationCanvas } from '../../features/tasks/observatory/constellation-canvas';
-import { ObservatoryHeader } from '../../features/tasks/observatory/observatory-header';
 import { PeriodRail } from '../../features/tasks/observatory/period-rail';
 import { RoutineGate } from '../../features/tasks/observatory/routine-gate';
+import { RoutineEditorModal } from '../../features/tasks/observatory/routine-editor-modal';
 import { StarTaskList } from '../../features/tasks/observatory/star-task-list';
 import { useObservatoryData } from '../../features/tasks/observatory/use-observatory-data';
 import { Palette, R, Sp, useTasksPalette } from '../../features/tasks/tokens';
-import { WeeklyStudio } from '../tasks/plan';
+import { WeeklyStudio } from '@/features/tasks/weekly-studio/weekly-studio';
 import type { BlockType, Star } from '../../types/tasks';
 
 export default function TasksToday() {
@@ -29,12 +32,8 @@ export default function TasksToday() {
   const [photoVisible, setPhotoVisible] = useState(false);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
   const [weeklyStudioOpen, setWeeklyStudioOpen] = useState(false);
-
-  const dailyProgress = useMemo(() => {
-    const tasks = (['morning', 'afternoon', 'evening'] as BlockType[])
-      .flatMap((block) => d.plan.blocks[block] ?? []);
-    return { lit: tasks.filter((task) => task.status === 'lit').length, total: tasks.length };
-  }, [d.plan.blocks]);
+  const [routineEditorOpen, setRoutineEditorOpen] = useState(false);
+  const [earnedReward, setEarnedReward] = useState<{ reward: TaskReward; nebulaName?: string } | null>(null);
 
   const selectedLabel = d.periods.find((period) => period.key === d.selectedPeriod)?.label ?? 'Today';
   const selectedLit = d.filteredTodayTasks.filter(({ task }) => task.status === 'lit').length;
@@ -68,11 +67,23 @@ export default function TasksToday() {
 
   const handlePhotoComplete = (uri: string) => {
     if (!pendingCompletion) return;
+    const nebulaProgress = d.domainProgress.get(pendingCompletion.star.constellationId);
+    const reward = calculateTaskReward({
+      constellationId: pendingCompletion.star.constellationId,
+      productivityStreak: d.productivityStreak,
+      todayPlan: d.plan,
+      completedNebulaDays: nebulaProgress?.completedDays ?? 0,
+    });
+    const nebulaName = d.constellations.find(
+      (item) => item.id === pendingCompletion.star.constellationId,
+    )?.name;
     d.updateTaskStatus(pendingCompletion.star.id, pendingCompletion.block, 'lit', uri);
-    d.awardCoins(pendingCompletion.star.id, pendingCompletion.block, 10);
-    d.addCoins(10);
+    d.awardCoins(pendingCompletion.star.id, pendingCompletion.block, reward.total);
+    d.addCoins(reward.total);
+    d.reloadWeekly();
     setPhotoVisible(false);
     setPendingCompletion(null);
+    setEarnedReward({ reward, nebulaName });
   };
 
   if (!d.loaded) {
@@ -93,15 +104,19 @@ export default function TasksToday() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.dashboard}
+        stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
       >
-        <ObservatoryHeader
-          date={d.today}
-          litCount={dailyProgress.lit}
-          totalPlanned={dailyProgress.total}
-          coins={d.coins}
-          streakDays={d.productivityStreak}
-          onPlanPress={() => setWeeklyStudioOpen(true)}
+        <PageHeader
+          title="Tasks"
+          tabIndex={2}
+          actions={[
+            {
+              accessibilityLabel: 'Manage week plan',
+              icon: 'calendar-outline',
+              onPress: () => setWeeklyStudioOpen(true),
+            },
+          ]}
         />
 
         <PeriodRail
@@ -122,6 +137,7 @@ export default function TasksToday() {
           readOnly={d.routinesReadOnly}
           sleepBlocked={d.sleepBlocked}
           onToggle={d.toggleQuestComplete}
+          onEdit={() => setRoutineEditorOpen(true)}
         />
 
         <View style={styles.sectionHeader}>
@@ -215,6 +231,24 @@ export default function TasksToday() {
         taskLabel={pendingCompletion?.star.label ?? ''}
         onComplete={handlePhotoComplete}
         onCancel={() => { setPhotoVisible(false); setPendingCompletion(null); }}
+      />
+      <CoinRewardCelebration
+        reward={earnedReward?.reward ?? null}
+        nebulaName={earnedReward?.nebulaName}
+        onFinished={() => setEarnedReward(null)}
+      />
+      <RoutineEditorModal
+        visible={routineEditorOpen}
+        periodLabel={selectedLabel}
+        routines={d.displayRoutines}
+        onClose={() => setRoutineEditorOpen(false)}
+        onAdd={(label, icon) => d.addQuest(
+          label,
+          icon,
+          d.selectedPeriod === 'sleep' ? 'sleep' : (d.selectedBlock ?? 'morning'),
+        )}
+        onUpdate={(id, label, icon) => d.updateQuest(id, { label, icon })}
+        onRemove={d.removeQuest}
       />
       <Modal
         transparent

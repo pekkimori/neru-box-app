@@ -1,6 +1,6 @@
 // app/gacha/_layout.tsx
 import { Stack } from 'expo-router';
-import { useAppTheme } from '@/features/control/app-theme';
+import { useAppTheme } from '@/theme/app-theme';
 
 export default function GachaLayout() {
   const { colors } = useAppTheme();

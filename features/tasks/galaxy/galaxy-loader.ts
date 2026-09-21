@@ -25,7 +25,7 @@ interface GalaxyResult {
   partialError: boolean;
 }
 
-export function galaxyStarArchiveId(
+function galaxyStarArchiveId(
   star: Pick<GalaxyStar, 'starId' | 'completionDate'>,
 ): string {
   return `${star.completionDate}:${star.starId}`;
