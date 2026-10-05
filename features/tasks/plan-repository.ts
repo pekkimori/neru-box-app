@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureAccountStorage, type AccountStorage } from '../../lib/storage/account-storage';
 
 import { persistStorageValue } from '../../hooks/useStorage';
 import type { DailyPlan } from '../../types/tasks';
@@ -17,8 +17,9 @@ interface StoredPlansResult {
 
 export async function loadPlansForDates(
   dates: readonly string[],
+  storage: AccountStorage = captureAccountStorage(),
 ): Promise<Record<string, DailyPlan>> {
-  const entries = await AsyncStorage.multiGet(dates.map(planStorageKey));
+  const entries = await storage.multiGet(dates.map(planStorageKey));
   return Object.fromEntries(entries.map(([key, raw]) => {
     const date = dateFromPlanStorageKey(key);
     const plan = raw ? parseDailyPlanJson(raw, date) : null;
@@ -26,13 +27,13 @@ export async function loadPlansForDates(
   }));
 }
 
-export async function loadAllStoredPlans(): Promise<StoredPlansResult> {
-  const keys = await AsyncStorage.getAllKeys();
+export async function loadAllStoredPlans(storage: AccountStorage = captureAccountStorage()): Promise<StoredPlansResult> {
+  const keys = await storage.getAllKeys();
   const planKeys = keys.filter(
     (key) => key.startsWith(PLAN_STORAGE_PREFIX)
       && key.length > PLAN_STORAGE_PREFIX.length,
   );
-  const entries = planKeys.length ? await AsyncStorage.multiGet(planKeys) : [];
+  const entries = planKeys.length ? await storage.multiGet(planKeys) : [];
   const plans = new Map<string, DailyPlan>();
   let malformedCount = 0;
 
@@ -47,6 +48,6 @@ export async function loadAllStoredPlans(): Promise<StoredPlansResult> {
   return { plans, malformedCount };
 }
 
-export async function savePlan(date: string, plan: DailyPlan): Promise<void> {
-  await persistStorageValue(planStorageKey(date), plan);
+export async function savePlan(date: string, plan: DailyPlan, storage: AccountStorage = captureAccountStorage()): Promise<void> {
+  await persistStorageValue(planStorageKey(date), plan, storage);
 }

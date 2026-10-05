@@ -1,6 +1,6 @@
 import { type ComponentProps, useEffect, useMemo, useRef } from 'react';
 import { useIsFocused } from 'expo-router/react-navigation';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import Animated, {
   cancelAnimation,
@@ -45,6 +45,22 @@ interface Props {
   height?: number;
 }
 
+function NebulaLabels({ constellations }: { constellations: Constellation[] }) {
+  const styles = useThemedStyles(themedStyles);
+  if (constellations.length === 0) return null;
+  return <ScrollView
+    horizontal
+    style={styles.nebulaStrip}
+    contentContainerStyle={styles.nebulaStripContent}
+    showsHorizontalScrollIndicator={false}
+    accessibilityLabel="Your nebulae"
+  >
+    {constellations.map(nebula => <View key={nebula.id} style={styles.nebulaLabel}>
+      <Text style={styles.nebulaLabelText}>{nebula.icon} {nebula.name}</Text>
+    </View>)}
+  </ScrollView>;
+}
+
 type Point = { x: number; y: number };
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
@@ -61,7 +77,8 @@ function starPosition(
   starId: string,
   index: number,
   total: number,
-  canvasHeight: number,
+  center: Point,
+  cellSize: { width: number; height: number },
 ): Point {
   let hash = 0;
   for (let i = 0; i < starId.length; i++) {
@@ -72,12 +89,36 @@ function starPosition(
   const phase = (Math.abs(hash) % 360) * (Math.PI / 180);
   const angle = sequence * goldenAngle + phase * 0.16;
   const normalizedRadius = Math.sqrt(sequence / (Math.max(total, 1) + 1));
-  const radius = 30 + normalizedRadius * 105;
-  const verticalScale = Math.max(0.34, Math.min(0.58, canvasHeight / 340));
+  const radius = 8 + normalizedRadius * Math.min(cellSize.width, cellSize.height) * 0.32;
   return {
-    x: 170 + Math.cos(angle) * radius,
-    y: canvasHeight / 2 + Math.sin(angle) * radius * verticalScale,
+    x: center.x + Math.cos(angle) * radius,
+    y: center.y + Math.sin(angle) * radius,
   };
+}
+
+function nebulaLayout(tasks: DailyVisorTask[], constellations: Constellation[], height: number) {
+  const ids = [...new Set(tasks.map(({ task }) => task.constellationId))];
+  const columns = Math.min(3, Math.max(1, ids.length));
+  const rows = Math.max(1, Math.ceil(ids.length / columns));
+  const cellSize = { width: 340 / columns, height: Math.max(100, height - 42) / rows };
+  const counts = new Map(ids.map(id => [id, tasks.filter(({ task }) => task.constellationId === id).length]));
+  const seen = new Map<string, number>();
+  const groups = ids.map((id, index) => ({
+    id,
+    name: constellations.find(nebula => nebula.id === id)?.name ?? 'Nebula',
+    center: {
+      x: (index % columns + 0.5) * cellSize.width,
+      y: (Math.floor(index / columns) + 0.5) * cellSize.height,
+    },
+  }));
+  const byId = new Map(groups.map(group => [group.id, group]));
+  const positions = tasks.map(({ task }) => {
+    const id = task.constellationId;
+    const index = seen.get(id) ?? 0;
+    seen.set(id, index + 1);
+    return starPosition(task.starId, index, counts.get(id) ?? 1, byId.get(id)!.center, cellSize);
+  });
+  return { groups, positions, cellSize };
 }
 
 function truncateLabel(label: string, maxLen = 10): string {
@@ -441,12 +482,13 @@ export function ConstellationCanvas({
   const styles = useThemedStyles(themedStyles);
   const isFocused = useIsFocused();
   const canvasProgress = useSharedValue(0);
+  const layout = useMemo(() => nebulaLayout(tasks, constellations, height), [tasks, constellations, height]);
   const nodes = useMemo(() => tasks.map((entry, index) => ({
     ...entry,
     order: index,
     star: stars.find((star) => star.id === entry.task.starId),
-    pos: starPosition(entry.task.starId, index, tasks.length, height),
-  })), [tasks, stars, height]);
+    pos: layout.positions[index]!,
+  })), [tasks, stars, layout]);
 
   const completed = useMemo(() => nodes
     .filter((node) => node.task.status === 'lit')
@@ -459,6 +501,10 @@ export function ConstellationCanvas({
       }
       return a.order - b.order;
     }), [nodes]);
+  const completionLinks = useMemo(() => completed.flatMap((node, index) => {
+    const previous = completed.slice(0, index).reverse().find(candidate => candidate.task.constellationId === node.task.constellationId);
+    return previous ? [{ from: previous.pos, to: node.pos, key: `${previous.task.starId}-${node.task.starId}` }] : [];
+  }), [completed]);
 
   useEffect(() => {
     cancelAnimation(canvasProgress);
@@ -492,6 +538,7 @@ export function ConstellationCanvas({
               : 'No tasks planned for today.'}
           </Text>
         </View>
+        <NebulaLabels constellations={constellations} />
       </Animated.View>
     );
   }
@@ -511,17 +558,21 @@ export function ConstellationCanvas({
     >
       <SkyAtmosphere active={isFocused} />
       <Svg width="100%" height={height} viewBox={`0 0 340 ${height}`}>
-        {completed.slice(1).map((node, index) => {
-          const previous = completed[index];
-          return (
-            <AnimatedCompletionLine
-              key={`completion-${previous.task.starId}-${node.task.starId}`}
-              from={previous.pos}
-              to={node.pos}
-              order={index}
-            />
-          );
-        })}
+        {layout.groups.map(group => <SvgText
+          key={`nebula-${group.id}`}
+          x={group.center.x}
+          y={group.center.y - layout.cellSize.height * 0.37}
+          textAnchor="middle"
+          fill={Palette.warmMuted}
+          fontSize={11}
+          fontWeight="600"
+        >{truncateLabel(group.name, Math.floor(layout.cellSize.width / 7))}</SvgText>)}
+        {completionLinks.map((link, index) => <AnimatedCompletionLine
+          key={`completion-${link.key}`}
+          from={link.from}
+          to={link.to}
+          order={index}
+        />)}
 
         {nodes.map(({ block, task, star, pos, available, order }) => {
           if (!star) return null;
@@ -557,11 +608,16 @@ export function ConstellationCanvas({
           );
         })}
       </Svg>
+      <NebulaLabels constellations={constellations} />
     </Animated.View>
   );
 }
 
 const themedStyles = createEditorialStyles(() => ({
+  nebulaStrip: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: 36 },
+  nebulaStripContent: { gap: 6, alignItems: 'center' },
+  nebulaLabel: { borderRadius: R.full, backgroundColor: Palette.bgRaised, borderWidth: 1, borderColor: Palette.gray, paddingHorizontal: 9, paddingVertical: 5 },
+  nebulaLabelText: { ...Type.captionStrong, color: Palette.warmWhite },
   canvas: {
     backgroundColor: Palette.bgElevated,
     borderRadius: R.sm,

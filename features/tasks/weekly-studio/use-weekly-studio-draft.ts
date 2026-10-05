@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { useState } from 'react';
 
 import { persistStorageValue } from '../../../hooks/useStorage';
+import { captureAccountStorage } from '../../../lib/storage/account-storage';
 import type {
   BlockType,
   Constellation,
@@ -25,6 +26,7 @@ export function useWeeklyStudioDraft({
   storedConstellations,
   storedStars,
 }: WeeklyStudioDraftInput) {
+  const storage = captureAccountStorage();
   const [draftPlans, setDraftPlans] = useState<Record<string, DailyPlan>>({});
   const [draftConstellations, setDraftConstellations] = useState<Constellation[] | null>(null);
   const [draftStars, setDraftStars] = useState<Star[] | null>(null);
@@ -134,12 +136,12 @@ export function useWeeklyStudioDraft({
   };
 
   const saveDrafts = async () => {
-    await removeStarRefsFromAllPlans(deletedStarIds);
+    await removeStarRefsFromAllPlans(deletedStarIds, storage);
     await Promise.all([
-      persistStorageValue('@neru/constellations', constellations),
-      persistStorageValue('@neru/stars', stars),
+      persistStorageValue('@neru/constellations', constellations, storage),
+      persistStorageValue('@neru/stars', stars, storage),
       ...Object.entries(draftPlans).map(([date, dayPlan]) =>
-        savePlan(date, planWithoutStars(dayPlan, deletedStarIds))),
+        savePlan(date, planWithoutStars(dayPlan, deletedStarIds), storage)),
     ]);
     setHasUnsavedChanges(false);
   };

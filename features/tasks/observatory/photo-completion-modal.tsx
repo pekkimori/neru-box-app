@@ -22,6 +22,8 @@ type PhotoCompletionModalProps = {
   visible: boolean;
   taskLabel: string;
   onComplete: (photoUri: string) => void;
+  onSavePhoto?: (photoUri: string) => Promise<boolean>;
+  purpose?: 'setup' | 'completion';
   onCancel: () => void;
 };
 
@@ -29,13 +31,14 @@ type ModalStep = 'choose' | 'preview' | 'processing' | 'success';
 type PhotoSource = 'camera' | 'gallery';
 
 export function PhotoCompletionModal({
-  visible, taskLabel, onComplete, onCancel,
+  visible, taskLabel, onComplete, onCancel, onSavePhoto, purpose = 'completion',
 }: PhotoCompletionModalProps) {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const [step, setStep] = useState<ModalStep>('choose');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [sourceBusy, setSourceBusy] = useState<PhotoSource | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [progress] = useState(() => new Animated.Value(0));
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,11 +49,14 @@ export function PhotoCompletionModal({
 
   useEffect(() => { photoUriRef.current = photoUri; }, [photoUri]);
 
-  useEffect(() => () => {
-    isUnmountedRef.current = true;
-    if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
-    if (successTimerRef.current) clearTimeout(successTimerRef.current);
-    animationRef.current?.stop();
+  useEffect(() => {
+    isUnmountedRef.current = false;
+    return () => {
+      isUnmountedRef.current = true;
+      if (processingTimerRef.current) clearTimeout(processingTimerRef.current);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      animationRef.current?.stop();
+    };
   }, []);
 
   const reset = useCallback(() => {
@@ -58,6 +64,7 @@ export function PhotoCompletionModal({
     setStep('choose');
     setPhotoUri(null);
     setSourceBusy(null);
+    setSaveError(null);
     progress.setValue(0);
     if (processingTimerRef.current) {
       clearTimeout(processingTimerRef.current);
@@ -150,6 +157,7 @@ export function PhotoCompletionModal({
       successTimerRef.current = null;
     }
     setStep('processing');
+    setSaveError(null);
     progress.setValue(0);
     animationRef.current = Animated.timing(progress, {
       toValue: 1,
@@ -162,10 +170,12 @@ export function PhotoCompletionModal({
       processingTimerRef.current = null;
       animationRef.current = null;
       void persistPhotoProof(photoUri)
-        .then((persistentUri) => {
+        .then(async (persistentUri) => {
           if (isUnmountedRef.current || operationRef.current !== operation) return;
           photoUriRef.current = persistentUri;
           setPhotoUri(persistentUri);
+          if (onSavePhoto && !(await onSavePhoto(persistentUri))) throw new Error('The save did not finish. Close this form and check the pending save or error on your plan.');
+          if (isUnmountedRef.current || operationRef.current !== operation) return;
           setStep('success');
           successTimerRef.current = setTimeout(() => {
             if (
@@ -178,16 +188,16 @@ export function PhotoCompletionModal({
             reset();
           }, 550);
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           if (isUnmountedRef.current || operationRef.current !== operation) return;
           progress.setValue(0);
           setStep('preview');
-          Alert.alert('Could not save photo', 'The selected photo could not be stored on this device. Please choose another photo and try again.');
+          setSaveError(error instanceof Error ? error.message : 'Could not save this photo. Please try again.');
         });
     }, 1350);
   };
 
-  const handleClose = () => { reset(); onCancel(); };
+  const handleClose = () => { if (step === 'processing') return; reset(); onCancel(); };
   const progressScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.08, 1] });
 
   return (
@@ -207,7 +217,7 @@ export function PhotoCompletionModal({
               </View>
               <View style={styles.headerCopy}>
                 <Text style={styles.eyebrow}>PHOTO PROOF</Text>
-                <Text style={styles.title}>{step === 'choose' ? 'Complete this task' : 'Use this photo?'}</Text>
+                <Text style={styles.title}>{step === 'choose' ? purpose === 'setup' ? 'Set up this task' : 'Complete this task' : 'Use this photo?'}</Text>
                 <Text style={styles.taskName} numberOfLines={1}>{taskLabel}</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityRole="button" accessibilityLabel="Close photo completion">
@@ -218,7 +228,7 @@ export function PhotoCompletionModal({
 
           {step === 'choose' && (
             <>
-              <Text style={styles.description}>Choose where your completion photo should come from.</Text>
+              <Text style={styles.description}>Choose a {purpose} photo for this task.</Text>
               <TouchableOpacity
                 style={styles.cameraButton}
                 onPress={handleCamera}
@@ -256,19 +266,20 @@ export function PhotoCompletionModal({
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Palette.warmMuted} />
               </TouchableOpacity>
-              <Text style={styles.privacyNote}>Your photo stays attached to this task on this device.</Text>
+              <Text style={styles.privacyNote}>{onSavePhoto ? 'Your photo is saved privately to your account.' : 'Your photo stays attached to this task on this device.'}</Text>
             </>
           )}
 
           {step === 'preview' && photoUri && (
             <>
               <Image source={{ uri: photoUri }} style={styles.previewImage} contentFit="cover" />
+              {saveError && <Text accessibilityRole="alert" style={{ color: Palette.red }}>{saveError}</Text>}
               <View style={styles.previewActions}>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => { setPhotoUri(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => { setPhotoUri(null); setSaveError(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
                   <Ionicons name="refresh" size={17} color={Palette.warmDim} />
                   <Text style={styles.secondaryText}>Choose again</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.primaryButton} onPress={handleProcess} accessibilityRole="button" accessibilityLabel="Use photo and complete task">
+                <TouchableOpacity style={styles.primaryButton} onPress={handleProcess} accessibilityRole="button" accessibilityLabel={purpose === 'setup' ? 'Use photo and set up task' : 'Use photo and complete task'}>
                   <Ionicons name="checkmark" size={18} color={Palette.onRed} />
                   <Text style={styles.primaryText}>Use photo</Text>
                 </TouchableOpacity>
@@ -282,8 +293,8 @@ export function PhotoCompletionModal({
                 {photoUri && <Image source={{ uri: photoUri }} style={styles.processingImage} contentFit="cover" />}
                 <View style={styles.processingBadge}><ActivityIndicator size="small" color={Palette.onRed} /></View>
               </View>
-              <Text style={styles.processingTitle}>Lighting your star</Text>
-              <Text style={styles.processingText}>Saving your photo and marking “{taskLabel}” complete.</Text>
+              <Text style={styles.processingTitle}>{purpose === 'setup' ? 'Setting up your star' : 'Lighting your star'}</Text>
+              <Text style={styles.processingText}>Saving your {purpose} photo for “{taskLabel}”.</Text>
               <View style={styles.steps}>
                 <View style={styles.stepRow}><Ionicons name="checkmark-circle" size={17} color={Palette.red} /><Text style={styles.stepDone}>Photo added</Text></View>
                 <View style={styles.stepRow}><ActivityIndicator size="small" color={Palette.red} /><Text style={styles.stepActive}>Saving completion</Text></View>
@@ -298,8 +309,8 @@ export function PhotoCompletionModal({
           {step === 'success' && (
             <View style={styles.success}>
               <View style={styles.successIcon}><Ionicons name="star" size={34} color={Palette.onRed} /></View>
-              <Text style={styles.successTitle}>Star lit</Text>
-              <Text style={styles.processingText}>“{taskLabel}” is complete and now shines in your sky.</Text>
+              <Text style={styles.successTitle}>{purpose === 'setup' ? 'Setup saved' : 'Star lit'}</Text>
+              <Text style={styles.processingText}>{purpose === 'setup' ? `“${taskLabel}” is ready to begin.` : `“${taskLabel}” is complete and now shines in your sky.`}</Text>
             </View>
           )}
         </Pressable>

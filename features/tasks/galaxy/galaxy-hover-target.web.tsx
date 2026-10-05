@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { playTapFeedback } from '@/utils/interaction-feedback';
 import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { GalaxyPalette } from './galaxy-theme';
+import { ServerPhoto } from '../connected/server-photo';
 
 const CARD_WIDTH = 760;
 const CARD_HEIGHT = 600;
@@ -46,6 +47,7 @@ export function GalaxyHoverTarget({
   const [excluding, setExcluding] = useState(false);
   const [excludeError, setExcludeError] = useState(false);
   const [photoUnavailable, setPhotoUnavailable] = useState(false);
+  const [photoActivated, setPhotoActivated] = useState(false);
   const [wasPinned, setWasPinned] = useState(pinned);
   if (wasPinned !== pinned) {
     setWasPinned(pinned);
@@ -123,6 +125,8 @@ export function GalaxyHoverTarget({
     <div
       ref={sensorRef}
       className={`galaxy-hover-sensor${pinned ? ' is-pinned' : ''}`}
+      onPointerEnter={() => setPhotoActivated(true)}
+      onFocus={() => setPhotoActivated(true)}
       style={{
         position: 'absolute',
         zIndex: pinned ? 50 : 10,
@@ -220,7 +224,7 @@ export function GalaxyHoverTarget({
             <div className="galaxy-popup-date">Completed {formatCompletionDate(star.completionDate)}</div>
 
             <div className="galaxy-popup-photo">
-              {star.completionPhotoUri && !photoUnavailable ? (
+              {star.completionPhotoUri?.startsWith('/tasks/') ? (pinned || photoActivated) ? <ServerPhoto uri={star.completionPhotoUri} label={`Completion proof for ${star.label}`} style={{ width: '100%', height: '100%' }} /> : null : star.completionPhotoUri && !photoUnavailable ? (
                 <img
                   src={star.completionPhotoUri}
                   alt={`Completion proof for ${star.label}`}

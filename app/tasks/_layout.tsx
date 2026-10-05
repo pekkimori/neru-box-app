@@ -16,6 +16,7 @@ export default function TasksLayout() {
       }}
     >
       <Stack.Screen name="plan" options={{ headerShown: false }} />
+      <Stack.Screen name="connected" options={{ headerShown: false }} />
       <Stack.Screen name="galaxy" options={{ headerShown: false }} />
     </Stack>
   );

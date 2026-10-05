@@ -68,7 +68,8 @@ export const MotionPressable = forwardRef<View, MotionPressableProps>(function M
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  const resolvedStyle = typeof style === 'function' ? style({ hovered, pressed }) : style;
+  const pressState = { hovered, pressed };
+  const resolvedStyle = typeof style === 'function' ? style(pressState) : style;
 
   return (
     <AnimatedPressable

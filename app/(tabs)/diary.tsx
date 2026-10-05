@@ -18,6 +18,11 @@ import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
 import { Type } from '@/theme/typography';
 import type { BlockType, DiaryStickerPlacement, PlannedTask } from '@/types/tasks';
 import { addLocalDays, formatLocalDate, parseLocalDate } from '@/utils/time';
+import { useConnectedPlanning } from '@/features/tasks/connected/use-connected-planning';
+import { connectedStreak, useConnectedHistory } from '@/features/tasks/connected/use-connected-history';
+import { ConnectedSaveStatus } from '@/features/tasks/connected/connected-save-status';
+import { ServerPhoto } from '@/features/tasks/connected/server-photo';
+import { PromptModal } from '@/features/tasks/connected/prompt-modal';
 
 const diaryExtras = (colors: EditorialPalette) => ({
   paper: colors.mode === 'dark' ? '#201E25' : '#FFFEFB',
@@ -40,8 +45,8 @@ const MAX_POKEMON_STICKERS = 4;
 
 type MoodKey = (typeof MOODS)[number];
 type DataStickerId = 'tasks' | 'routines' | 'coins' | 'streak';
-type JournalTask = PlannedTask & { block: BlockType; label: string; domain: string };
-type MemoryPhoto = { id: string; label: string; domain: string; source: ImageSource };
+type JournalTask = PlannedTask & { label: string; domain: string };
+type MemoryPhoto = { id: string; label: string; domain: string; source: ImageSource; remoteUri?: string };
 type StickerDefinition = {
   id: DataStickerId;
   label: string;
@@ -129,19 +134,30 @@ export default function DiaryScreen() {
   const [dateJumpOpen, setDateJumpOpen] = useState(false);
   const [dateJumpDraft, setDateJumpDraft] = useState(todayKey);
   const [dateJumpError, setDateJumpError] = useState('');
+  const [taskSource, setTaskSource] = useState<'online' | 'device'>('online');
+  const online = taskSource === 'online';
+  const [reflection, setReflection] = useState<{ blockId: string; label: string; initial: string } | null>(null);
+  const connected = useConnectedPlanning(selectedDate);
+  const history = useConnectedHistory(online);
+  const blocked = !connected.ready || connected.loading || connected.saving || !!connected.pending.length || !!connected.pendingPhotos.length;
 
-  const { plan, loaded: planLoaded, saveDiaryDataStickers, saveDiaryNote, saveDiaryStickers, setMoodSticker } = useDailyPlan(selectedDate);
+  const { plan: localPlan, loaded: localPlanLoaded, saveDiaryDataStickers, saveDiaryNote, saveDiaryStickers, setMoodSticker: setLocalMood } = useDailyPlan(selectedDate);
+  const plan = useMemo(() => online ? { ...localPlan, moodSticker: connected.schedule?.moodSticker, reflections: connected.schedule?.reflections ?? {} } : localPlan, [online, localPlan, connected.schedule]);
+  const planLoaded = localPlanLoaded && (!online || !connected.loading);
+  const setMoodSticker = (mood: string) => { if (online) void connected.setMood(mood); else setLocalMood(mood); };
   const { quests, status, loaded: routinesLoaded } = useRoutineQuests(selectedDate);
   const { constellations, stars, loaded: constellationsLoaded } = useConstellations();
   const { gachaResults, loaded: gachaLoaded } = useGachaCollection();
-  const { streak, loaded: streakLoaded } = useProductivityStreak(plan, selectedDate);
+  const localStreak = useProductivityStreak(localPlan, selectedDate);
+  const streak = online ? connectedStreak(history.schedules, selectedDate, connected.schedule) : localStreak.streak;
+  const streakLoaded = online ? history.loaded : localStreak.loaded;
   const selectedDateValue = useMemo(() => parseLocalDate(selectedDate) ?? new Date(), [selectedDate]);
   const isToday = selectedDate === todayKey;
   const loaded = planLoaded && routinesLoaded && constellationsLoaded && streakLoaded;
 
   const fallbackReflection = useMemo(() => BLOCKS.map((block) => plan.reflections[block]).filter(Boolean).join('\n\n'), [plan.reflections]);
   const noteSource = plan.diaryNote ?? fallbackReflection ?? '';
-  if (planLoaded && (loadedNote.date !== selectedDate || loadedNote.source !== noteSource)) {
+  if (planLoaded && (loadedNote.date !== selectedDate || (!noteDirty && loadedNote.source !== noteSource))) {
     setLoadedNote({ date: selectedDate, source: noteSource });
     setNoteDraft(noteSource);
     setNoteDirty(false);
@@ -149,11 +165,16 @@ export default function DiaryScreen() {
 
   const starById = useMemo(() => new Map(stars.map((star) => [star.id, star])), [stars]);
   const constellationById = useMemo(() => new Map(constellations.map((item) => [item.id, item])), [constellations]);
-  const tasks = useMemo((): JournalTask[] => BLOCKS.flatMap((block) => plan.blocks[block].map((task) => ({
+  const tasks = useMemo((): JournalTask[] => online ? (connected.schedule?.tasks ?? []).map(task => ({
+    starId: task.id, constellationId: task.nebulaId, status: task.status,
+    coinsEarned: task.coinsEarned, completedAt: task.completedAt,
+    setupPhotoUri: task.setupPhotoUri, completionPhotoUri: task.completionPhotoUri,
+    label: task.title, domain: connected.nebulas.find(nebula => nebula.id === task.nebulaId)?.name ?? 'Nebula',
+  })) : BLOCKS.flatMap((block) => plan.blocks[block].map((task) => ({
     ...task, block,
     label: starById.get(task.starId)?.label ?? 'Completed task',
     domain: constellationById.get(task.constellationId)?.name ?? 'Unsorted',
-  }))), [constellationById, plan.blocks, starById]);
+  }))), [online, connected.schedule, connected.nebulas, constellationById, plan.blocks, starById]);
 
   const completedCount = tasks.filter((task) => task.status === 'lit').length;
   const totalTasks = tasks.length;
@@ -164,10 +185,10 @@ export default function DiaryScreen() {
 
   const memoryPhotos = useMemo((): MemoryPhoto[] => {
     const completed = tasks.filter((task) => task.status === 'lit' && task.completionPhotoUri).slice(0, 3).map((task) => ({
-      id: task.starId, label: task.label, domain: task.domain, source: { uri: task.completionPhotoUri! },
+      id: task.starId, label: task.label, domain: task.domain, source: { uri: task.completionPhotoUri! }, remoteUri: online ? task.completionPhotoUri : undefined,
     }));
-    return completed.length > 0 ? completed : isToday ? MOCK_COMPLETION_PHOTOS : [];
-  }, [isToday, tasks]);
+    return completed.length > 0 ? completed : !online && isToday ? MOCK_COMPLETION_PHOTOS : [];
+  }, [isToday, tasks, online]);
 
   const attachedDataStickers = useMemo(() => (plan.diaryDataStickers ?? DEFAULT_DATA_STICKERS).filter(isDataStickerId), [plan.diaryDataStickers]);
   const attachedDataStickerSet = useMemo(() => new Set(attachedDataStickers), [attachedDataStickers]);
@@ -237,6 +258,11 @@ export default function DiaryScreen() {
           { accessibilityLabel: 'Edit diary stickers', icon: 'create-outline', onPress: () => setStickerTrayOpen(true) },
         ]} />
 
+        <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12 }}>
+          {(['online', 'device'] as const).map(source => <Pressable key={source} accessibilityRole="tab" accessibilityLabel={source === 'online' ? 'Online diary' : 'On device diary'} accessibilityState={{ selected: source === taskSource }} onPress={() => { commitNote(); setTaskSource(source); }} style={{ padding: 10, borderRadius: 12, backgroundColor: taskSource === source ? colors.accentSoft : colors.card }}><Text style={{ color: colors.text }}>{source === 'online' ? 'Online' : 'On device'}</Text></Pressable>)}
+        </View>
+        {online && <><ConnectedSaveStatus planning={connected} />{history.error && <Text accessibilityRole="alert" style={{ color: colors.accent }}>{history.error}</Text>}</>}
+
         <View style={styles.dayRail}>
           <Pressable accessibilityLabel="Previous day" onPress={() => turnToDate(addLocalDays(selectedDate, -1) ?? selectedDate)} style={styles.dayArrow}><Ionicons name="chevron-back" size={19} color={colors.text} /></Pressable>
           <Pressable accessibilityLabel="Choose diary date" onPress={openDateJump} style={styles.dayRailCenter}><Text style={styles.dayRailDate}>{isToday ? 'Today' : weekday}</Text><Text style={styles.dayRailMeta}>{displayDate}</Text></Pressable>
@@ -247,7 +273,7 @@ export default function DiaryScreen() {
           <View style={styles.entryHeader}>
             <View style={styles.dateStamp}><Text style={styles.dateStampMonth}>{shortMonth}</Text><Text style={styles.dateStampDay}>{selectedDateValue.getDate()}</Text></View>
             <View style={styles.entryHeading}><Text style={styles.entryEyebrow}>{isToday ? "TODAY'S ENTRY" : 'ARCHIVED ENTRY'}</Text><Text style={styles.entryTitle}>{weekday}</Text><Text style={styles.entrySubtitle}>A small place to keep the day.</Text></View>
-            <Pressable accessibilityLabel={`Mood: ${MOOD_DETAILS[mood].label}. Change mood`} onPress={() => setStickerTrayOpen(true)} style={styles.moodButton}><MoodSticker mood={mood} small={compact} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Mood: ${MOOD_DETAILS[mood].label}. Change mood`} onPress={() => setStickerTrayOpen(true)} style={styles.moodButton}><MoodSticker mood={mood} small={compact} /></Pressable>
           </View>
 
           <View style={[styles.entryBody, !compact && styles.entryBodyWide]}>
@@ -259,7 +285,7 @@ export default function DiaryScreen() {
 
               {memoryPhotos.length > 0 ? <View style={styles.memorySection}>
                 <View style={styles.memoryHeading}><Text style={styles.memoryTitle}>MOMENTS FROM THE DAY</Text><Text style={styles.memoryCount}>{memoryPhotos.length} SAVED</Text></View>
-                <View style={styles.memoryRail}>{memoryPhotos.map((photo, index) => <View key={photo.id} style={[styles.memoryPhoto, index % 2 === 0 ? styles.memoryPhotoLeft : styles.memoryPhotoRight]}><Image source={photo.source} style={styles.memoryImage} contentFit="cover" /><View style={styles.memoryCaptionRow}><Text style={styles.memoryCaption} numberOfLines={1}>{photo.label}</Text><Text style={styles.memoryDomain}>{photo.domain.toUpperCase()}</Text></View></View>)}</View>
+                <View style={styles.memoryRail}>{memoryPhotos.map((photo, index) => <View key={photo.id} style={[styles.memoryPhoto, index % 2 === 0 ? styles.memoryPhotoLeft : styles.memoryPhotoRight]}>{photo.remoteUri ? <ServerPhoto uri={photo.remoteUri} label={photo.label} style={styles.memoryImage} /> : <Image source={photo.source} style={styles.memoryImage} contentFit="cover" />}<View style={styles.memoryCaptionRow}><Text style={styles.memoryCaption} numberOfLines={1}>{photo.label}</Text><Text style={styles.memoryDomain}>{photo.domain.toUpperCase()}</Text></View></View>)}</View>
               </View> : null}
             </View>
 
@@ -273,7 +299,15 @@ export default function DiaryScreen() {
             </View>
           </View>
         </View>
-        <Text style={styles.pageHint}>Your entry and sticker choices are saved for this date.</Text>
+        {online && <View style={{ gap: 10, padding: 16 }}>
+          <Text style={{ color: colors.text, fontWeight: '700' }}>Period reflections</Text>
+          {BLOCKS.map(type => {
+            const block = connected.schedule?.groupedBlocks.find(item => item.type === type);
+            const text = connected.schedule?.reflections[type] ?? '';
+            return <Pressable key={type} disabled={blocked} accessibilityRole="button" accessibilityLabel={`Edit ${type} reflection`} onPress={() => setReflection({ blockId: block?.id ?? type, label: type, initial: text })} style={{ padding: 12, backgroundColor: colors.card, borderRadius: 10 }}><Text style={{ color: colors.text, fontWeight: '700' }}>{type}</Text><Text style={{ color: colors.textMuted }}>{text || 'Add a reflection'}</Text></Pressable>;
+          })}
+        </View>}
+        <Text style={styles.pageHint}>{online ? 'Tasks, photos, mood and reflections sync with your account. Notes and decorative stickers are saved on this device.' : 'Your entry and sticker choices are saved on this device for this date.'}</Text>
       </ScrollView>
 
       <Modal visible={stickerTrayOpen} transparent animationType="none" onRequestClose={() => setStickerTrayOpen(false)}>
@@ -284,7 +318,7 @@ export default function DiaryScreen() {
             <View style={styles.trayHeader}><View><Text style={styles.trayEyebrow}>STICKER TRAY</Text><Text style={styles.trayTitle}>Tell the story of today</Text></View><Pressable accessibilityLabel="Close sticker tray" onPress={() => setStickerTrayOpen(false)} style={styles.closeButton}><Ionicons name="close" size={20} color={colors.text} /></Pressable></View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.trayScroll}>
               <Text style={styles.traySectionLabel}>HOW DID IT FEEL?</Text>
-              <View style={styles.moodGrid}>{MOODS.map((item) => { const selected = mood === item; return <Pressable key={item} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setMoodSticker(item)} style={[styles.moodChoice, selected && styles.choiceSelected]}><Ionicons name={MOOD_DETAILS[item].icon} size={19} color={selected ? Palette.onAccent : colors.text} /><Text style={[styles.moodChoiceLabel, selected && styles.choiceSelectedText]}>{MOOD_DETAILS[item].label}</Text></Pressable>; })}</View>
+              <View style={styles.moodGrid}>{MOODS.map((item) => { const selected = mood === item; return <Pressable key={item} disabled={online && blocked} accessibilityLabel={`Set mood ${MOOD_DETAILS[item].label}`} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setMoodSticker(item)} style={[styles.moodChoice, selected && styles.choiceSelected]}><Ionicons name={MOOD_DETAILS[item].icon} size={19} color={selected ? Palette.onAccent : colors.text} /><Text style={[styles.moodChoiceLabel, selected && styles.choiceSelectedText]}>{MOOD_DETAILS[item].label}</Text></Pressable>; })}</View>
               <View style={styles.traySectionHeading}><Text style={styles.traySectionLabel}>FROM YOUR TRACKING</Text><Text style={styles.traySectionHint}>Tap to attach</Text></View>
               <View style={styles.dataChoices}>{(Object.keys(stickerDefinitions) as DataStickerId[]).map((id) => { const selected = attachedDataStickerSet.has(id); return <Pressable key={id} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => toggleDataSticker(id)} style={[styles.dataChoice, selected && styles.dataChoiceSelected]}><DataSticker item={stickerDefinitions[id]} compact /><View style={[styles.choiceCheck, selected && styles.choiceCheckSelected]}><Ionicons name={selected ? 'checkmark' : 'add'} size={14} color={selected ? Palette.onAccent : colors.textSecondary} /></View></Pressable>; })}</View>
               <View style={styles.traySectionHeading}><Text style={styles.traySectionLabel}>TODAY&apos;S CATCHES</Text><Text style={styles.traySectionHint}>{pokemonPlacements.length}/{MAX_POKEMON_STICKERS} attached</Text></View>
@@ -294,6 +328,7 @@ export default function DiaryScreen() {
           </View>
         </SafeAreaView>
       </Modal>
+      <PromptModal key={reflection ? `${selectedDate}:${reflection.blockId}` : 'reflection-closed'} visible={!!reflection} title={`${reflection?.label ?? ''} reflection`} placeholder="How did this period go?" submitLabel="Save reflection" initialValue={reflection?.initial} multiline allowEmpty error={connected.error} onCancel={() => setReflection(null)} onSubmit={text => reflection ? connected.saveReflection(reflection.blockId, text) : Promise.resolve(false)} />
 
       <Modal visible={dateJumpOpen} transparent animationType="none" onRequestClose={() => setDateJumpOpen(false)}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom', 'left', 'right']}>

@@ -11,6 +11,7 @@ import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { GalaxyPalette } from './galaxy-theme';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
+import { ServerPhoto } from '../connected/server-photo';
 
 interface Props {
   targetKey: string;
@@ -113,7 +114,7 @@ export function GalaxyHoverTarget({ star, pinned, onClose, onExclude }: Props) {
             <Text style={styles.date}>Completed {formatCompletionDate(star.completionDate)}</Text>
 
             <View style={styles.photoFrame}>
-              {star.completionPhotoUri && !photoUnavailable ? (
+              {star.completionPhotoUri?.startsWith('/tasks/') ? <ServerPhoto uri={star.completionPhotoUri} label={`Completion photo for ${star.label}`} style={styles.photo} /> : star.completionPhotoUri && !photoUnavailable ? (
                 <Image
                   source={{ uri: star.completionPhotoUri }}
                   style={styles.photo}

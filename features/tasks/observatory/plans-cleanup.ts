@@ -2,11 +2,13 @@
 import type { DailyPlan } from '../../../types/tasks';
 import { planWithoutStars } from '../plan-model';
 import { loadAllStoredPlans, savePlan } from '../plan-repository';
+import { captureAccountStorage, type AccountStorage } from '../../../lib/storage/account-storage';
 
 export async function removeStarRefsFromAllPlans(
   starIds: Set<string>,
+  storage: AccountStorage = captureAccountStorage(),
 ): Promise<void> {
-  const { plans } = await loadAllStoredPlans();
+  const { plans } = await loadAllStoredPlans(storage);
   const writes: [string, DailyPlan][] = [];
 
   for (const [, plan] of plans) {
@@ -17,5 +19,5 @@ export async function removeStarRefsFromAllPlans(
     if (changed) writes.push([plan.date, cleaned]);
   }
 
-  await Promise.all(writes.map(([date, plan]) => savePlan(date, plan)));
+  await Promise.all(writes.map(([date, plan]) => savePlan(date, plan, storage)));
 }

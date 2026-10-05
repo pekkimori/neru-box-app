@@ -6,6 +6,8 @@ import {
   MotionTouchableOpacity as TouchableOpacity,
 } from '@/components/motion';
 import { PageHeader } from '@/components/page-header';
+import { ConnectedTasksToday } from '@/features/tasks/connected/connected-tasks-today';
+import { useAuth } from '@/features/auth/auth-provider';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { Type } from '@/theme/typography';
 import { useThemedStyles } from '@/theme/app-theme';
@@ -28,6 +30,10 @@ export default function TasksToday() {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const router = useRouter();
+  const auth = useAuth();
+  const connected = auth.status === 'signedIn' && !!auth.user;
+  const [taskSource, setTaskSource] = useState<'online' | 'device'>('online');
+  const showConnected = connected && taskSource === 'online';
   const d = useObservatoryData();
   const [photoVisible, setPhotoVisible] = useState(false);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
@@ -140,7 +146,28 @@ export default function TasksToday() {
           onEdit={() => setRoutineEditorOpen(true)}
         />
 
-        <View style={styles.sectionHeader}>
+        {connected && <View style={styles.sourceSwitch} accessibilityRole="tablist">
+          <TouchableOpacity
+            style={[styles.sourceOption, taskSource === 'online' && styles.sourceOptionActive]}
+            onPress={() => setTaskSource('online')}
+            accessibilityRole="tab"
+            accessibilityLabel="Online tasks"
+            accessibilityState={{ selected: taskSource === 'online' }}
+          ><Text style={styles.sourceText}>Online</Text></TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sourceOption, taskSource === 'device' && styles.sourceOptionActive]}
+            onPress={() => setTaskSource('device')}
+            accessibilityRole="tab"
+            accessibilityLabel="On device tasks"
+            accessibilityState={{ selected: taskSource === 'device' }}
+          ><Text style={styles.sourceText}>On device</Text></TouchableOpacity>
+        </View>}
+
+        {showConnected ? <ConnectedTasksToday
+          selectedBlock={d.selectedBlock}
+          selectedLabel={selectedLabel}
+          tasksUnlocked={d.tasksUnlocked}
+        /> : <><View style={styles.sectionHeader}>
           <View style={styles.sectionCopy}>
             <Text style={styles.sectionTitle}>
               {d.selectedPeriod === 'sleep' ? 'Sleep mode' : `${selectedLabel} tasks`}
@@ -207,7 +234,7 @@ export default function TasksToday() {
           </View>
           <TouchableOpacity
             style={styles.archiveButton}
-            onPress={() => router.push('/tasks/galaxy')}
+            onPress={() => router.push({ pathname: '/tasks/galaxy', params: { source: 'device' } })}
             accessibilityRole="button"
             accessibilityLabel="Open completed stars archive"
           >
@@ -224,6 +251,7 @@ export default function TasksToday() {
           onStarPress={promptStarCompletion}
           height={260}
         />
+        </>}
       </ScrollView>
 
       <PhotoCompletionModal
@@ -257,6 +285,7 @@ export default function TasksToday() {
         onRequestClose={() => setWeeklyStudioOpen(false)}
       >
         <WeeklyStudio
+          source={showConnected ? 'online' : 'device'}
           presentation="drawer"
           onDismiss={() => setWeeklyStudioOpen(false)}
         />
@@ -269,6 +298,10 @@ const themedStyles = createEditorialStyles(() => ({
   safe: { flex: 1, backgroundColor: Palette.bg },
   scroll: { flex: 1 },
   dashboard: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 104 : 92, gap: 14 },
+  sourceSwitch: { flexDirection: 'row', alignSelf: 'flex-start', padding: 3, gap: 3, borderRadius: R.full, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
+  sourceOption: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 13, borderRadius: R.full },
+  sourceOptionActive: { backgroundColor: Palette.redSoft },
+  sourceText: { ...Type.captionStrong, color: Palette.red },
   sectionHeader: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { ...Type.sectionTitle, color: Palette.warmWhite },

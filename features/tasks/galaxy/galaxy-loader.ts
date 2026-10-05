@@ -3,7 +3,7 @@
 // Returns positioned GalaxyStar[] with partial-error flag.
 // No React dependency. Only imports AsyncStorage and geometry.
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureAccountStorage } from '../../../lib/storage/account-storage';
 import type {
   Constellation,
   Star,
@@ -16,6 +16,9 @@ import {
   type GalaxyDomain,
 } from './galaxy-geometry';
 import { buildGalaxyEdges } from './galaxy-edges';
+import { createServerRepository } from '../server-repository';
+import type { ApiClient } from '../../../lib/api/client';
+import { mapServerGalaxy } from './server-galaxy';
 
 const HIDDEN_NODES_KEY = '@neru/galaxy-hidden-nodes';
 
@@ -32,11 +35,12 @@ function galaxyStarArchiveId(
 }
 
 export async function hideGalaxyStar(star: GalaxyStar): Promise<void> {
-  const raw = await AsyncStorage.getItem(HIDDEN_NODES_KEY);
+  const storage = captureAccountStorage();
+  const raw = await storage.getItem(HIDDEN_NODES_KEY);
   const parsed = safeParseArray<string>(raw ?? '');
   const hidden = new Set(parsed.value ?? []);
   hidden.add(galaxyStarArchiveId(star));
-  await AsyncStorage.setItem(HIDDEN_NODES_KEY, JSON.stringify([...hidden]));
+  await storage.setItem(HIDDEN_NODES_KEY, JSON.stringify([...hidden]));
 }
 
 /**
@@ -50,8 +54,9 @@ export async function hideGalaxyStar(star: GalaxyStar): Promise<void> {
  * Returns partialError=true when any plan JSON fails to parse.
  */
 export async function loadGalaxyStars(): Promise<GalaxyResult> {
+  const storage = captureAccountStorage();
   // --- join tables ---
-  const [consRaw, starsRaw, hiddenRaw] = await AsyncStorage.multiGet([
+  const [consRaw, starsRaw, hiddenRaw] = await storage.multiGet([
     '@neru/constellations',
     '@neru/stars',
     HIDDEN_NODES_KEY,
@@ -72,7 +77,7 @@ export async function loadGalaxyStars(): Promise<GalaxyResult> {
   let errors = consParse.error || starsParse.error || hiddenParse.error ? 1 : 0;
 
   // --- enumerate plans ---
-  const storedPlans = await loadAllStoredPlans();
+  const storedPlans = await loadAllStoredPlans(storage);
   errors += storedPlans.malformedCount;
 
   if (storedPlans.plans.size === 0 && !__DEV__) {
@@ -136,6 +141,22 @@ export async function loadGalaxyStars(): Promise<GalaxyResult> {
   }));
 
   return { stars: starsWithWeekLabels, domains, partialError: errors > 0 };
+}
+
+export async function loadServerGalaxyStars(client: ApiClient): Promise<GalaxyResult> {
+  const storage = captureAccountStorage();
+  const repository = createServerRepository(client, storage);
+  let partialError = false;
+  let history, nebulas;
+  try {
+    [history, nebulas] = await Promise.all([repository.refreshHistory(), repository.refreshNebulas()]);
+  } catch (error) {
+    [history, nebulas] = await Promise.all([repository.cachedHistory(), repository.cachedNebulas()]);
+    if (!history) throw error;
+    partialError = true;
+  }
+  const hidden = safeParseArray<string>(await storage.getItem(HIDDEN_NODES_KEY) ?? '');
+  return { ...mapServerGalaxy(history.data, nebulas?.data ?? [], new Set(hidden.value ?? [])), partialError: partialError || hidden.error };
 }
 
 interface ParseResult<T> {

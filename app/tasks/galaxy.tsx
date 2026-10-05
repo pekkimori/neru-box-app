@@ -9,7 +9,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
@@ -20,7 +20,7 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 import { Sp, R } from '../../features/tasks/tokens';
-import { hideGalaxyStar, loadGalaxyStars } from '../../features/tasks/galaxy/galaxy-loader';
+import { hideGalaxyStar, loadGalaxyStars, loadServerGalaxyStars } from '../../features/tasks/galaxy/galaxy-loader';
 import { GalaxyCanvas } from '../../features/tasks/galaxy/galaxy-canvas';
 import { GalaxyEntrance } from '../../features/tasks/galaxy/galaxy-entrance';
 import { GalaxyListView } from '../../features/tasks/galaxy/galaxy-list-view';
@@ -28,17 +28,23 @@ import { GalaxyPalette } from '../../features/tasks/galaxy/galaxy-theme';
 import type { GalaxyDomain, GalaxyStar } from '../../features/tasks/galaxy/galaxy-geometry';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
+import { useAuth } from '@/features/auth/auth-provider';
 
 export default function GalaxyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { appearance } = useAppTheme();
   const styles = useThemedStyles(themedStyles);
+  const { client } = useAuth();
+  const { source } = useLocalSearchParams<{ source?: string }>();
+  const online = source !== 'device';
+  const loadStars = useCallback(() => online && client ? loadServerGalaxyStars(client) : loadGalaxyStars(), [client, online]);
 
   const [stars, setStars] = useState<GalaxyStar[]>([]);
   const [domains, setDomains] = useState<GalaxyDomain[]>([]);
   const [loading, setLoading] = useState(true);
   const [partialError, setPartialError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [listView, setListView] = useState(false);
   const [sceneRevealed, setSceneRevealed] = useState(false);
   const [entranceVisible, setEntranceVisible] = useState(true);
@@ -51,18 +57,19 @@ export default function GalaxyScreen() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
-    loadGalaxyStars().then((result) => {
+    setLoading(true); setLoadError(null);
+    void loadStars().then((result) => {
       if (!cancelled) {
         setStars(result.stars);
         setDomains(result.domains);
         setPartialError(result.partialError);
         setLoading(false);
       }
-    });
+    }).catch(cause => { if (!cancelled) { setLoadError(cause instanceof Error ? cause.message : 'Could not load your archive.'); setLoading(false); } });
     return () => { cancelled = true; };
-  }, []);
+  }, [loadStars]));
 
   const handleBack = useCallback(() => router.back(), [router]);
   const handleEntranceReveal = useCallback(() => setSceneRevealed(true), []);
@@ -72,11 +79,11 @@ export default function GalaxyScreen() {
   }, []);
   const handleExcludeStar = useCallback(async (star: GalaxyStar) => {
     await hideGalaxyStar(star);
-    const result = await loadGalaxyStars();
+    const result = await loadStars();
     setStars(result.stars);
     setDomains(result.domains);
     setPartialError(result.partialError);
-  }, []);
+  }, [loadStars]);
 
   const readyToShow = !loading && sceneRevealed;
 
@@ -90,6 +97,7 @@ export default function GalaxyScreen() {
         accessibilityElementsHidden={entranceVisible}
         importantForAccessibility={entranceVisible ? 'no-hide-descendants' : 'auto'}
       >
+        {loadError && <View style={[styles.banner, { paddingTop: Math.max(insets.top, 12) }]}><Text accessibilityRole="alert" style={styles.bannerText}>{loadError}</Text><TouchableOpacity onPress={() => { setLoading(true); void loadStars().then(result => { setStars(result.stars); setDomains(result.domains); setPartialError(result.partialError); setLoadError(null); }).catch(cause => setLoadError(cause instanceof Error ? cause.message : 'Could not load your archive.')).finally(() => setLoading(false)); }} accessibilityRole="button" accessibilityLabel="Retry archive loading"><Text style={styles.returnText}>Retry</Text></TouchableOpacity></View>}
         {readyToShow && stars.length === 0 ? (
           <Animated.View
             style={styles.emptyState}
@@ -99,7 +107,7 @@ export default function GalaxyScreen() {
               <View style={styles.emptyRing} />
               <View style={styles.emptyDot} />
             </View>
-            <Text style={styles.emptyTitle}>Your universe is waiting.</Text>
+            <Text style={styles.emptyTitle}>{loadError ? 'Your archive could not be loaded.' : 'Your universe is waiting.'}</Text>
             <Text style={styles.emptyText}>Complete your first star to see it here.</Text>
             <TouchableOpacity
               style={styles.returnBtn}
@@ -130,7 +138,7 @@ export default function GalaxyScreen() {
 
               <View style={styles.heading}>
                 <Text style={styles.eyebrow}>SKY OBSERVER</Text>
-                <Text style={styles.title}>Archive</Text>
+                <Text style={styles.title}>{online ? 'Online archive' : 'Device archive'}</Text>
               </View>
 
               <View style={styles.toggle}>

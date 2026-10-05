@@ -1,5 +1,7 @@
 import { WeeklyStudio } from '@/features/tasks/weekly-studio/weekly-studio';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function WeeklyStudioRoute() {
-  return <WeeklyStudio />;
+  const { source } = useLocalSearchParams<{ source?: string }>();
+  return <WeeklyStudio source={source === 'device' ? 'device' : 'online'} />;
 }
