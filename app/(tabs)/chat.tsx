@@ -39,10 +39,7 @@ import {
   type Personality,
   type PersonalityId,
 } from "@/features/chat/preview-model";
-import {
-  useChatPreview,
-  type ChatConversation,
-} from "@/features/chat/use-chat-preview";
+import { useChat, type ChatConversation } from "@/features/chat/use-chat";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { useDraggableDrawer } from "@/hooks/useDraggableDrawer";
 
@@ -116,17 +113,20 @@ function PersonalityOption({
   personality,
   selected,
   onSelect,
+  disabled,
 }: {
   personality: Personality;
   selected: boolean;
   onSelect: (id: PersonalityId) => void;
+  disabled: boolean;
 }) {
   const styles = useThemedStyles(themedStyles);
 
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={() => onSelect(personality.id)}
       style={({ pressed }) => [
         styles.personalityOption,
@@ -149,22 +149,32 @@ function PersonalityOption({
 function MemoryRow({
   item,
   onRemove,
+  onEdit,
+  disabled,
 }: {
   item: MemoryItem;
   onRemove: (id: string) => void;
+  onEdit: (id: string, text: string) => Promise<boolean>;
+  disabled: boolean;
 }) {
   const styles = useThemedStyles(themedStyles);
   const { colors: Palette } = useAppTheme();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.text);
 
   return (
     <View style={styles.memoryRow}>
       <View style={styles.memoryMarker} />
-      <Text style={styles.memoryText}>{item.text}</Text>
+      {editing ? <TextInput accessibilityLabel={`Edit memory ${item.text}`} value={draft} onChangeText={setDraft} maxLength={500} style={styles.memoryText} /> : <Text style={styles.memoryText}>{item.text}</Text>}
+      <Pressable accessibilityRole="button" accessibilityLabel={editing ? `Save memory ${item.text}` : `Edit ${item.text}`} disabled={disabled || (editing && !draft.trim())} onPress={async () => { if (!editing) { setDraft(item.text); setEditing(true); } else if (await onEdit(item.id,draft)) setEditing(false); }} style={styles.memoryRemove}>
+        <Ionicons name={editing ? "checkmark" : "pencil-outline"} size={17} color={Palette.secondary} />
+      </Pressable>
       <Pressable
-        accessibilityLabel={`Forget ${item.text}`}
+        accessibilityLabel={editing ? "Cancel memory edit" : `Forget ${item.text}`}
         accessibilityRole="button"
         hitSlop={8}
-        onPress={() => onRemove(item.id)}
+        disabled={disabled}
+        onPress={() => { if (editing) setEditing(false); else onRemove(item.id); }}
         style={({ pressed }) => [
           styles.memoryRemove,
           pressed && styles.pressed,
@@ -195,7 +205,7 @@ function getConversationTitle(conversation: ChatConversation) {
 }
 
 function getConversationPreview(conversation: ChatConversation) {
-  return conversation.messages.at(-1)?.text ?? "No messages yet";
+  return conversation.preview || conversation.messages.at(-1)?.text || "No messages yet";
 }
 
 export default function ChatScreen() {
@@ -256,17 +266,18 @@ export default function ChatScreen() {
     inputText,
     setInputText,
     isTyping,
+    chatError,
+    cancelPendingReply,
     memoryItems,
     memoryDraft,
     setMemoryDraft,
     sendMessage,
     addMemory,
-    removeMemory,
-  } = useChatPreview(scrollToEnd);
+    removeMemory, editMemory, busy, canSend, refreshChat, pendingChange, retryChange, loadOlder, hasOlder, loadMoreConversations, hasMoreConversations,
+  } = useChat(scrollToEnd);
   const handleSelectConversation = useCallback(
-    (conversationId: string) => {
-      selectConversation(conversationId);
-      closeHistoryDrawer();
+    async (conversationId: string) => {
+      if (await selectConversation(conversationId)) closeHistoryDrawer();
     },
     [closeHistoryDrawer, selectConversation],
   );
@@ -279,10 +290,9 @@ export default function ChatScreen() {
     setRenamingConversationId(null);
     setRenameDraft("");
   }, []);
-  const handleSaveRename = useCallback(() => {
+  const handleSaveRename = useCallback(async () => {
     if (!renamingConversationId || !renameDraft.trim()) return;
-    renameConversation(renamingConversationId, renameDraft);
-    handleCancelRename();
+    if (await renameConversation(renamingConversationId, renameDraft)) handleCancelRename();
   }, [
     handleCancelRename,
     renameConversation,
@@ -290,8 +300,8 @@ export default function ChatScreen() {
     renamingConversationId,
   ]);
   const handleDeleteConversation = useCallback(
-    (conversationId: string) => {
-      deleteConversation(conversationId);
+    async (conversationId: string) => {
+      if (!(await deleteConversation(conversationId))) return;
       setPendingDeleteConversationId(null);
       if (renamingConversationId === conversationId) handleCancelRename();
     },
@@ -356,6 +366,7 @@ export default function ChatScreen() {
                 accessibilityLabel: "Start a new chat",
                 icon: "add",
                 onPress: startNewConversation,
+                disabled: busy || isTyping || !!pendingChange,
               },
               {
                 accessibilityLabel: "Open chat history",
@@ -372,6 +383,7 @@ export default function ChatScreen() {
 
           <FlatList
             ref={flatListRef}
+            ListHeaderComponent={hasOlder ? <Pressable accessibilityRole="button" disabled={busy} onPress={loadOlder}><Text style={styles.memoryIntro}>Load earlier messages</Text></Pressable> : null}
             data={messages}
             renderItem={renderMessage}
             keyExtractor={(item) => item.id}
@@ -381,6 +393,10 @@ export default function ChatScreen() {
             onContentSizeChange={scrollToEnd}
             ListFooterComponent={isTyping ? <TypingIndicator /> : null}
           />
+
+          {chatError && <Text accessibilityRole="alert" style={styles.errorBanner}>{chatError}</Text>}
+          {busy ? <Text style={styles.memoryIntro}>Syncing chat…</Text> : null}
+          <Pressable accessibilityRole="button" accessibilityLabel={pendingChange ? "Retry chat change" : "Refresh chat"} disabled={busy || isTyping} onPress={pendingChange ? retryChange : refreshChat}><Text style={styles.memoryIntro}>{pendingChange ? "Retry saved change" : "Refresh history"}</Text></Pressable>
 
           <ScrollView
             horizontal
@@ -416,21 +432,21 @@ export default function ChatScreen() {
               maxLength={500}
             />
             <TouchableOpacity
-              accessibilityLabel="Send message"
+              accessibilityLabel={isTyping ? "Stop response" : "Send message"}
               accessibilityRole="button"
               activeOpacity={0.8}
-              disabled={!inputText.trim() || isTyping}
-              onPress={sendMessage}
+              disabled={!isTyping && (!inputText.trim() || !canSend)}
+              onPress={isTyping ? cancelPendingReply : sendMessage}
               style={[
                 styles.sendButton,
-                (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
+                (!isTyping && !inputText.trim()) && styles.sendButtonDisabled,
               ]}
             >
-              <Ionicons name="arrow-up" size={21} color={Palette.onAccent} />
+              <Ionicons name={isTyping ? "stop" : "arrow-up"} size={21} color={Palette.onAccent} />
             </TouchableOpacity>
           </View>
           <Text style={styles.localNote}>
-            PRIVATE SESSION · STORED ON THIS SCREEN ONLY
+            CHAT HISTORY AND PREFERENCES ARE SAVED TO YOUR ACCOUNT
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -445,6 +461,7 @@ export default function ChatScreen() {
           <Reanimated.View style={[styles.modalBackdrop, historyBackdropStyle]}>
             <Pressable
               accessibilityLabel="Close chat history"
+              accessibilityRole="button"
               pressScale={1}
               style={StyleSheet.absoluteFill}
               onPress={closeHistoryDrawer}
@@ -463,6 +480,7 @@ export default function ChatScreen() {
                   <View>
                     <Text style={styles.sheetEyebrow}>CHAT / HISTORY</Text>
                     <Text style={styles.sheetTitle}>Past conversations.</Text>
+                    <Text style={styles.historyCaution}>Saved to your account and available on your other devices.</Text>
                   </View>
                 </View>
               </View>
@@ -473,6 +491,8 @@ export default function ChatScreen() {
               contentContainerStyle={styles.historyList}
               keyboardShouldPersistTaps="handled"
             >
+              {chatError ? <Text accessibilityRole="alert" style={styles.errorBanner}>{chatError}</Text> : null}
+              {pendingChange ? <Pressable accessibilityRole="button" accessibilityLabel="Retry history change" disabled={busy} onPress={retryChange}><Text style={styles.memoryIntro}>Retry saved change</Text></Pressable> : null}
               {conversationHistory.map((conversation) => {
                 const isActive = conversation.id === activeConversationId;
                 const isRenaming = conversation.id === renamingConversationId;
@@ -556,7 +576,7 @@ export default function ChatScreen() {
                               accessibilityState={{
                                 disabled: !renameDraft.trim(),
                               }}
-                              disabled={!renameDraft.trim()}
+                              disabled={!renameDraft.trim() || busy || !!pendingChange || isTyping}
                               hitSlop={4}
                               onPress={handleSaveRename}
                               style={({ pressed }) => [
@@ -597,6 +617,7 @@ export default function ChatScreen() {
                               accessibilityLabel={`Rename conversation ${conversation.number}`}
                               accessibilityRole="button"
                               hitSlop={4}
+                              disabled={busy || !!pendingChange || isTyping}
                               onPress={() => handleBeginRename(conversation)}
                               style={({ pressed }) => [
                                 styles.historyActionButton,
@@ -678,6 +699,7 @@ export default function ChatScreen() {
                   </View>
                 );
               })}
+              {hasMoreConversations ? <Pressable accessibilityRole="button" disabled={busy} onPress={loadMoreConversations}><Text style={styles.memoryIntro}>Load more conversations</Text></Pressable> : null}
               <View style={styles.sheetBottomSpace} />
             </ScrollView>
           </Reanimated.View>
@@ -696,6 +718,7 @@ export default function ChatScreen() {
           >
             <Pressable
               accessibilityLabel="Close customization"
+              accessibilityRole="button"
               pressScale={1}
               style={StyleSheet.absoluteFill}
               onPress={closeSettingsDrawer}
@@ -723,8 +746,12 @@ export default function ChatScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
+              {chatError ? <Text accessibilityRole="alert" style={styles.errorBanner}>{chatError}</Text> : null}
+              {busy ? <Text style={styles.memoryIntro}>Saving…</Text> : null}
+              {pendingChange ? <Pressable accessibilityRole="button" accessibilityLabel="Retry settings change" disabled={busy} onPress={retryChange}><Text style={styles.memoryIntro}>Retry saved change</Text></Pressable> : null}
               <Text style={styles.sheetSectionNumber}>01</Text>
               <Text style={styles.sheetSectionTitle}>HOW NERU SPEAKS</Text>
+              <Text style={styles.memoryIntro}>Choose the style Neru will use for your next replies.</Text>
               <View
                 accessibilityRole="radiogroup"
                 style={styles.personalityList}
@@ -735,6 +762,7 @@ export default function ChatScreen() {
                     personality={personality}
                     selected={personality.id === selectedPersonality}
                     onSelect={setSelectedPersonality}
+                    disabled={busy || !!pendingChange || isTyping}
                   />
                 ))}
               </View>
@@ -743,8 +771,7 @@ export default function ChatScreen() {
               <Text style={styles.sheetSectionNumber}>02</Text>
               <Text style={styles.sheetSectionTitle}>WHAT NERU KNOWS</Text>
               <Text style={styles.memoryIntro}>
-                Add details you want NERU to remember about how you work and
-                what matters to you.
+                Save useful details for Neru to use in your conversations.
               </Text>
 
               <View style={styles.previewNotice}>
@@ -754,7 +781,7 @@ export default function ChatScreen() {
                   color={Palette.red}
                 />
                 <Text style={styles.previewNoticeText}>
-                  Preview only - changes are not saved yet
+                  Saved to your account and used by Neru in your next replies.
                 </Text>
               </View>
 
@@ -765,6 +792,8 @@ export default function ChatScreen() {
                       key={item.id}
                       item={item}
                       onRemove={removeMemory}
+                      onEdit={editMemory}
+                      disabled={busy || !!pendingChange || isTyping}
                     />
                   ))
                 ) : (
@@ -773,7 +802,7 @@ export default function ChatScreen() {
                       No memories yet.
                     </Text>
                     <Text style={styles.memoryEmptyText}>
-                      Add a useful detail below to start this preview.
+                      Add a useful detail below.
                     </Text>
                   </View>
                 )}
@@ -787,14 +816,14 @@ export default function ChatScreen() {
                   onChangeText={setMemoryDraft}
                   placeholder="e.g. I prefer short study sessions"
                   placeholderTextColor={Palette.muted}
-                  maxLength={80}
+                  maxLength={500}
                   returnKeyType="done"
                   onSubmitEditing={addMemory}
                 />
                 <Pressable
                   accessibilityLabel="Add memory"
                   accessibilityRole="button"
-                  disabled={!memoryDraft.trim()}
+                  disabled={!memoryDraft.trim() || busy || !!pendingChange || isTyping}
                   onPress={addMemory}
                   style={({ pressed }) => [
                     styles.addMemoryButton,
@@ -931,6 +960,15 @@ const themedStyles = createEditorialStyles(() => ({
     textAlign: "center",
     marginTop: 6,
   },
+  errorBanner: {
+    ...Type.bodySmall,
+    color: Palette.red,
+    backgroundColor: Palette.surface,
+    borderLeftWidth: 2,
+    borderLeftColor: Palette.red,
+    padding: 10,
+    marginBottom: 8,
+  },
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
     ...StyleSheet.absoluteFill,
@@ -965,6 +1003,7 @@ const themedStyles = createEditorialStyles(() => ({
   },
   sheetEyebrow: { ...Type.label, color: Palette.red, marginBottom: 5 },
   sheetTitle: { ...Type.heroTitle, color: Palette.ink },
+  historyCaution: { ...Type.bodySmall, color: Palette.muted, marginTop: 6 },
   historyList: { gap: 8 },
   historyItem: {
     minHeight: 96,
