@@ -19,7 +19,8 @@ globalThis.__neruStorageTestAdapter = storage;
 const source = await readFile(new URL('./useStorage.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
   .replace("from 'react'", `from '${pathToFileURL(require.resolve('react')).href}'`)
-  .replace(/import AsyncStorage from '@react-native-async-storage\/async-storage';/, 'const AsyncStorage = globalThis.__neruStorageTestAdapter;');
+  .replace(/import AsyncStorage from '@react-native-async-storage\/async-storage';/, 'const AsyncStorage = globalThis.__neruStorageTestAdapter;')
+  .replace(/import .* from '\.\.\/lib\/storage\/account-storage';/, 'const resolveStorageKey = key => key; const captureAccountStorage = () => ({ keyFor: key => key });');
 const { useStorage } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 delete globalThis.__neruStorageTestAdapter;
 

@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { AppLaunch } from '@/components/app-launch';
 import { AppThemeProvider, useAppTheme } from '@/theme/app-theme';
 import { prepareInteractionFeedback } from '@/utils/interaction-feedback';
+import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -16,6 +17,7 @@ export const unstable_settings = {
 };
 
 function ThemedRootLayout() {
+  const { status, user } = useAuth();
   const { appearance, colors, loaded } = useAppTheme();
   const [launchVisible, setLaunchVisible] = useState(true);
   const [feedbackReady, setFeedbackReady] = useState(false);
@@ -66,10 +68,17 @@ function ThemedRootLayout() {
           accessibilityElementsHidden={launchVisible}
           importantForAccessibility={launchVisible ? 'no-hide-descendants' : 'auto'}
         >
-          <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="tasks" options={{ headerShown: false }} />
-            <Stack.Screen name="gacha" options={{ headerShown: false }} />
+          <Stack key={user?.id ?? 'signed-out'} screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
+            <Stack.Protected guard={status === 'signedIn'}>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="tasks" options={{ headerShown: false }} />
+              <Stack.Screen name="gacha" options={{ headerShown: false }} />
+              <Stack.Screen name="account" options={{ headerShown: false }} />
+            </Stack.Protected>
+            <Stack.Protected guard={status !== 'signedIn'}>
+              <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            </Stack.Protected>
           </Stack>
         </View>
 
@@ -85,9 +94,11 @@ function ThemedRootLayout() {
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <ThemedRootLayout />
-    </AppThemeProvider>
+    <AuthProvider>
+      <AppThemeProvider>
+        <ThemedRootLayout />
+      </AppThemeProvider>
+    </AuthProvider>
   );
 }
 

@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -239,6 +240,7 @@ export default function ControlScreen() {
           title="Control"
           tabIndex={0}
           actions={[
+            { accessibilityLabel: "Open your account", icon: "person-circle-outline", onPress: () => router.push('/account') },
             {
               accessibilityLabel: session
                 ? `End ${session.kind} session`

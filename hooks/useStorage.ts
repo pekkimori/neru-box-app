@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { captureAccountStorage, resolveStorageKey, type AccountStorage } from '../lib/storage/account-storage';
 
 type StorageListener = (value: unknown) => void;
 
@@ -16,16 +17,18 @@ function publishStorageValue(key: string, value: unknown) {
   listenersByKey.get(key)?.forEach((listener) => listener(value));
 }
 
-export async function persistStorageValue<T>(key: string, value: T): Promise<void> {
-  await AsyncStorage.setItem(key, JSON.stringify(value));
-  publishStorageValue(key, value);
+export async function persistStorageValue<T>(key: string, value: T, storage: AccountStorage = captureAccountStorage()): Promise<void> {
+  const resolvedKey = storage.keyFor(key);
+  await AsyncStorage.setItem(resolvedKey, JSON.stringify(value));
+  publishStorageValue(resolvedKey, value);
 }
 
 export function useStorage<T>(
-  key: string,
+  storageKey: string,
   initialValue: T,
   options?: StorageOptions<T>,
 ) {
+  const key = resolveStorageKey(storageKey);
   const [value, setValue] = useState<T>(initialValue);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
