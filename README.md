@@ -1,5 +1,9 @@
 # Welcome to your Expo app 👋
 
+## Neru server authentication
+
+See [authentication setup](docs/authentication.md) for API URLs, login/session behavior, Google configuration, and verification. The separate [Connected plan](docs/connected-planning.md) synchronizes constellations, stars, and daily assignments. [Weekly Studio](docs/connected-weekly-planning.md) saves weekly plans, and [photos and diary](docs/connected-completion.md) share completion history across devices. [Live chat](docs/live-chat.md) persists conversations and customization and refreshes connected planning data. Device-only records remain separate; importing historical local data is still pending.
+
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
 ## Get started
