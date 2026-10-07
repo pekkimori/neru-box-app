@@ -10,6 +10,7 @@ import { verifyConnectedPlanning } from './verify-connected-planning-browser.mjs
 import { verifyChatBrowser } from './verify-chat-browser.mjs';
 import { verifyCompletionBrowser } from './verify-completion-browser.mjs';
 import { verifyWeeklyBrowser } from './verify-weekly-browser.mjs';
+import { verifyRoutinesBrowser } from './verify-routines-browser.mjs';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const apiPort = process.env.NERU_AUTH_TEST_PORT ?? '4107';
@@ -189,6 +190,7 @@ try {
   console.log('Logout, account switching, logout-all, and login back passed.');
   await verifyConnectedPlanning({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
   await verifyCompletionBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
+  await verifyRoutinesBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, proxyApi });
   await verifyWeeklyBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
   await verifyChatBrowser({ page, browser, origin, apiUrl, email, password, proxyApi, artifacts });
   assert.deepEqual(failures, [], 'No uncaught browser errors');

@@ -4,8 +4,9 @@ import * as Crypto from 'expo-crypto';
 import { useStorage } from './useStorage';
 import { DEFAULT_ROUTINES } from '@/features/tasks/default-routines';
 import type { RoutineQuest, DailyRoutineStatus, RoutineBlock } from '../types/tasks';
+import { useConnectedRoutines } from '@/features/tasks/routines/use-connected-routines';
 
-export function useRoutineQuests(date: string) {
+function useLocalRoutineQuests(date: string) {
   const { value: quests, save: saveQuests, loaded: questsLoaded } =
     useStorage<RoutineQuest[]>('@neru/routines', DEFAULT_ROUTINES);
   const { value: status, save: saveStatus, loaded: statusLoaded } =
@@ -94,4 +95,10 @@ export function useRoutineQuests(date: string) {
     updateQuest,
     removeQuest,
   };
+}
+
+export function useRoutineQuests(date: string, online = false) {
+  const local = useLocalRoutineQuests(date);
+  const connected = useConnectedRoutines(date, online);
+  return online ? connected : { ...local, disabled: false, error: null, saving: false, pending: [], reload: async () => {}, retry: async () => true };
 }

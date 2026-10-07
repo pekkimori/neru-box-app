@@ -13,6 +13,7 @@ import { useProductivityStreak } from '@/features/tasks/observatory/use-producti
 import { useConstellations } from '@/hooks/useConstellations';
 import { useDailyPlan } from '@/hooks/useDailyPlan';
 import { useRoutineQuests } from '@/hooks/useRoutineQuests';
+import { RoutineSyncStatus } from '@/features/tasks/routines/routine-sync-status';
 import { createEditorialPalette, createEditorialStyles, type EditorialPalette } from '@/theme/editorial-theme';
 import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
 import { Type } from '@/theme/typography';
@@ -145,7 +146,8 @@ export default function DiaryScreen() {
   const plan = useMemo(() => online ? { ...localPlan, moodSticker: connected.schedule?.moodSticker, reflections: connected.schedule?.reflections ?? {} } : localPlan, [online, localPlan, connected.schedule]);
   const planLoaded = localPlanLoaded && (!online || !connected.loading);
   const setMoodSticker = (mood: string) => { if (online) void connected.setMood(mood); else setLocalMood(mood); };
-  const { quests, status, loaded: routinesLoaded } = useRoutineQuests(selectedDate);
+  const routines = useRoutineQuests(selectedDate, online);
+  const { quests, status, loaded: routinesLoaded } = routines;
   const { constellations, stars, loaded: constellationsLoaded } = useConstellations();
   const { gachaResults, loaded: gachaLoaded } = useGachaCollection();
   const localStreak = useProductivityStreak(localPlan, selectedDate);
@@ -194,10 +196,10 @@ export default function DiaryScreen() {
   const attachedDataStickerSet = useMemo(() => new Set(attachedDataStickers), [attachedDataStickers]);
   const stickerDefinitions = useMemo<Record<DataStickerId, StickerDefinition>>(() => ({
     tasks: { id: 'tasks', label: 'TASKS', icon: 'checkmark-done', value: `${completedCount}/${totalTasks}`, caption: `${completionPercent}% complete`, fill: Palette.peach, ink: Palette.peachInk },
-    routines: { id: 'routines', label: 'RITUALS', icon: 'repeat', value: `${completedRoutines}/${quests.length}`, caption: 'kept today', fill: Palette.mint, ink: Palette.mintInk },
+    routines: { id: 'routines', label: 'RITUALS', icon: 'repeat', value: online && routines.disabled ? '—' : `${completedRoutines}/${quests.length}`, caption: routines.error ? 'Could not refresh routines' : 'kept today', fill: Palette.mint, ink: Palette.mintInk },
     coins: { id: 'coins', label: 'COINS', icon: 'sparkles', value: `+${coinsEarned}`, caption: 'earned today', fill: Palette.gold, ink: Palette.goldInk },
     streak: { id: 'streak', label: 'STREAK', icon: 'flame', value: loaded ? `${streak} day${streak === 1 ? '' : 's'}` : '—', caption: 'keep the spark', fill: Palette.sky, ink: Palette.skyInk },
-  }), [coinsEarned, completedCount, completedRoutines, completionPercent, loaded, quests.length, streak, totalTasks]);
+  }), [coinsEarned, completedCount, completedRoutines, completionPercent, loaded, quests.length, streak, totalTasks, online, routines.disabled, routines.error]);
 
   const availableCollectibles = useMemo(() => getGachaResultsAcquiredOnDate(gachaResults, selectedDate), [gachaResults, selectedDate]);
   const collectibleByKey = useMemo(() => new Map(availableCollectibles.map((item) => [gachaResultKey(item), item])), [availableCollectibles]);
@@ -257,6 +259,7 @@ export default function DiaryScreen() {
           { accessibilityLabel: `Selected date: ${weekday}, ${displayDate}. Choose another date`, icon: 'calendar-outline', onPress: openDateJump },
           { accessibilityLabel: 'Edit diary stickers', icon: 'create-outline', onPress: () => setStickerTrayOpen(true) },
         ]} />
+        {online && <RoutineSyncStatus {...routines} />}
 
         <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12 }}>
           {(['online', 'device'] as const).map(source => <Pressable key={source} accessibilityRole="tab" accessibilityLabel={source === 'online' ? 'Online diary' : 'On device diary'} accessibilityState={{ selected: source === taskSource }} onPress={() => { commitNote(); setTaskSource(source); }} style={{ padding: 10, borderRadius: 12, backgroundColor: taskSource === source ? colors.accentSoft : colors.card }}><Text style={{ color: colors.text }}>{source === 'online' ? 'Online' : 'On device'}</Text></Pressable>)}

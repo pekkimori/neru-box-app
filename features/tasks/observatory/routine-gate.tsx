@@ -9,6 +9,7 @@ import { Palette, Sp, R, useTasksPalette } from '../tokens';
 import type { RoutineQuest } from '../../../types/tasks';
 
 interface Props {
+  disabled?: boolean;
   routines: RoutineQuest[];
   isComplete: (id: string) => boolean;
   tasksUnlocked: boolean;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function RoutineGate({
+  disabled = false,
   routines, isComplete, tasksUnlocked,
   isSleepPeriod, sleepReady, readOnly, sleepBlocked, onToggle, onEdit,
 }: Props) {
@@ -28,6 +30,14 @@ export function RoutineGate({
   const Palette = useTasksPalette();
   const completedCount = routines.filter((r) => isComplete(r.id)).length;
   const allDone = routines.length === 0 || completedCount === routines.length;
+
+  if (disabled) {
+    return <View style={styles.gate}>
+      <Text style={styles.gateLabel}>Routine gate</Text>
+      <Text style={styles.lockMessage}>Waiting for your routines to sync.</Text>
+      {routines.map(quest => <Text key={quest.id} style={styles.rowText}>{quest.label}{isComplete(quest.id) ? ' ✓' : ''}</Text>)}
+    </View>;
+  }
 
   if (sleepBlocked) {
     return (

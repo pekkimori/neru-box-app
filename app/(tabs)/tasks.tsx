@@ -25,6 +25,7 @@ import { useObservatoryData } from '../../features/tasks/observatory/use-observa
 import { Palette, R, Sp, useTasksPalette } from '../../features/tasks/tokens';
 import { WeeklyStudio } from '@/features/tasks/weekly-studio/weekly-studio';
 import type { BlockType, Star } from '../../types/tasks';
+import { RoutineSyncStatus } from '@/features/tasks/routines/routine-sync-status';
 
 export default function TasksToday() {
   const styles = useThemedStyles(themedStyles);
@@ -34,7 +35,7 @@ export default function TasksToday() {
   const connected = auth.status === 'signedIn' && !!auth.user;
   const [taskSource, setTaskSource] = useState<'online' | 'device'>('online');
   const showConnected = connected && taskSource === 'online';
-  const d = useObservatoryData();
+  const d = useObservatoryData(showConnected);
   const [photoVisible, setPhotoVisible] = useState(false);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
   const [weeklyStudioOpen, setWeeklyStudioOpen] = useState(false);
@@ -134,7 +135,9 @@ export default function TasksToday() {
           onSelect={d.setSelectedPeriod}
         />
 
+        {showConnected && <RoutineSyncStatus {...d.routinesSync} />}
         <RoutineGate
+          disabled={d.routinesSync.disabled}
           routines={d.displayRoutines}
           isComplete={d.isQuestComplete}
           tasksUnlocked={d.tasksUnlocked}
@@ -143,7 +146,7 @@ export default function TasksToday() {
           readOnly={d.routinesReadOnly}
           sleepBlocked={d.sleepBlocked}
           onToggle={d.toggleQuestComplete}
-          onEdit={() => setRoutineEditorOpen(true)}
+          onEdit={() => { if (!d.routinesSync.disabled) setRoutineEditorOpen(true); }}
         />
 
         {connected && <View style={styles.sourceSwitch} accessibilityRole="tablist">
@@ -266,7 +269,9 @@ export default function TasksToday() {
         onFinished={() => setEarnedReward(null)}
       />
       <RoutineEditorModal
+        disabled={d.routinesSync.disabled}
         visible={routineEditorOpen}
+        status={showConnected ? <RoutineSyncStatus {...d.routinesSync} /> : undefined}
         periodLabel={selectedLabel}
         routines={d.displayRoutines}
         onClose={() => setRoutineEditorOpen(false)}

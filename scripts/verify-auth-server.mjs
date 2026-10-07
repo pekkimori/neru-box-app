@@ -32,6 +32,10 @@ import { AgentController } from '../../nerubox-server/src/infrastructure/http/en
 import { RunOrchestration } from '../../nerubox-server/src/application/usecases/agents/RunOrchestration.ts';
 import { MultiAgentOrchestrator } from '../../nerubox-server/src/application/orchestration/MultiAgentOrchestrator.ts';
 import { PostgresPlanningWriter } from '../../nerubox-server/src/infrastructure/planning/PostgresPlanningWriter.ts';
+import { PostgresRoutineRepository } from '../../nerubox-server/src/infrastructure/routine/PostgresRoutineRepository.ts';
+import { GetRoutines } from '../../nerubox-server/src/application/usecases/routine/GetRoutines.ts';
+import { ApplyRoutineCommand } from '../../nerubox-server/src/application/usecases/routine/ApplyRoutineCommand.ts';
+import { RoutinesController } from '../../nerubox-server/src/infrastructure/http/endpoints/routines/RoutinesController.ts';
 
 const database = await createTestDb();
 const users = new PostgresUserAuthRepository(database.db);
@@ -57,6 +61,8 @@ const controller = new AuthController(
 const app = new Hono();
 app.use('*', cors({ origin: process.env.NERU_AUTH_TEST_ORIGIN ?? 'http://localhost:8082' }));
 app.route('/auth', controller.routes());
+const routines = new PostgresRoutineRepository(database.db, ids);
+app.route('/routines', new RoutinesController(new GetRoutines(routines), new ApplyRoutineCommand(routines), createBearerAuth(new GetCurrentUser(users, tokens))).routes());
 attachDomainRoutes(app, database.db, createBearerAuth(new GetCurrentUser(users, tokens)), ids, clock);
 // Deterministic test agent behind the real bearer-protected SSE controller.
 // It avoids contacting a paid model while exercising the app's live stream UI.

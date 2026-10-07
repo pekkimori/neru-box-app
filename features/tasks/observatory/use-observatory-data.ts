@@ -21,7 +21,7 @@ type CanCompleteResult =
   | { can: true }
   | { can: false; reason: 'future' | 'sleep_mode' };
 
-export function useObservatoryData() {
+export function useObservatoryData(online = false) {
   const [now, setNow] = useState(() => new Date());
   const nowMin = getMinuteOfDay(now);
   const today = todayString();
@@ -50,11 +50,12 @@ export function useObservatoryData() {
     useDailyPlan(today);
   const { streak: productivityStreak, loaded: streakLoaded } =
     useProductivityStreak(plan, today);
+  const routinesSync = useRoutineQuests(today, online);
   const {
     getQuestsForBlock, isQuestComplete, toggleQuestComplete: rawToggle,
     addQuest, updateQuest, removeQuest, loaded: questsLoaded,
   } =
-    useRoutineQuests(today);
+    routinesSync;
   const { constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation, loaded: consLoaded } =
     useConstellations();
 
@@ -139,15 +140,15 @@ export function useObservatoryData() {
   const sleepBlocked = sleepModeActive && selectedPeriod !== 'sleep';
 
   const tasksUnlocked =
-    selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
+    !routinesSync.disabled && selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
     (displayRoutines.length === 0 || displayRoutines.every((r) => isQuestComplete(r.id)));
 
   const routinesReadOnly =
     (selectedPeriod !== 'sleep' && isSelectedFuture) || sleepBlocked;
 
   const toggleQuestComplete = useCallback(
-    (questId: string) => { if (!routinesReadOnly) rawToggle(questId); },
-    [rawToggle, routinesReadOnly],
+    (questId: string) => { if (!routinesReadOnly && !routinesSync.disabled) void rawToggle(questId); },
+    [rawToggle, routinesReadOnly, routinesSync.disabled],
   );
 
   const canCompleteBlock = useCallback(
@@ -197,12 +198,13 @@ export function useObservatoryData() {
   useEffect(() => {
     if (
       isSleepWindow && selectedPeriod === 'sleep' && !sleepReady &&
-      sleepRoutines.length > 0 &&
+      !routinesSync.disabled && sleepRoutines.length > 0 &&
       sleepRoutines.every((r) => isQuestComplete(r.id))
     ) { markSleepReady(); }
-  }, [isSleepWindow, selectedPeriod, sleepReady, sleepRoutines, isQuestComplete, markSleepReady]);
+  }, [isSleepWindow, selectedPeriod, sleepReady, sleepRoutines, isQuestComplete, markSleepReady, routinesSync.disabled]);
 
   return {
+    routinesSync,
     loaded, today, nowMin, coins, addCoins, productivityStreak,
     constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation,
     plan, assignTask, updateTaskStatus, awardCoins, removeTask,
