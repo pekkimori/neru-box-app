@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 // features/tasks/connected/connected-planning-screen.tsx
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, Text, View } from 'react-native';
@@ -215,7 +216,7 @@ export function ConnectedPlanningScreen() {
           <Text style={styles.sectionTitle}>Nebulae</Text>
           <TouchableOpacity style={styles.addButton} disabled={blocked} onPress={() => setNebulaOpen(true)} accessibilityRole="button" accessibilityLabel="Create nebula"><Text style={styles.addText}>New nebula</Text></TouchableOpacity>
         </View>
-        <View style={styles.card}>{planning.nebulas.filter(nebula => !nebula.archivedAt).map(nebula => <Text key={nebula.id} style={styles.cardTitle}>{nebula.icon} {nebula.name}</Text>)}</View>
+        <View style={styles.card}>{planning.nebulas.filter(nebula => !nebula.archivedAt).map(nebula => <Text key={nebula.id} style={styles.cardTitle}>{iconGlyph(nebula.icon)} {nebula.name}</Text>)}</View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Constellations</Text>
@@ -238,7 +239,7 @@ export function ConnectedPlanningScreen() {
         ) : planning.constellations.map((constellation) => (
           <View key={constellation.id} testID={`online-goal-${constellation.id}`} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{constellation.icon} {constellation.name}</Text>
+              <Text style={styles.cardTitle}>{iconGlyph(constellation.icon)} {constellation.name}</Text>
               <View style={styles.cardActions}>
                 <TouchableOpacity
                   style={styles.chip}
@@ -342,7 +343,7 @@ export function ConnectedPlanningScreen() {
       >
         <Text style={styles.muted}>Life domain</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {[{ id: '', name: 'New nebula', icon: '✨' }, ...planning.nebulas.filter(nebula => !nebula.archivedAt)].map(nebula => <TouchableOpacity key={nebula.id} accessibilityRole="radio" accessibilityState={{ selected: goalNebulaId === nebula.id }} onPress={() => setGoalNebulaId(nebula.id)} style={[styles.chip, goalNebulaId === nebula.id && { backgroundColor: Palette.redSoft }]}><Text style={styles.chipText}>{nebula.icon} {nebula.name}</Text></TouchableOpacity>)}
+          {[{ id: '', name: 'New nebula', icon: '✨' }, ...planning.nebulas.filter(nebula => !nebula.archivedAt)].map(nebula => <TouchableOpacity key={nebula.id} accessibilityRole="radio" accessibilityState={{ selected: goalNebulaId === nebula.id }} onPress={() => setGoalNebulaId(nebula.id)} style={[styles.chip, goalNebulaId === nebula.id && { backgroundColor: Palette.redSoft }]}><Text style={styles.chipText}>{iconGlyph(nebula.icon)} {nebula.name}</Text></TouchableOpacity>)}
         </View>
       </AddConstellationModal>
       <AddConstellationModal visible={nebulaOpen} onClose={() => setNebulaOpen(false)} onSubmit={planning.createNebula} error={planning.error} />

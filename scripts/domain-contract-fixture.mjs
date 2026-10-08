@@ -106,7 +106,7 @@ export async function verifyDomainContract(client, outsider) {
   const retry = await client.request('/planning/commands', { method: 'POST', body: { operationId, command } });
   assert.deepEqual(retry, receipt);
   const connectedGoal = await client.request(`/goals/${receipt.result.id}`);
-  assert.equal(connectedGoal.goal.icon, '🎹');
+  assert.equal(connectedGoal.goal.icon, 'piano');
   await assert.rejects(client.request('/planning/commands', { method: 'POST', body: { operationId, command: { ...command, title: 'Changed' } } }), error => error.status === 409);
   const addStar = await client.request('/planning/commands', { method: 'POST', body: {
     operationId: crypto.randomUUID(), command: { kind: 'addQuest', goalId: connectedGoal.goal.id, phaseId: connectedGoal.phases[0].phase.id, title: 'Connected star', timesRequired: 3 },
@@ -140,7 +140,7 @@ export async function verifyDomainContract(client, outsider) {
   await client.request('/planning/commands', { method: 'POST', body: { operationId: crypto.randomUUID(), command: { kind: 'setMood', date, sticker: '😌' } } });
   await client.request('/planning/commands', { method: 'POST', body: { operationId: crypto.randomUUID(), command: { kind: 'saveReflection', date, blockId: 'morning', text: 'A good start' } } });
   const history = (await repository.refreshHistory()).data;
-  assert.ok(history.some(day => day.date === date && day.moodSticker === '😌' && day.reflections.morning === 'A good start'));
+  assert.ok(history.some(day => day.date === date && day.moodSticker === 'calm' && day.reflections.morning === 'A good start'));
   assert.ok(history.some(day => day.tasks.some(task => task.id === planned.result.id && task.status === 'lit')));
   const firstPage = await client.request('/schedules?limit=1');
   assert.equal(firstPage.schedules.length, 1);

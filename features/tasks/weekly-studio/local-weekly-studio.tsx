@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 import Animated from 'react-native-reanimated';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -544,7 +545,7 @@ export function LocalWeeklyStudio({
             <View key={constellation.id} style={[styles.domainCard, goalReached && styles.domainCardGoal]}>
               <View style={styles.domainHeader}>
                 <View style={styles.domainIdentity}>
-                  <View style={[styles.domainIcon, goalReached && styles.domainIconGoal]}><Text style={styles.domainEmoji}>{constellation.icon}</Text></View>
+                  <View style={[styles.domainIcon, goalReached && styles.domainIconGoal]}><Text style={styles.domainEmoji}>{iconGlyph(constellation.icon)}</Text></View>
                   <View style={styles.domainCopy}>
                     <Text style={styles.domainName}>{constellation.name}</Text>
                     <Text style={styles.domainProgressText}>
@@ -671,7 +672,7 @@ export function LocalWeeklyStudio({
             </GestureDetector>
             <View style={styles.sheetHeader}>
               <View style={styles.sheetTitleRow}>
-                <View style={styles.domainIcon}><Text style={styles.domainEmoji}>{activeDomain?.icon ?? '✨'}</Text></View>
+                <View style={styles.domainIcon}><Text style={styles.domainEmoji}>{iconGlyph(activeDomain?.icon)}</Text></View>
                 <View>
                   <Text style={styles.sheetTitle}>New {activeDomain?.name ?? 'nebula'} star</Text>
                   <Text style={styles.sheetSubtitle}>{formatFullDate(selectedDate)}</Text>

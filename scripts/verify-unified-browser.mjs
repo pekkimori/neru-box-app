@@ -7,8 +7,9 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   await page.getByRole('button', { name: 'Manage week plan', exact: true }).click();
   await page.getByRole('button', { name: 'Create a new nebula', exact: true }).click();
   await page.getByLabel('Domain name', { exact: true }).fill('Browser original sky');
-  await page.getByLabel('Domain icon', { exact: true }).fill('🌿');
+  await page.getByLabel('Domain icon', { exact: true }).fill('piano');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.getByText('🎹', { exact: true }).first().waitFor();
   await page.getByRole('button', { name: /^Create Browser original sky task for/ }).click();
   await page.getByLabel('Task name', { exact: true }).fill('Browser original star');
   await page.getByRole('button', { name: block, exact: true }).click();
@@ -20,6 +21,11 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   assert.equal(saved.status(), 200, await saved.text());
   const authorization = saved.request().headers().authorization;
   const headers = { Authorization: authorization };
+  assert.equal(saved.request().postDataJSON().command.nebulas.find(edit => edit.kind === 'create').icon, 'piano');
+  const domains = await (await page.request.get(testApiUrl + '/nebulas', { headers })).json();
+  assert.equal(domains.nebulas.find(nebula => nebula.name === 'Browser original sky').icon, 'piano');
+  const routineDefinitions = await (await page.request.get(testApiUrl + '/routines?date=' + saved.request().postDataJSON().command.days[0].date, { headers })).json();
+  assert.ok(routineDefinitions.quests.every(quest => /^[a-z][a-z0-9-]{0,63}$/.test(quest.icon)));
   await page.getByRole('button', { name: 'Close Weekly Studio', exact: true }).waitFor({ state: 'detached' });
   await page.getByText('Browser original star', { exact: true }).first().waitFor();
   assert.equal(await page.getByRole('tab', { name: /^(Online|On device) tasks$/ }).count(), 0);

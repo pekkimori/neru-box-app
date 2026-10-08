@@ -53,7 +53,7 @@ test('a successful command posts once with an operation id and clears its pendin
   const body = f.requests[0].options.body;
   assert.deepEqual(Object.keys(body).sort(), ['command', 'operationId']);
   assert.equal(body.operationId, 'op-1');
-  assert.deepEqual(body.command, { kind: 'createGoal', title: 'Piano', icon: '🎹' });
+  assert.deepEqual(body.command, { kind: 'createGoal', title: 'Piano', icon: 'piano' });
   assert.deepEqual(await f.commands.pending(), []);
 });
 
@@ -65,7 +65,7 @@ test('a lost response keeps the save pending and retry reuses the same operation
   const pending = await f.commands.pending();
   assert.equal(pending.length, 1);
   assert.equal(pending[0].operationId, 'op-1');
-  assert.deepEqual(pending[0].command, { kind: 'createGoal', title: 'Piano', icon: '🎹' });
+  assert.deepEqual(pending[0].command, { kind: 'createGoal', title: 'Piano', icon: 'piano' });
 
   const before = f.requests.length;
   f.setResponder(async () => ({ result: { id: 'srv-late' } }));
@@ -78,11 +78,11 @@ test('a lost response keeps the save pending and retry reuses the same operation
 test('a new change is refused while a save is still pending', async () => {
   const f = fixture();
   f.setResponder(async () => { throw new Error('offline'); });
-  await assert.rejects(f.commands.execute({ kind: 'createGoal', title: 'A', icon: 'x' }), /offline/);
+  await assert.rejects(f.commands.execute({ kind: 'createGoal', title: 'A', icon: 'star' }), /offline/);
 
   const before = f.requests.length;
   await assert.rejects(
-    f.commands.execute({ kind: 'createGoal', title: 'B', icon: 'x' }),
+    f.commands.execute({ kind: 'createGoal', title: 'B', icon: 'star' }),
     /Retry the pending save/,
   );
   assert.equal(f.requests.length, before);
@@ -114,7 +114,7 @@ test('an account change blocks pending reads and writes', async () => {
   f.switchAccount();
   await assert.rejects(f.commands.pending(), /Account changed/);
   await assert.rejects(
-    f.commands.execute({ kind: 'createGoal', title: 'A', icon: 'x' }),
+    f.commands.execute({ kind: 'createGoal', title: 'A', icon: 'star' }),
     /Account changed/,
   );
   assert.equal(f.requests.length, 0);
@@ -122,4 +122,16 @@ test('an account change blocks pending reads and writes', async () => {
   const signedOut = fixture();
   signedOut.signOut();
   await assert.rejects(signedOut.commands.pending(), /Account changed/);
+});
+
+test('a legacy pending icon command retries its exact body instead of changing its receipt hash', async () => {
+  const f = fixture();
+  const command = { kind: 'createGoal', title: 'Piano', icon: '🎹' };
+  const scoped = scopedStorage(f.storage, 'server', 'u1');
+  await scoped.setItem('@neru/planning-outbox/v1/legacy-op', JSON.stringify({
+    operationId: 'legacy-op', command, createdAt: '2026-10-04T00:00:00.000Z',
+  }));
+  await f.commands.retry('legacy-op');
+  assert.deepEqual(f.requests[0].options.body, { operationId: 'legacy-op', command });
+  assert.deepEqual(await f.commands.pending(), []);
 });

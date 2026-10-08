@@ -1,3 +1,4 @@
+import { MOOD_KEYS, moodKey } from '@/lib/icons/icon-reference';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Image, type ImageSource } from 'expo-image';
@@ -37,7 +38,7 @@ const diaryExtras = (colors: EditorialPalette) => ({
 
 const Palette = createEditorialPalette(diaryExtras);
 const BLOCKS: BlockType[] = ['morning', 'afternoon', 'evening'];
-const MOODS = ['😌', '⚡', '🥳', '🫠', '🌙', '🔥'] as const;
+const MOODS = MOOD_KEYS;
 const DEFAULT_DATA_STICKERS: DataStickerId[] = ['tasks', 'streak'];
 const MAX_POKEMON_STICKERS = 4;
 
@@ -56,12 +57,12 @@ type StickerDefinition = {
 };
 
 const MOOD_DETAILS: Record<MoodKey, { icon: React.ComponentProps<typeof Ionicons>['name']; label: string }> = {
-  '😌': { icon: 'leaf', label: 'Calm' },
-  '⚡': { icon: 'flash', label: 'Charged' },
-  '🥳': { icon: 'sparkles', label: 'Glowing' },
-  '🫠': { icon: 'water', label: 'Melty' },
-  '🌙': { icon: 'moon', label: 'Dreamy' },
-  '🔥': { icon: 'flame', label: 'On fire' },
+  calm: { icon: 'leaf', label: 'Calm' },
+  charged: { icon: 'flash', label: 'Charged' },
+  glowing: { icon: 'sparkles', label: 'Glowing' },
+  melty: { icon: 'water', label: 'Melty' },
+  dreamy: { icon: 'moon', label: 'Dreamy' },
+  'on-fire': { icon: 'flame', label: 'On fire' },
 };
 
 
@@ -163,7 +164,7 @@ export default function DiaryScreen() {
   const coinsEarned = tasks.reduce((sum, task) => sum + task.coinsEarned, 0);
   const completedRoutines = quests.filter((quest) => status.completed[quest.id]).length;
   const completionPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
-  const mood = (MOODS.includes(plan.moodSticker as MoodKey) ? plan.moodSticker : totalTasks > 0 && completedCount === totalTasks ? '🥳' : '😌') as MoodKey;
+  const mood: MoodKey = moodKey(plan.moodSticker) ?? (totalTasks > 0 && completedCount === totalTasks ? 'glowing' : 'calm');
 
   const memoryPhotos = useMemo((): MemoryPhoto[] => {
     const completed = tasks.filter((task) => task.status === 'lit' && task.completionPhotoUri).slice(0, 3).map((task) => ({

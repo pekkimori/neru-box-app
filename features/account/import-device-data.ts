@@ -1,3 +1,4 @@
+import { iconKey, moodKey } from '../../lib/icons/icon-reference.ts';
 import type { ApiClient } from '../../lib/api/client';
 import type { KeyValueStorage } from '../../lib/storage/scoped-storage';
 import type { Constellation, Star, RoutineQuest, DailyRoutineStatus } from '../../types/tasks';
@@ -37,10 +38,12 @@ export async function importDeviceData(client: ApiClient, storage: KeyValueStora
         return { starId: task.starId, nebulaId: task.constellationId, title: stars.find(star => star.id === task.starId)?.label ?? 'Completed task', block, status: task.status, coinsEarned: task.coinsEarned, ...(task.completedAt ? { completedAt: task.completedAt } : {}) };
       });
       const diary = Object.fromEntries(['diaryNote', 'diaryStickers', 'diaryDataStickers', 'diaryPageLayout'].filter(key => key in plan).map(key => [key, plan[key as keyof typeof plan]]));
-      return { date, tasks, diary, reflections: plan.reflections, ...(plan.moodSticker ? { moodSticker: plan.moodSticker } : {}) };
+      const sticker = moodKey(plan.moodSticker);
+      if (plan.moodSticker && !sticker) throw new Error('An existing diary mood has no supported icon name. Its original record has been preserved.');
+      return { date, tasks, diary, reflections: plan.reflections, ...(sticker ? { moodSticker: sticker } : {}) };
     });
     const values = ['sleep-schedule', 'sleep-intent', 'app-appearance-v1', 'gacha-results', 'galaxy-hidden-nodes'].filter(key => entries.has(`@neru/${key}`)).map(key => ({ key, value: key === 'sleep-schedule' ? normalizeSleepSchedule(read(`@neru/${key}`, null)) : read(`@neru/${key}`, null) }));
-    const data = { nebulas, days, routines: read<RoutineQuest[]>('@neru/routines', []), routineDays: [...entries].filter(([key]) => key.startsWith('@neru/routines/')).map(([, raw]) => JSON.parse(raw) as DailyRoutineStatus), values, ...(entries.has('@neru/coins') ? { coins: read<number>('@neru/coins', 120) } : {}) };
+    const data = { nebulas: nebulas.map(nebula => ({ ...nebula, icon: iconKey(nebula.icon) })), days, routines: read<RoutineQuest[]>('@neru/routines', []).map(routine => ({ ...routine, icon: iconKey(routine.icon) })), routineDays: [...entries].filter(([key]) => key.startsWith('@neru/routines/')).map(([, raw]) => JSON.parse(raw) as DailyRoutineStatus), values, ...(entries.has('@neru/coins') ? { coins: read<number>('@neru/coins', 120) } : {}) };
     job = { operationId: uuid(), data, photos };
     if (!entries.size) job.done = true;
     guard(); await storage.setItem(jobKey, JSON.stringify(job));

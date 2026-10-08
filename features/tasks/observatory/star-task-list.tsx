@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 // features/tasks/observatory/star-task-list.tsx
 import { Text, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,7 +57,7 @@ export function StarTaskList({
                 </Text>
                 {constellation && (
                   <Text style={styles.meta}>
-                    {constellation.icon} {constellation.name}
+                    {iconGlyph(constellation.icon)} {constellation.name}
                   </Text>
                 )}
               </View>

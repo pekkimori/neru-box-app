@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
@@ -31,7 +32,7 @@ export function OnlineTaskModal({ visible, nebulas, blocks, error, onCancel, onS
             <TextInput accessibilityLabel="Task name" placeholder="What will you do?" placeholderTextColor={colors.warmMuted} value={title} onChangeText={setTitle} maxLength={240} style={{ ...chip, color: colors.warmWhite }} />
             <Text style={{ color: colors.warmDim }}>Nebula</Text>
             {nebulas.filter(nebula => !nebula.archivedAt).map(nebula => <TouchableOpacity key={nebula.id} onPress={() => setNebulaId(nebula.id)} disabled={busy} accessibilityRole="radio" accessibilityLabel={nebula.name} accessibilityState={{ selected: nebulaId === nebula.id }} style={[chip, nebulaId === nebula.id && { backgroundColor: colors.redSoft }]}>
-              <Text style={{ color: colors.warmWhite }}>{nebula.icon} {nebula.name}</Text>
+              <Text style={{ color: colors.warmWhite }}>{iconGlyph(nebula.icon)} {nebula.name}</Text>
             </TouchableOpacity>)}
             {!nebulas.some(nebula => !nebula.archivedAt) && <Text style={{ color: colors.warmMuted }}>Create a nebula on your plan first.</Text>}
             <Text style={{ color: colors.warmDim }}>Period</Text>

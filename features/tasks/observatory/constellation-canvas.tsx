@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 import { type ComponentProps, useEffect, useMemo, useRef } from 'react';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -56,7 +57,7 @@ function NebulaLabels({ constellations }: { constellations: Constellation[] }) {
     accessibilityLabel="Your nebulae"
   >
     {constellations.map(nebula => <View key={nebula.id} style={styles.nebulaLabel}>
-      <Text style={styles.nebulaLabelText}>{nebula.icon} {nebula.name}</Text>
+      <Text style={styles.nebulaLabelText}>{iconGlyph(nebula.icon)} {nebula.name}</Text>
     </View>)}
   </ScrollView>;
 }

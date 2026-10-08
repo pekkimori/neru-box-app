@@ -69,4 +69,6 @@ test('import preserves originals, uploads each historical photo once, and retrie
   assert.equal(requests[0].operationId, requests[1].operationId); assert.equal(photos, 1);
   assert.equal(storage.data.get(`@neru/plans/${date}`), original);
   assert.equal(requests[0].data.days[0].diary.diaryNote, 'Keep original');
+  assert.equal(requests[0].data.nebulas[0].icon, 'music');
+  assert.equal(JSON.parse(storage.data.get('@neru/constellations'))[0].icon, '🎵');
 });

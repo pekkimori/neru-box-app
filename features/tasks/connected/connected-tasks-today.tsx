@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 import { useMemo } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,7 +93,7 @@ export function ConnectedTasksToday({ selectedBlock, selectedLabel, tasksUnlocke
           <Ionicons name={task.status === 'lit' ? 'star' : 'star-outline'} size={19} color={task.status === 'lit' ? colors.warmWhite : colors.red} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.warmWhite, fontWeight: '600' }}>{task.title}</Text>
-            <Text style={{ color: colors.warmMuted, fontSize: 12 }}>{nebula ? `${nebula.icon} ${nebula.name}` : 'Nebula'} · {task.status}</Text>
+            <Text style={{ color: colors.warmMuted, fontSize: 12 }}>{nebula ? `${iconGlyph(nebula.icon)} ${nebula.name}` : 'Nebula'} · {task.status}</Text>
           </View>
         </View><ConnectedTaskActions task={task} planning={planning} disabled={blocked} canComplete={tasksUnlocked} /></View>;
       })}

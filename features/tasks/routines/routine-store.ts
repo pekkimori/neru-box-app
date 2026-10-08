@@ -1,3 +1,4 @@
+import { iconKey } from '../../../lib/icons/icon-reference.ts';
 import type { KeyValueStorage } from '../../../lib/storage/scoped-storage.ts';
 import { readRoutineSnapshot, type RoutineAttempt, type RoutineChange, type RoutineSnapshot, type routineRepository } from './routine-repository.ts';
 
@@ -81,6 +82,7 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
       const attempts = await pending();
       let attempt: RoutineAttempt;
       if (change) {
+        if (change.kind === 'create' || change.kind === 'update') change = { ...change, icon: iconKey(change.icon) };
         if (!state.fresh) throw new Error('Reload your routines before editing.');
         if (attempts.length) throw new Error('Retry the pending routine save before making another change.');
         attempt = { operationId: uuid(), command: { ...change, revision: state.snapshot.revision }, createdAt: new Date().toISOString() };

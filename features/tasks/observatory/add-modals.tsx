@@ -1,3 +1,4 @@
+import { iconKey } from '../../../lib/icons/icon-reference';
 // features/tasks/observatory/add-modals.tsx
 import { useRef, useState, type ReactNode } from 'react';
 import {
@@ -74,7 +75,7 @@ export function AddConstellationModal({
     inFlight.current = true;
     setSubmitting(true); setLocalError(null);
     try {
-      if (await onSubmit(trimmed, icon.trim() || '✨')) { setName(''); setIcon('✨'); onClose(); }
+      if (await onSubmit(trimmed, iconKey(icon.trim() || 'sparkles'))) { setName(''); setIcon('✨'); onClose(); }
     } catch (cause) { setLocalError(cause instanceof Error ? cause.message : 'Could not save. Please retry.'); }
     finally { inFlight.current = false; setSubmitting(false); }
   };
@@ -96,7 +97,7 @@ export function AddConstellationModal({
               accessibilityLabel="Domain icon"
               value={icon} onChangeText={setIcon}
               placeholder="✨" placeholderTextColor={Palette.warmMuted}
-              style={[S.input, S.iconInput]} maxLength={3}
+              style={[S.input, S.iconInput]} maxLength={64}
             />
             <TextInput
               accessibilityLabel="Domain name"

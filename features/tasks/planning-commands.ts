@@ -1,3 +1,4 @@
+import { iconKey, moodKey } from '../../lib/icons/icon-reference.ts';
 import { planningChanged } from './planning-events.ts';
 import type { ApiClient } from '../../lib/api/client';
 import type { KeyValueStorage } from '../../lib/storage/scoped-storage';
@@ -76,6 +77,7 @@ export function createPlanningCommands(client: Pick<ApiClient, 'getSnapshot' | '
     pending,
     async execute(command: PlanningCommand, operationId = uuid()) {
       guard();
+      command = planningIconNames(command);
       if ((await pending()).length) throw new Error('Retry the pending save before making another change.');
       const record = { operationId, command, createdAt: new Date().toISOString() };
       await storage.setItem(PREFIX + record.operationId, JSON.stringify(record));
@@ -87,4 +89,16 @@ export function createPlanningCommands(client: Pick<ApiClient, 'getSnapshot' | '
       return deliver(record);
     },
   };
+}
+
+/** Only new operations are translated; pending requests keep their exact body. */
+function planningIconNames(command: PlanningCommand): PlanningCommand {
+  if (command.kind === 'createGoal' || command.kind === 'createNebula') return { ...command, icon: iconKey(command.icon) };
+  if (command.kind === 'saveStudioPlan') return { ...command, nebulas: command.nebulas.map(edit => edit.kind === 'create' ? { ...edit, icon: iconKey(edit.icon) } : edit) };
+  if (command.kind === 'setMood') {
+    const sticker = command.sticker === '' ? '' : moodKey(command.sticker);
+    if (sticker === null) throw new Error('Choose a supported mood.');
+    return { ...command, sticker };
+  }
+  return command;
 }

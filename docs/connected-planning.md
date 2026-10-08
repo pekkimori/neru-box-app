@@ -46,3 +46,11 @@ npm run test:auth:browser
 The browser runner uses disposable API/PGlite processes and two sessions. It checks auth/reconnection, both import paths, original Weekly Studio, routine gating, photos, rewards, diary notes and archive visibility.
 
 Native OS blocking remains platform work: saving settings does not enforce system limits. Physical Android/iOS camera/upload acceptance, live Google OAuth/model acceptance, routine coin rewards and an S3 adapter remain pending. See [Weekly Studio](connected-weekly-planning.md) and [photos/diary](connected-completion.md).
+
+## Icon references
+
+Server icon fields contain semantic names, for example `{ "icon": "water" }`.
+`lib/icons/icon-reference.ts` translates them to the existing visible glyphs (💧).
+Nebulas, goals, routines and diary moods use this translation without changing their normal screen layout.
+New writes and device imports normalize names before saving a command. Legacy pending commands retain their original bodies for exact receipt replay; the backend translates known legacy glyphs only at persistence.
+The server migration `0008_icon_references.sql` converts existing values and enforces name-only icon/mood fields. Unknown server names display the default icon until the app adds their visual mapping.

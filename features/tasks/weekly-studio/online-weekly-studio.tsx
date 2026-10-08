@@ -1,3 +1,4 @@
+import { iconGlyph } from '../../../lib/icons/icon-reference';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -87,7 +88,7 @@ export function OnlineWeeklyStudio({ presentation = 'screen', onDismiss }: {
         const dayTasks = tasks.filter(task => task.nebulaId === nebula.id);
         const plannedDays = dates.filter(date => (week.draft.days[date]?.tasks ?? week.schedules[date]?.tasks ?? []).some(task => task.nebulaId === nebula.id)).length;
         const completedDays = dates.filter(date => (week.schedules[date]?.tasks ?? []).some(task => task.nebulaId === nebula.id && task.status === 'lit')).length;
-        return <View key={nebula.id} style={S.card}><Text style={S.copy}>{nebula.icon} {nebula.name}{nebula.archivedAt ? ' · archived' : ''}</Text>
+        return <View key={nebula.id} style={S.card}><Text style={S.copy}>{iconGlyph(nebula.icon)} {nebula.name}{nebula.archivedAt ? ' · archived' : ''}</Text>
           <Text style={S.muted}>{plannedDays}/7 days planned · {completedDays}/3 active days</Text>
           {!dayTasks.length && <Text style={S.muted}>Nothing planned for this day.</Text>}
           {dayTasks.map(task => <View key={task.id} testID={`weekly-task-${task.id}`} style={S.task}>
@@ -115,7 +116,7 @@ export function OnlineWeeklyStudio({ presentation = 'screen', onDismiss }: {
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 12 }}>
           <Text style={S.title}>Plan a task</Text>
           <Text style={S.muted}>{selectedDate} · saved as a draft until Save week</Text>
-          <View style={S.wrap}>{activeNebulas.map(nebula => <TouchableOpacity key={nebula.id} accessibilityRole="radio" accessibilityLabel={`Weekly nebula ${nebula.name}`} accessibilityState={{ selected: form?.nebulaId === nebula.id }} style={[S.chip, form?.nebulaId === nebula.id && S.selected]} disabled={week.busy} onPress={() => setForm(current => current && { ...current, nebulaId: nebula.id, questId: null, title: '' })}><Text style={[S.copy, form?.nebulaId === nebula.id && S.onRed]}>{nebula.icon} {nebula.name}</Text></TouchableOpacity>)}</View>
+          <View style={S.wrap}>{activeNebulas.map(nebula => <TouchableOpacity key={nebula.id} accessibilityRole="radio" accessibilityLabel={`Weekly nebula ${nebula.name}`} accessibilityState={{ selected: form?.nebulaId === nebula.id }} style={[S.chip, form?.nebulaId === nebula.id && S.selected]} disabled={week.busy} onPress={() => setForm(current => current && { ...current, nebulaId: nebula.id, questId: null, title: '' })}><Text style={[S.copy, form?.nebulaId === nebula.id && S.onRed]}>{iconGlyph(nebula.icon)} {nebula.name}</Text></TouchableOpacity>)}</View>
           <TouchableOpacity accessibilityRole="radio" accessibilityLabel="New ad-hoc weekly task" accessibilityState={{ selected: !form?.questId }} disabled={week.busy} onPress={() => setForm(current => current && { ...current, questId: null, title: '' })} style={S.chip}><Text style={S.copy}>New task</Text></TouchableOpacity>
           {eligibleQuests.map(quest => <TouchableOpacity key={quest.id} accessibilityRole="radio" accessibilityLabel={`Weekly star ${quest.title}`} accessibilityState={{ selected: form?.questId === quest.id }} disabled={week.busy} style={[S.chip, form?.questId === quest.id && S.selected]} onPress={() => setForm(current => current && { ...current, questId: quest.id, title: quest.title })}><Text style={[S.copy, form?.questId === quest.id && S.onRed]}>{quest.title} · {quest.completionCount}/{quest.timesRequired}</Text><Text style={[S.muted, form?.questId === quest.id && S.onRed]}>{quest.goalTitle}</Text></TouchableOpacity>)}
           {!form?.questId && <TextInput accessibilityLabel="Weekly task name" placeholder="Task name" placeholderTextColor={colors.warmMuted} style={S.input} value={form?.title ?? ''} maxLength={240} onChangeText={title => setForm(current => current && { ...current, title })} />}

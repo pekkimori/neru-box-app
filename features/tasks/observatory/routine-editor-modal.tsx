@@ -1,3 +1,4 @@
+import { iconKey, iconGlyph } from '../../../lib/icons/icon-reference';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View,
@@ -29,18 +30,23 @@ export function RoutineEditorModal({
   const Palette = useTasksPalette();
   const [newLabel, setNewLabel] = useState('');
   const [newIcon, setNewIcon] = useState('✨');
+  const [iconError, setIconError] = useState('');
 
   useEffect(() => {
     if (!visible) {
       setNewLabel('');
       setNewIcon('✨');
+      setIconError('');
     }
   }, [visible]);
 
   const addRoutine = async () => {
     const label = newLabel.trim();
     if (!label || disabled) return;
-    if (await onAdd(label, newIcon.trim() || '✨') === false) return;
+    try {
+      setIconError('');
+      if (await onAdd(label, iconKey(newIcon.trim() || 'sparkles')) === false) return;
+    } catch (cause) { setIconError(cause instanceof Error ? cause.message : 'Choose an icon.'); return; }
     setNewLabel('');
     setNewIcon('✨');
   };
@@ -61,6 +67,7 @@ export function RoutineEditorModal({
             </View>
 
             {status}
+            {!!iconError && <Text accessibilityRole="alert" style={{ color: Palette.red }}>{iconError}</Text>}
             <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
               {routines.length === 0 && (
                 <Text style={styles.empty}>No routine tasks yet. Add one below.</Text>
@@ -83,7 +90,7 @@ export function RoutineEditorModal({
                 onChangeText={setNewIcon}
                 style={[styles.input, styles.iconInput]}
                 accessibilityLabel="New routine icon"
-                maxLength={3}
+                maxLength={64}
                 placeholder="✨"
                 placeholderTextColor={Palette.warmMuted}
               />
@@ -127,56 +134,63 @@ function RoutineEditorRow({
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const [label, setLabel] = useState(routine.label);
-  const [icon, setIcon] = useState(routine.icon);
+  const [iconError, setIconError] = useState('');
+  const [icon, setIcon] = useState(iconGlyph(routine.icon));
 
   useEffect(() => {
     setLabel(routine.label);
-    setIcon(routine.icon);
+    setIcon(iconGlyph(routine.icon));
+    setIconError('');
   }, [routine.icon, routine.label]);
 
   const save = () => {
     if (disabled) return;
     const trimmedLabel = label.trim();
-    const trimmedIcon = icon.trim();
+    let trimmedIcon: string;
+    try { trimmedIcon = icon === iconGlyph(routine.icon) ? routine.icon : iconKey(icon.trim() || 'sparkles'); setIconError(''); }
+    catch (cause) { setIconError(cause instanceof Error ? cause.message : 'Choose an icon.'); return; }
     if (!trimmedLabel) {
       setLabel(routine.label);
       return;
     }
-    if (trimmedLabel === routine.label && (trimmedIcon || '✨') === routine.icon) return;
-    void onUpdate(routine.id, trimmedLabel, trimmedIcon || '✨');
+    if (trimmedLabel === routine.label && trimmedIcon === routine.icon) return;
+    void onUpdate(routine.id, trimmedLabel, trimmedIcon);
   };
 
   return (
-    <View style={styles.routineRow}>
-      <TextInput
-        editable={!disabled}
-        value={icon}
-        onChangeText={setIcon}
-        onBlur={save}
-        style={[styles.input, styles.iconInput]}
-        accessibilityLabel={`${routine.label} icon`}
-        maxLength={3}
-      />
-      <TextInput
-        editable={!disabled}
-        value={label}
-        onChangeText={setLabel}
-        onBlur={save}
-        onSubmitEditing={save}
-        style={[styles.input, styles.labelInput]}
-        accessibilityLabel={`${routine.label} name`}
-        returnKeyType="done"
-        maxLength={60}
-      />
-      <TouchableOpacity
-        disabled={disabled}
-        style={styles.deleteButton}
-        onPress={() => onRemove(routine.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`Remove ${routine.label}`}
-      >
-        <Ionicons name="trash-outline" size={19} color={Palette.red} />
-      </TouchableOpacity>
+    <View>
+      {!!iconError && <Text accessibilityRole="alert" style={{ color: Palette.red }}>{iconError}</Text>}
+      <View style={styles.routineRow}>
+        <TextInput
+          editable={!disabled}
+          value={icon}
+          onChangeText={setIcon}
+          onBlur={save}
+          style={[styles.input, styles.iconInput]}
+          accessibilityLabel={`${routine.label} icon`}
+          maxLength={64}
+        />
+        <TextInput
+          editable={!disabled}
+          value={label}
+          onChangeText={setLabel}
+          onBlur={save}
+          onSubmitEditing={save}
+          style={[styles.input, styles.labelInput]}
+          accessibilityLabel={`${routine.label} name`}
+          returnKeyType="done"
+          maxLength={60}
+        />
+        <TouchableOpacity
+          disabled={disabled}
+          style={styles.deleteButton}
+          onPress={() => onRemove(routine.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${routine.label}`}
+        >
+          <Ionicons name="trash-outline" size={19} color={Palette.red} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
