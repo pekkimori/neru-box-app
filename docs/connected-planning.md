@@ -1,8 +1,14 @@
-# Connected planning
+# Server-backed original app
 
-The Tasks screen's cloud action opens **Online plan**. Create nebulas, create constellations within a nebula, edit stars, and plan linked or ad-hoc tasks by date. Move assignments or remove clean unlit tasks. Tasks also exposes setup/completion photos; Online plan and diary save mood and block reflections. Sign in first.
+Updated: 2026-10-07
 
-Run the server's migrations before using the view with an existing database:
+Tasks, Weekly Studio, Diary and Archive retain their original interface and use the authenticated account on the server. There is no Online/On device selector. `/tasks/connected` redirects to `/tasks/plan`; source query parameters no longer select another mode.
+
+Original app constellations map to server **nebulas**. Visible stars map to **scheduled assignment IDs**, so repeating a quest never merges its progress or evidence. Goals/phases/quests remain supported by the backend and chat; creating a simple task does not require those extra steps.
+
+## Setup
+
+Run all server migrations, including `0005_routines.sql`, `0006_account_state.sql` and `0007_device_import.sql`, then restart the API:
 
 ```bash
 cd ../nerubox-server
@@ -10,22 +16,33 @@ bun run migrate
 bun run dev
 ```
 
-Migrations `0001_connected_planning.sql`, `0002_nebulas.sql` and `0003_task_photo_access.sql` add operation receipts, life domains, and photo purpose/MIME/hash metadata. The verification scripts use a disposable PGlite database; they do **not** migrate a persistent server database. Set the app's `EXPO_PUBLIC_API_URL` to the server address reachable from the device, then start Expo. See [authentication setup](authentication.md) for URL and sign-in details.
+Set `EXPO_PUBLIC_API_URL` to an address reachable from the device. See [authentication setup](authentication.md).
 
-The connected view reads fresh server data on focus or Refresh. When offline, it can display account-scoped cached data, but disables new changes. If a save may have reached the server without a response, it appears as **A save is waiting**; use Retry after reconnecting. Retry sends the same operation ID, so the server returns the original result instead of duplicating the change. A definite validation, ownership, or stale-edit conflict is shown as an error, and Refresh obtains current data. Do not clear the app/browser storage while a save is pending.
+## Account data
 
-The diary's **Online** view uses server tasks/photos, mood/reflections and streak history. Galaxy's **Online archive** reads all pages of server history; **On device** retains the existing local archive. A server read cache is replaced only after the full history fetch succeeds. Archive hiding is a device preference.
+- Planning and the original routine definitions/checklists use server repositories.
+- Photos, mood, reflections, schedules and streaks feed the original diary/archive.
+- Notes, stickers, page positions, archive hiding, appearance, sleep and control/focus configuration/session use revision-checked account values.
+- Wallet rewards and gacha rolls/spending/collection commit on the server. The original animation/reveal remain in the app.
+- Device storage contains account-scoped caches, exact pending operations and migration backups.
 
-**Manage week plan** opens [Online Weekly Studio](connected-weekly-planning.md) from Online Tasks: account-scoped durable drafts, atomic multi-day saves, interrupted-save replay and explicit review of changes from other sessions. On device Tasks retains the local weekly editor.
+Fresh reads enable planning edits. Failed saves show errors and retain exact pending requests when outcomes are uncertain. Retry uses the original operation ID. Stale edits require refreshing/reviewing current data. Keep app storage while a save is pending.
 
-Existing local Tasks/photos are accessible through **On device**. Rewards, diary notes/decorative stickers and local-data import remain device-only. The backup on Account is a snapshot for future import. See [completion and photo behavior](connected-completion.md) and the remaining [Phase 3 tasks](../../docs/integration/03-constellations-and-planning.md). Physical-device acceptance is pending.
+## Import
 
-Local checks (from this app directory):
+Original account-scoped domains, assignments, diary, routines/completions, preferences, coins and collection import before data screens mount. Deterministic account-specific IDs and stable photo IDs support interrupted-save recovery. Original records remain intact; existing server records are not overwritten.
+
+Unscoped legacy records require choosing their account using **Back up and import to this account** on Account. The reservation prevents another account/server from claiming the backup. Device balance only seeds an absent wallet; this migration baseline is not an anti-cheat guarantee.
+
+## Verification and limits
 
 ```bash
-npm run test:auth:server
-npm run test:auth:browser
+npm run typecheck
+npm run lint
 node --test --test-isolation=none
+npm run test:auth:browser
 ```
 
-The browser check needs Chromium/Playwright. It starts temporary local API and Expo processes, uses a throwaway PGlite database, and exercises two separate browser sessions.
+The browser runner uses disposable API/PGlite processes and two sessions. It checks auth/reconnection, both import paths, original Weekly Studio, routine gating, photos, rewards, diary notes and archive visibility.
+
+Native OS blocking remains platform work: saving settings does not enforce system limits. Physical Android/iOS camera/upload acceptance, live Google OAuth/model acceptance, routine coin rewards and an S3 adapter remain pending. See [Weekly Studio](connected-weekly-planning.md) and [photos/diary](connected-completion.md).

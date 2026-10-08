@@ -1,33 +1,29 @@
-# Connected completion, photos and diary
+# Completion, photos and diary
 
-Updated: 2026-10-04
+Updated: 2026-10-07
 
-Run server migrations and restart the server before using these flows with an existing database. See [connected planning setup](connected-planning.md).
+The original Tasks view keeps its routine gate, sky, photo modal and celebration. All account data uses the server. Run migrations and restart the API; see [setup](connected-planning.md).
 
-## Tasks
+## Completion and rewards
 
-1. Open an Online task in Tasks or Online plan.
-2. **Add setup photo** sends a photo and changes the assignment to dim.
-3. **Complete with photo** uploads completion evidence, then commits assignment status, linked quest count and phase progression together.
+Setup photos leave an assignment dim. Completion upload attaches evidence; the following command atomically saves lit status, completion time, linked quest/phase progress and coins. Celebration uses the authoritative reward in the refreshed assignment.
 
-Ad-hoc tasks have no linked quest. A completed assignment stays lit; schedule another assignment to repeat a quest. Photos do not award server coins.
+Rewards are `10 + min(productive streak, 7)`, plus 15 when the completion creates the third distinct active day for that nebula in the Sunday-based week. Repeating completion never awards twice. Wallets begin at 120 coins unless a historic device balance seeded an absent wallet.
 
-Accepted images are JPEG, PNG and WebP, up to 8 MiB. Files are uploaded as multipart `photo`, `photoId`, `purpose`, with optional `description`. Photos are read through authenticated `/tasks/:taskId/photos/:photoId/content` requests; credentials stay out of image URLs. The API client handles token refresh for both uploads and binary reads.
+Ad-hoc tasks need no quest. Completed assignments remain lit; repetition requires another assignment. Routine gating remains the original UI rule, not a backend completion policy.
 
-## Interrupted saves
+## Photos and recovery
 
-The app stores the image reference and stable upload/completion IDs in an account-scoped outbox before sending. On web the image is persisted as a data URI; native keeps the modal's copied file. If local storage cannot hold the pending image, sending is stopped and an error is shown.
+JPEG/PNG/WebP files up to 8 MiB upload as authenticated multipart requests. PostgreSQL stores metadata and `PhotoStorage` stores files; binary reads require authentication. Native `file://`/`content://` uploads use Expo File bytes; web supports persisted data URIs.
 
-A lost response leaves a pending save. Reconnect and select **Retry**. Retry uploads with the same photo ID and completes with the same operation ID; server receipts and task state prevent duplicate photos or quest progress. Pending state survives reload. Resolve it before making another connected edit. Keep app/browser storage until the pending save has been delivered.
+The account outbox stores the photo reference and stable upload/completion IDs before sending. Retry reuses those IDs, including after reload. Keep app storage until delivery. Imported completed assignments may fill a missing photo slot once without changing status or earning again.
 
-## Diary and archive
+## Diary, archive and collection
 
-The diary's **Online** view reads server tasks, completion photos, mood, period reflections and streak history. **On device** shows local records. Notes and decorative stickers remain on this device. Mood and reflection edits are saved through the same retry-safe command queue.
+Original diary pages read server tasks/photos, mood, reflections, streaks and routines. Notes, decorative stickers and layout save as a revision-checked account value per date. Note drafts remain open on failure; another session sees acknowledged data. Archive hiding is an account value; repeated assignments remain separate stars.
 
-Galaxy's **Online archive** uses paginated server history and distinct scheduled-task IDs, so repeated completions are separate stars. Historical nebula labels remain available. Archive hiding stays a device preference.
+Gacha retains its original animation/reveal. The server chooses generation I–V results with 84/10/5/1 rarity weights and atomically commits collection plus a cost of 20 coins for one or 180 for ten. Pending pulls retain exact requests so retry cannot charge or roll again.
 
-## Verification and remaining work
+## Verification and limits
 
-Node tests cover uploads, token refresh, account isolation, interrupted-save recovery, storage failure, history pagination/cache integrity and archive mapping. The Expo/Chromium walkthrough verifies completion after a committed response is lost, reload/retry without duplicate progress, and diary/archive reads in a second independent session. Server tests cover photo ownership, validation, cleanup, locked phases and atomic quest progression.
-
-Android/iOS physical-device camera/upload acceptance is pending. [Online Weekly Studio](connected-weekly-planning.md) now synchronizes weekly plans. Importing existing local tasks/photos, routine/reward APIs and server-backed diary notes/sticker layouts remain open.
+Tests cover account isolation, retries, stale revisions, atomic completion/rewards/gacha, import and protected photos. The browser walkthrough covers the original editor/checklist/photo modal and cross-session diary/archive. Physical-device camera/upload acceptance is pending. S3/native blocking are adapter/platform work; routine coin rewards are not implemented.

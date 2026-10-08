@@ -1,3 +1,4 @@
+import { useAccountValue } from '../../hooks/useAccountValue';
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { clampMinutes } from "./model";
@@ -9,7 +10,7 @@ interface FocusSession {
 }
 
 export function useFocusSession(onFocusComplete?: () => void) {
-  const [session, setSession] = useState<FocusSession | null>(null);
+  const { value: session, save: setSession, saveAsync, error, retry } = useAccountValue<FocusSession | null>("control-session", null);
   const [now, setNow] = useState(Date.now);
   const onFocusCompleteRef = useRef(onFocusComplete);
   onFocusCompleteRef.current = onFocusComplete;
@@ -21,13 +22,12 @@ export function useFocusSession(onFocusComplete?: () => void) {
       setNow(nextNow);
       if (nextNow >= session.endsAt) {
         clearInterval(timer);
-        setSession(null);
-        if (session.kind === "focus") onFocusCompleteRef.current?.();
+        void saveAsync(null).then(() => { if (session.kind === "focus") onFocusCompleteRef.current?.(); }).catch(() => undefined);
       }
     };
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [session]);
+  }, [session, saveAsync]);
 
   const startSession = useCallback((duration: string | number) => {
     const safeDuration = clampMinutes(duration, 1, 480);
@@ -38,7 +38,7 @@ export function useFocusSession(onFocusComplete?: () => void) {
       durationMinutes: safeDuration,
       endsAt: started + safeDuration * 60_000,
     });
-  }, []);
+  }, [setSession]);
 
   const startRestSession = useCallback((duration: string | number) => {
     const safeDuration = clampMinutes(duration, 1, 120);
@@ -49,15 +49,15 @@ export function useFocusSession(onFocusComplete?: () => void) {
       durationMinutes: safeDuration,
       endsAt: started + safeDuration * 60_000,
     });
-  }, []);
+  }, [setSession]);
 
-  const endSession = useCallback(() => setSession(null), []);
+  const endSession = useCallback(() => setSession(null), [setSession]);
   const remainingSeconds = session
     ? Math.max(0, Math.ceil((session.endsAt - now) / 1000))
     : 0;
 
   return {
-    session,
+    session, error, retry,
     now,
     remainingSeconds,
     startSession,

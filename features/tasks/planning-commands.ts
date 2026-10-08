@@ -1,14 +1,17 @@
+import { planningChanged } from './planning-events.ts';
 import type { ApiClient } from '../../lib/api/client';
 import type { KeyValueStorage } from '../../lib/storage/scoped-storage';
 
 export type WeeklyPlanEdit =
-  | { kind: 'addQuestTask'; blockId: string; questId: string }
-  | { kind: 'addAdHocTask'; blockId: string; nebulaId: string; title: string }
+  | { kind: 'addQuestTask'; blockId: string; questId: string; taskId?: string }
+  | { kind: 'addAdHocTask'; blockId: string; nebulaId: string; title: string; taskId?: string }
   | { kind: 'moveTask'; taskId: string; blockId: string | null; targetBlockId: string }
   | { kind: 'removeTask'; taskId: string; blockId: string | null };
 export interface WeeklyPlanDay { date: string; expectedUpdatedAt: string | null; edits: WeeklyPlanEdit[] }
 
+export type StudioNebulaEdit = { kind: 'create'; id: string; name: string; icon: string } | { kind: 'archive'; id: string; expectedUpdatedAt: string };
 export type PlanningCommand =
+  | { kind: 'saveStudioPlan'; days: WeeklyPlanDay[]; nebulas: StudioNebulaEdit[] }
   | { kind: 'saveWeeklyPlan'; weekStart: string; days: WeeklyPlanDay[] }
   | { kind: 'createGoal'; title: string; icon: string; nebulaId?: string }
   | { kind: 'createNebula'; name: string; icon: string }
@@ -58,6 +61,7 @@ export function createPlanningCommands(client: Pick<ApiClient, 'getSnapshot' | '
       guard();
       if (!response?.result?.id) throw new Error('The server returned an invalid save receipt. Retry this pending save.');
       await storage.setItem(PREFIX + record.operationId, 'null');
+      planningChanged();
       return response.result;
     } catch (error) {
       // Definitive validation/ownership/conflict errors did not commit. Keep

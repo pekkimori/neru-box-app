@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { subscribePlanning } from '../planning-events';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useAuth } from '../../auth/auth-provider';
 import { captureAccountStorage } from '../../../lib/storage/account-storage';
@@ -19,7 +20,7 @@ export function useConnectedHistory(active = true) {
       ...(previous.owner === owner ? previous : { schedules: [], loaded: false, error: null }),
       ...patch, owner,
     })); };
-    publish({ loaded: false, error: null });
+    publish({ error: null });
     try {
       const cached = await repository.cachedHistory();
       if (cached) publish({ schedules: cached.data });
@@ -32,6 +33,7 @@ export function useConnectedHistory(active = true) {
     void reload();
     return () => { revision.current++; };
   }, [reload]));
+  useEffect(() => subscribePlanning(() => { void reload(); }), [reload]);
   return state.owner === owner
     ? { schedules: state.schedules, loaded: state.loaded, error: state.error, reload }
     : { schedules: [], loaded: false, error: null, reload };

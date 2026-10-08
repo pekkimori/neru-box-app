@@ -1,10 +1,13 @@
+import { useServerDataReady } from '@/features/account/server-data-boundary';
 // app/tasks/_layout.tsx
 import { Stack } from 'expo-router';
 import { useAppTheme } from '@/theme/app-theme';
 
 export default function TasksLayout() {
+  const ready = useServerDataReady();
   const { colors } = useAppTheme();
 
+  if (!ready) return null;
   return (
     <Stack
       screenOptions={{

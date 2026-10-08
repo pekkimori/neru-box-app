@@ -1,7 +1,15 @@
+import { File } from 'expo-file-system';
 import { imageDataUri } from '../../lib/api/image-data';
 import type { PendingTaskPhoto } from './task-photos';
 
 async function image(uri: string) {
+  if (uri.startsWith('file://') || uri.startsWith('content://')) {
+    const file = new File(uri);
+    const data = await file.bytes();
+    if (!data.length || data.length > 8 * 1024 * 1024) throw new Error('Choose a photo smaller than 8 MB.');
+    const type = file.type || (/\.png(?:[?#]|$)/i.test(uri) ? 'image/png' : /\.webp(?:[?#]|$)/i.test(uri) ? 'image/webp' : 'image/jpeg');
+    return new Blob([data], { type });
+  }
   const response = await fetch(uri);
   if (!response.ok) throw new Error('The selected photo is unavailable. Choose it again.');
   const blob = await response.blob();

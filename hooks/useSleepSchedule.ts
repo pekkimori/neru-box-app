@@ -13,7 +13,7 @@ import {
   getMinuteOfDay,
   parseTimeMinutes,
 } from '../utils/time';
-import { useStorage } from './useStorage';
+import { useAccountValue } from './useAccountValue';
 
 export type { SharedSleepSchedule, SleepScheduleEntry };
 
@@ -26,8 +26,8 @@ export function useSleepSchedule() {
   const {
     value: storedSchedule,
     save: saveStoredSchedule,
-    loaded: scheduleLoaded,
-  } = useStorage<unknown>('@neru/sleep-schedule', DEFAULT_SLEEP_SCHEDULE);
+    loaded: scheduleLoaded, error: scheduleError, retry: retrySchedule,
+  } = useAccountValue<unknown>('@neru/sleep-schedule', DEFAULT_SLEEP_SCHEDULE);
 
   const schedule = useMemo(
     () => normalizeSleepSchedule(storedSchedule),
@@ -91,8 +91,8 @@ export function useSleepSchedule() {
   const {
     value: sleepIntent,
     save: saveSleepIntent,
-    loaded: intentLoaded,
-  } = useStorage<SleepIntent>('@neru/sleep-intent', {
+    loaded: intentLoaded, error: intentError, retry: retryIntent,
+  } = useAccountValue<SleepIntent>('@neru/sleep-intent', {
     sessionKey: sleepSessionKey,
     ready: false,
   });
@@ -109,6 +109,8 @@ export function useSleepSchedule() {
   );
 
   return {
+    error: scheduleError ?? intentError,
+    retry: async () => { await retrySchedule(); await retryIntent(); },
     schedule,
     saveSchedule,
     loaded: scheduleLoaded && intentLoaded,

@@ -1,3 +1,8 @@
+import { ImportDeviceData } from '../../nerubox-server/src/application/usecases/account/ImportDeviceData.ts';
+import { PostgresDeviceImport } from '../../nerubox-server/src/infrastructure/account/PostgresDeviceImport.ts';
+import { AccountState } from '../../nerubox-server/src/application/usecases/account/AccountState.ts';
+import { PostgresAccountState } from '../../nerubox-server/src/infrastructure/account/PostgresAccountState.ts';
+import { AccountStateController } from '../../nerubox-server/src/infrastructure/http/endpoints/account/AccountStateController.ts';
 import { PostgresChatRepository } from '../../nerubox-server/src/infrastructure/chat/PostgresChatRepository.ts';
 import { ChatService } from '../../nerubox-server/src/application/usecases/chat/ChatService.ts';
 import { ChatController } from '../../nerubox-server/src/infrastructure/http/endpoints/chat/ChatController.ts';
@@ -61,6 +66,7 @@ const controller = new AuthController(
 const app = new Hono();
 app.use('*', cors({ origin: process.env.NERU_AUTH_TEST_ORIGIN ?? 'http://localhost:8082' }));
 app.route('/auth', controller.routes());
+app.route('/account', new AccountStateController(new AccountState(new PostgresAccountState(database.db)), createBearerAuth(new GetCurrentUser(users, tokens)), new ImportDeviceData(new PostgresDeviceImport(database.db))).routes());
 const routines = new PostgresRoutineRepository(database.db, ids);
 app.route('/routines', new RoutinesController(new GetRoutines(routines), new ApplyRoutineCommand(routines), createBearerAuth(new GetCurrentUser(users, tokens))).routes());
 attachDomainRoutes(app, database.db, createBearerAuth(new GetCurrentUser(users, tokens)), ids, clock);
@@ -74,7 +80,7 @@ const chatAgent = {
     if (input.text === 'Create a browser chat constellation') {
       await chatWriter.apply(input.metadata.userId, crypto.randomUUID(), { kind: 'createGoal', title: 'Created in chat', icon: '💬' }, clock.now());
       onToken?.('I created ');
-      return { text: 'I created a constellation in your online plan.' };
+      return { text: 'I created a nebula in your plan.' };
     }
     if (input.text === 'Personalization check') return { text: `${input.metadata.chatPersonality}: ${input.metadata.chatMemories.map(m => m.text).join('; ')}` };
     onToken?.('Hello ');

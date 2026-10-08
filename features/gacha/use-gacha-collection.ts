@@ -1,9 +1,8 @@
-import { useCallback, useEffect } from 'react';
+import { subscribePlanning } from '../tasks/planning-events';
+import { useEffect } from 'react';
 
-import { useStorage } from '../../hooks/useStorage';
-import { formatLocalDate } from '../../utils/time';
+import { useAccountValue } from '../../hooks/useAccountValue';
 import {
-  hasValidAcquisitionDate,
   isValidAcquiredTimestamp,
   isValidLocalDateKey,
   type GachaResult,
@@ -33,46 +32,7 @@ function isGachaCollection(value: unknown): value is GachaResult[] {
 }
 
 export function useGachaCollection() {
-  const {
-    value: gachaResults,
-    save: setGachaResults,
-    loaded,
-    error,
-  } = useStorage<GachaResult[]>('@neru/gacha-results', [], {
-    validate: isGachaCollection,
-  });
-
-  useEffect(() => {
-    if (!loaded || !gachaResults.some((result) => !hasValidAcquisitionDate(result))) return;
-    const migrated = new Date();
-    const migratedAt = migrated.toISOString();
-    const migratedDate = formatLocalDate(migrated);
-    setGachaResults((current) => current.map((result) => (
-      hasValidAcquisitionDate(result)
-        ? result
-        : { ...result, acquiredAt: migratedAt, acquiredDate: migratedDate }
-    )));
-  }, [gachaResults, loaded, setGachaResults]);
-
-  const addGachaResults = useCallback((results: GachaResult[]) => {
-    const acquired = new Date();
-    const acquiredAt = acquired.toISOString();
-    const acquiredDate = formatLocalDate(acquired);
-    setGachaResults((current) => [
-      ...current,
-      ...results.map((result) => ({
-        ...result,
-        ...(hasValidAcquisitionDate(result)
-          ? { acquiredAt: result.acquiredAt, acquiredDate: result.acquiredDate }
-          : { acquiredAt, acquiredDate }),
-      })),
-    ]);
-  }, [setGachaResults]);
-
-  return {
-    gachaResults,
-    addGachaResults,
-    loaded,
-    error,
-  } as const;
+  const { value: gachaResults, loaded, error, reload } = useAccountValue<GachaResult[]>('gacha-results', [], { validate: isGachaCollection });
+  useEffect(() => subscribePlanning(() => { void reload(); }), [reload]);
+  return { gachaResults, loaded, error, reload } as const;
 }

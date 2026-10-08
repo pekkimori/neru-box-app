@@ -1,3 +1,4 @@
+import { useServerDataReady } from '@/features/account/server-data-boundary';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,10 +7,12 @@ import { FloatingTabBar } from '@/components/floating-tab-bar';
 import { useAppTheme } from '@/theme/app-theme';
 
 export default function TabLayout() {
+  const ready = useServerDataReady();
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
 
+  if (!ready) return null;
   return (
     <Tabs
       detachInactiveScreens={!isWeb}

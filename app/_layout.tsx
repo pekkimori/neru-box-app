@@ -1,3 +1,4 @@
+import { ServerDataBoundary } from '@/features/account/server-data-boundary';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -96,7 +97,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AppThemeProvider>
-        <ThemedRootLayout />
+        <ServerDataBoundary><ThemedRootLayout /></ServerDataBoundary>
       </AppThemeProvider>
     </AuthProvider>
   );

@@ -6,14 +6,13 @@ import {
   MotionTouchableOpacity as TouchableOpacity,
 } from '@/components/motion';
 import { PageHeader } from '@/components/page-header';
-import { ConnectedTasksToday } from '@/features/tasks/connected/connected-tasks-today';
-import { useAuth } from '@/features/auth/auth-provider';
+import { ConnectedSaveStatus } from '@/features/tasks/connected/connected-save-status';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { Type } from '@/theme/typography';
 import { useThemedStyles } from '@/theme/app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConstellationCanvas } from '../../features/tasks/observatory/constellation-canvas';
@@ -31,23 +30,21 @@ export default function TasksToday() {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
   const router = useRouter();
-  const auth = useAuth();
-  const connected = auth.status === 'signedIn' && !!auth.user;
-  const [taskSource, setTaskSource] = useState<'online' | 'device'>('online');
-  const showConnected = connected && taskSource === 'online';
-  const d = useObservatoryData(showConnected);
+  const d = useObservatoryData();
   const [photoVisible, setPhotoVisible] = useState(false);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
   const [weeklyStudioOpen, setWeeklyStudioOpen] = useState(false);
   const [routineEditorOpen, setRoutineEditorOpen] = useState(false);
   const [earnedReward, setEarnedReward] = useState<{ reward: TaskReward; nebulaName?: string } | null>(null);
 
+  const savedReward = useRef<{ reward: TaskReward; nebulaName?: string } | null>(null);
+
   const selectedLabel = d.periods.find((period) => period.key === d.selectedPeriod)?.label ?? 'Today';
   const selectedLit = d.filteredTodayTasks.filter(({ task }) => task.status === 'lit').length;
 
   const promptStarCompletion = (star: Star) => {
     const planned = d.plannedByStar.get(star.id);
-    if (!planned) return;
+    if (!planned || !d.planning.ready || d.planning.saving || d.planning.pending.length || d.planning.pendingPhotos.length) return;
     if (planned.status === 'lit') return;
 
     const gate = d.canCompleteBlock(planned.block);
@@ -72,8 +69,8 @@ export default function TasksToday() {
     setPhotoVisible(true);
   };
 
-  const handlePhotoComplete = (uri: string) => {
-    if (!pendingCompletion) return;
+  const saveCompletionPhoto = async (uri: string) => {
+    if (!pendingCompletion) return false;
     const nebulaProgress = d.domainProgress.get(pendingCompletion.star.constellationId);
     const reward = calculateTaskReward({
       constellationId: pendingCompletion.star.constellationId,
@@ -84,13 +81,20 @@ export default function TasksToday() {
     const nebulaName = d.constellations.find(
       (item) => item.id === pendingCompletion.star.constellationId,
     )?.name;
-    d.updateTaskStatus(pendingCompletion.star.id, pendingCompletion.block, 'lit', uri);
-    d.awardCoins(pendingCompletion.star.id, pendingCompletion.block, reward.total);
-    d.addCoins(reward.total);
-    d.reloadWeekly();
+    const serverBlock = d.planning.schedule?.blocks.find(block => block.type === pendingCompletion.block)?.id;
+    if (!serverBlock) return false;
+    const ok = await d.planning.uploadPhoto(pendingCompletion.star.id, serverBlock, 'completion', uri);
+    if (!ok) return false;
+    const completed = d.planning.getLatest().schedule?.tasks.find(task => task.id === pendingCompletion.star.id);
+    if (completed?.status === 'lit') savedReward.current = { reward: { ...reward, total: completed.coinsEarned }, nebulaName };
+    void d.reloadWeekly();
+    return true;
+  };
+  const handlePhotoComplete = () => {
     setPhotoVisible(false);
     setPendingCompletion(null);
-    setEarnedReward({ reward, nebulaName });
+    setEarnedReward(savedReward.current);
+    savedReward.current = null;
   };
 
   if (!d.loaded) {
@@ -135,7 +139,8 @@ export default function TasksToday() {
           onSelect={d.setSelectedPeriod}
         />
 
-        {showConnected && <RoutineSyncStatus {...d.routinesSync} />}
+        <RoutineSyncStatus {...d.routinesSync} />
+        <ConnectedSaveStatus planning={d.planning} />
         <RoutineGate
           disabled={d.routinesSync.disabled}
           routines={d.displayRoutines}
@@ -149,28 +154,7 @@ export default function TasksToday() {
           onEdit={() => { if (!d.routinesSync.disabled) setRoutineEditorOpen(true); }}
         />
 
-        {connected && <View style={styles.sourceSwitch} accessibilityRole="tablist">
-          <TouchableOpacity
-            style={[styles.sourceOption, taskSource === 'online' && styles.sourceOptionActive]}
-            onPress={() => setTaskSource('online')}
-            accessibilityRole="tab"
-            accessibilityLabel="Online tasks"
-            accessibilityState={{ selected: taskSource === 'online' }}
-          ><Text style={styles.sourceText}>Online</Text></TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.sourceOption, taskSource === 'device' && styles.sourceOptionActive]}
-            onPress={() => setTaskSource('device')}
-            accessibilityRole="tab"
-            accessibilityLabel="On device tasks"
-            accessibilityState={{ selected: taskSource === 'device' }}
-          ><Text style={styles.sourceText}>On device</Text></TouchableOpacity>
-        </View>}
-
-        {showConnected ? <ConnectedTasksToday
-          selectedBlock={d.selectedBlock}
-          selectedLabel={selectedLabel}
-          tasksUnlocked={d.tasksUnlocked}
-        /> : <><View style={styles.sectionHeader}>
+        <View style={styles.sectionHeader}>
           <View style={styles.sectionCopy}>
             <Text style={styles.sectionTitle}>
               {d.selectedPeriod === 'sleep' ? 'Sleep mode' : `${selectedLabel} tasks`}
@@ -237,7 +221,7 @@ export default function TasksToday() {
           </View>
           <TouchableOpacity
             style={styles.archiveButton}
-            onPress={() => router.push({ pathname: '/tasks/galaxy', params: { source: 'device' } })}
+            onPress={() => router.push('/tasks/galaxy')}
             accessibilityRole="button"
             accessibilityLabel="Open completed stars archive"
           >
@@ -254,13 +238,13 @@ export default function TasksToday() {
           onStarPress={promptStarCompletion}
           height={260}
         />
-        </>}
       </ScrollView>
 
       <PhotoCompletionModal
         visible={photoVisible}
         taskLabel={pendingCompletion?.star.label ?? ''}
         onComplete={handlePhotoComplete}
+        onSavePhoto={saveCompletionPhoto}
         onCancel={() => { setPhotoVisible(false); setPendingCompletion(null); }}
       />
       <CoinRewardCelebration
@@ -271,7 +255,7 @@ export default function TasksToday() {
       <RoutineEditorModal
         disabled={d.routinesSync.disabled}
         visible={routineEditorOpen}
-        status={showConnected ? <RoutineSyncStatus {...d.routinesSync} /> : undefined}
+        status={<RoutineSyncStatus {...d.routinesSync} />}
         periodLabel={selectedLabel}
         routines={d.displayRoutines}
         onClose={() => setRoutineEditorOpen(false)}
@@ -290,8 +274,7 @@ export default function TasksToday() {
         onRequestClose={() => setWeeklyStudioOpen(false)}
       >
         <WeeklyStudio
-          source={showConnected ? 'online' : 'device'}
-          presentation="drawer"
+                    presentation="drawer"
           onDismiss={() => setWeeklyStudioOpen(false)}
         />
       </Modal>

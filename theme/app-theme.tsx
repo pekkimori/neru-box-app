@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import * as SystemUI from 'expo-system-ui';
-import { Appearance, Platform } from 'react-native';
+import { Appearance, Platform, Alert } from 'react-native';
 
 import { ThemeLoadingScreen } from './theme-loading-screen';
 import {
@@ -21,7 +21,7 @@ import {
   type AppColorMode,
   type EditorialPalette,
 } from '@/theme/editorial-theme';
-import { useStorage } from '@/hooks/useStorage';
+import { useAccountValue } from '@/hooks/useAccountValue';
 
 const APPEARANCE_STORAGE_KEY = '@neru/app-appearance-v1';
 const MIN_THEME_LOADING_MS = 480;
@@ -52,6 +52,8 @@ type AppThemeContextValue = {
   colors: EditorialPalette;
   accentPreset: ReturnType<typeof getAccentPreset>;
   loaded: boolean;
+  error: Error | null;
+  retry: () => Promise<void>;
   setMode: (mode: AppColorMode) => void;
   setAccentId: (accentId: AppAccentId) => void;
 };
@@ -59,7 +61,7 @@ type AppThemeContextValue = {
 const AppThemeContext = createContext<AppThemeContextValue | null>(null);
 
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
-  const { value, save, loaded } = useStorage(
+  const { value, saveAsync, loaded, error, retry } = useAccountValue(
     APPEARANCE_STORAGE_KEY,
     DEFAULT_APPEARANCE,
     { validate: isAppAppearance },
@@ -114,9 +116,9 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     commitTimerRef.current = setTimeout(() => {
       commitTimerRef.current = null;
       const target = pendingAppearanceRef.current;
-      if (target) save(target);
+      if (target) void saveAsync(target).catch(cause => { pendingAppearanceRef.current = null; transitionStartedRef.current = false; setPendingAppearance(null); Alert.alert('Could not save appearance', cause instanceof Error ? cause.message : 'Try again.'); });
     }, THEME_COMMIT_DELAY_MS);
-  }, [save]);
+  }, [saveAsync]);
 
   useEffect(() => {
     if (!pendingAppearance || !transitionStartedRef.current) return;
@@ -152,8 +154,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const contextValue = useMemo<AppThemeContextValue>(() => ({
-    appearance: value, colors, accentPreset, loaded, setMode, setAccentId,
-  }), [value, colors, accentPreset, loaded, setMode, setAccentId]);
+    appearance: value, colors, accentPreset, loaded, error, retry, setMode, setAccentId,
+  }), [value, colors, accentPreset, loaded, error, retry, setMode, setAccentId]);
 
   return (
     <AppThemeContext.Provider value={contextValue}>

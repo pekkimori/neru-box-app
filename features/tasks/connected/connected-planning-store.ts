@@ -9,6 +9,7 @@ import type { createTaskPhotos, PendingTaskPhoto } from '../task-photos';
 type Repository = ReturnType<typeof createServerRepository>;
 type Commands = ReturnType<typeof createPlanningCommands>;
 export interface ConnectedPlanningState {
+  loaded: boolean;
   loading: boolean;
   saving: boolean;
   fresh: boolean;
@@ -27,7 +28,7 @@ const message = (cause: unknown) => cause instanceof Error ? cause.message : 'Co
  * mutations return success only after a receipt, independent of refresh errors.
  */
 export function createConnectedPlanningStore(repository: Repository, commands: Commands, date: string, localPlan: () => Promise<DailyPlan>, assertAccount: () => void, photos?: ReturnType<typeof createTaskPhotos>) {
-  let state: ConnectedPlanningState = { loading: true, saving: false, fresh: false, cached: false, error: null, notice: null, constellations: [], nebulas: [], schedule: null, pending: [], pendingPhotos: [] };
+  let state: ConnectedPlanningState = { loaded: false, loading: true, saving: false, fresh: false, cached: false, error: null, notice: null, constellations: [], nebulas: [], schedule: null, pending: [], pendingPhotos: [] };
   const listeners = new Set<() => void>();
   let revision = 0;
   let saving = false;
@@ -56,7 +57,7 @@ export function createConnectedPlanningStore(repository: Repository, commands: C
     } catch (cause) {
       update({ error: message(cause), fresh: false });
       return false;
-    } finally { update({ loading: false }); }
+    } finally { update({ loaded: true, loading: false }); }
   }
   async function mutate(operation: () => Promise<unknown>, success: string) {
     if (saving) return false;

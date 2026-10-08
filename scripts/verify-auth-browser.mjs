@@ -6,11 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { verifyConnectedPlanning } from './verify-connected-planning-browser.mjs';
-import { verifyChatBrowser } from './verify-chat-browser.mjs';
-import { verifyCompletionBrowser } from './verify-completion-browser.mjs';
-import { verifyWeeklyBrowser } from './verify-weekly-browser.mjs';
-import { verifyRoutinesBrowser } from './verify-routines-browser.mjs';
+import { verifyUnifiedBrowser } from './verify-unified-browser.mjs';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const apiPort = process.env.NERU_AUTH_TEST_PORT ?? '4107';
@@ -124,16 +120,14 @@ try {
     const task = { starId: 'private-star', constellationId: 'private-a', status: 'unlit', coinsEarned: 0 };
     localStorage.setItem(prefix + 'plans/' + date, JSON.stringify({ date, blocks: { morning: [task], afternoon: [task], evening: [task] }, reflections: {} }));
     // The fixture's visible task should not depend on the time this test runs.
-    localStorage.setItem(prefix + 'sleep-schedule', JSON.stringify([]));
+    localStorage.setItem(prefix + 'sleep-schedule', JSON.stringify(['weekdays', 'weekend'].map(id => ({ id, label: id, days: [], bedtime: '23:00', wakeTime: '07:00', enabled: false }))));
+    localStorage.removeItem(prefix + 'server-import/v1');
   }, { id, apiUrl });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await openTasks();
-  await page.getByTestId('connected-period-tasks').waitFor();
-  assert.equal(await page.getByText('PRIVATE ACCOUNT A', { exact: true }).count(), 0);
-  await page.getByRole('tab', { name: 'On device tasks', exact: true }).click();
   await page.getByText('PRIVATE ACCOUNT A', { exact: true }).first().waitFor();
-  await page.getByRole('tab', { name: 'Online tasks', exact: true }).click();
-  await page.getByTestId('connected-period-tasks').waitFor();
+  assert.equal(await page.getByRole('tab', { name: 'On device tasks', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('tab', { name: 'Online tasks', exact: true }).count(), 0);
   assert.equal(await page.evaluate(({ id, apiUrl }) => {
     const prefix = `@neru/accounts/${encodeURIComponent(apiUrl)}/${encodeURIComponent(id)}/@neru/`;
     return JSON.parse(localStorage.getItem(prefix + 'stars') ?? '[]')[0]?.label;
@@ -151,8 +145,8 @@ try {
   await page.getByRole('button', { name: 'Not now', exact: true }).click();
   assert.equal(await page.evaluate(() => localStorage.getItem('@neru/migration/legacy-v1')), null);
   await page.getByRole('button', { name: 'Choose this account for legacy data', exact: true }).click();
-  await page.getByRole('button', { name: 'Back up and reserve for this account', exact: true }).click();
-  await page.getByText('Legacy records are backed up on this device', { exact: false }).waitFor();
+  await page.getByRole('button', { name: 'Back up and import to this account', exact: true }).click();
+  await page.getByText('These records are backed up and connected to your account', { exact: false }).waitFor();
   const backup = await page.evaluate(() => JSON.parse(localStorage.getItem('@neru/migration/legacy-v1')));
   assert.deepEqual(backup.owner, { server: apiUrl, userId: id });
   assert.equal(backup.entries.find(([key]) => key === '@neru/constellations')[1], legacyBefore);
@@ -185,16 +179,11 @@ try {
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await openTasks();
-  await page.getByTestId('connected-period-tasks').waitFor();
-  assert.equal(await page.getByText('PRIVATE ACCOUNT A', { exact: true }).count(), 0);
+  await page.getByText('PRIVATE ACCOUNT A', { exact: true }).first().waitFor();
   console.log('Logout, account switching, logout-all, and login back passed.');
-  await verifyConnectedPlanning({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
-  await verifyCompletionBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
-  await verifyRoutinesBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, proxyApi });
-  await verifyWeeklyBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
-  await verifyChatBrowser({ page, browser, origin, apiUrl, email, password, proxyApi, artifacts });
+  await verifyUnifiedBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
   assert.deepEqual(failures, [], 'No uncaught browser errors');
-  console.log(`Browser authentication, planning, and live chat walkthrough passed. Screenshots: ${artifacts}`);
+  console.log(`Browser authentication, device import, original Tasks/Weekly Studio, photos, rewards, diary and archive walkthrough passed. Screenshots: ${artifacts}`);
 } catch (error) {
   if (page) {
     await page.screenshot({ path: join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);

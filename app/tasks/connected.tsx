@@ -1,5 +1,2 @@
-import { ConnectedPlanningScreen } from '@/features/tasks/connected/connected-planning-screen';
-
-export default function ConnectedPlanningRoute() {
-  return <ConnectedPlanningScreen />;
-}
+import { Redirect } from 'expo-router';
+export default function ConnectedPlanningRoute() { return <Redirect href="/tasks/plan" />; }

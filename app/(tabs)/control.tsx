@@ -1,3 +1,4 @@
+import { useAccountValue } from '@/hooks/useAccountValue';
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState } from "react";
@@ -48,18 +49,18 @@ export default function ControlScreen() {
     accentPreset,
     colors: Palette,
     setMode,
-    setAccentId,
+    setAccentId, error: appearanceError, retry: retryAppearance,
   } = useAppTheme();
   const styles = useThemedStyles(controlStyles, appearance);
   const [editor, setEditor] = useState<ControlEditor>(null);
-  const [selectedApps, setSelectedApps] = useState<SelectedApp[]>([
+  const { value: selectedApps, save: setSelectedApps, error: appsError, retry: retryApps } = useAccountValue<SelectedApp[]>('control-apps', [
     { id: "instagram", limitMinutes: 30 },
     { id: "youtube", limitMinutes: 60 },
     { id: "messages", limitMinutes: 120 },
     { id: "spotify", limitMinutes: 90 },
   ]);
   const [search, setSearch] = useState("");
-  const [focusBlocks, setFocusBlocks] = useState<FocusBlock[]>([
+  const { value: focusBlocks, save: setFocusBlocks, error: blocksError, retry: retryBlocks } = useAccountValue<FocusBlock[]>('control-focus-blocks', [
     {
       id: "morning",
       label: "Deep work",
@@ -75,12 +76,11 @@ export default function ControlScreen() {
       enabled: true,
     },
   ]);
-  const [effects, setEffects] =
-    useState<Record<Mode, ModeEffects>>(DEFAULT_EFFECTS);
-  const { schedule, saveSchedule, activeSleep, isSleepWindow } =
+  const { value: effects, save: setEffects, error: effectsError, retry: retryEffects } = useAccountValue<Record<Mode, ModeEffects>>('control-effects', DEFAULT_EFFECTS);
+  const { schedule, saveSchedule, activeSleep, isSleepWindow, error: sleepError, retry: retrySleep } =
     useSleepSchedule();
   const [editingMode, setEditingMode] = useState<Mode>("focus");
-  const [focusDuration, setFocusDuration] = useState("25");
+  const { value: focusDuration, save: setFocusDuration } = useAccountValue("control-focus-duration", "25");
   const handleFocusComplete = useCallback(() => setEditor("rest"), []);
   const {
     session,
@@ -88,7 +88,7 @@ export default function ControlScreen() {
     remainingSeconds,
     startSession,
     startRestSession,
-    endSession,
+    endSession, error: sessionError, retry: retrySession,
   } = useFocusSession(handleFocusComplete);
 
   const selectedIds = useMemo(
@@ -257,6 +257,7 @@ export default function ControlScreen() {
           ]}
         />
 
+        {[appearanceError, appsError, blocksError, effectsError, sleepError, sessionError].some(Boolean) && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Retry settings save" onPress={() => { void Promise.allSettled([retryAppearance(), retryApps(), retryBlocks(), retryEffects(), retrySleep(), retrySession()]); }}><Text accessibilityRole="alert" style={{ color: Palette.accent }}>{[appearanceError, appsError, blocksError, effectsError, sleepError, sessionError].find(Boolean)?.message} · Retry</Text></TouchableOpacity>}
         <View style={styles.statusCard}>
           <View style={styles.statusTop}>
             <View style={styles.modeIdentity}>

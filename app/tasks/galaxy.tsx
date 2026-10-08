@@ -9,7 +9,7 @@ import {
   AccessibilityInfo,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
@@ -20,7 +20,7 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 import { Sp, R } from '../../features/tasks/tokens';
-import { hideGalaxyStar, loadGalaxyStars, loadServerGalaxyStars } from '../../features/tasks/galaxy/galaxy-loader';
+import { hideGalaxyStar, loadServerGalaxyStars } from '../../features/tasks/galaxy/galaxy-loader';
 import { GalaxyCanvas } from '../../features/tasks/galaxy/galaxy-canvas';
 import { GalaxyEntrance } from '../../features/tasks/galaxy/galaxy-entrance';
 import { GalaxyListView } from '../../features/tasks/galaxy/galaxy-list-view';
@@ -36,9 +36,7 @@ export default function GalaxyScreen() {
   const { appearance } = useAppTheme();
   const styles = useThemedStyles(themedStyles);
   const { client } = useAuth();
-  const { source } = useLocalSearchParams<{ source?: string }>();
-  const online = source !== 'device';
-  const loadStars = useCallback(() => online && client ? loadServerGalaxyStars(client) : loadGalaxyStars(), [client, online]);
+  const loadStars = useCallback(() => { if (!client) throw new Error('Sign in to open your archive.'); return loadServerGalaxyStars(client); }, [client]);
 
   const [stars, setStars] = useState<GalaxyStar[]>([]);
   const [domains, setDomains] = useState<GalaxyDomain[]>([]);
@@ -78,12 +76,13 @@ export default function GalaxyScreen() {
     setEntranceVisible(false);
   }, []);
   const handleExcludeStar = useCallback(async (star: GalaxyStar) => {
-    await hideGalaxyStar(star);
+    if (!client) return;
+    await hideGalaxyStar(star, client);
     const result = await loadStars();
     setStars(result.stars);
     setDomains(result.domains);
     setPartialError(result.partialError);
-  }, [loadStars]);
+  }, [loadStars, client]);
 
   const readyToShow = !loading && sceneRevealed;
 
@@ -138,7 +137,7 @@ export default function GalaxyScreen() {
 
               <View style={styles.heading}>
                 <Text style={styles.eyebrow}>SKY OBSERVER</Text>
-                <Text style={styles.title}>{online ? 'Online archive' : 'Device archive'}</Text>
+                <Text style={styles.title}>Archive</Text>
               </View>
 
               <View style={styles.toggle}>

@@ -13,7 +13,7 @@ export function ConnectedSaveStatus({ planning }: { planning: Pick<ReturnType<ty
     {!!pending && <TouchableOpacity disabled={planning.saving} onPress={() => { void planning.retryPending(); }} accessibilityRole="button" accessibilityLabel="Retry pending save" style={{ padding: 12, backgroundColor: colors.redSoft, borderRadius: 8 }}>
       <Text style={{ color: colors.red, fontWeight: '700' }}>A save is waiting · Retry</Text>
     </TouchableOpacity>}
-    {!planning.ready && !planning.loading && !pending && <TouchableOpacity disabled={planning.saving} onPress={() => { void planning.reload(); }} accessibilityRole="button" accessibilityLabel="Refresh online data" style={{ padding: 12 }}>
+    {!planning.ready && !planning.loading && !pending && <TouchableOpacity disabled={planning.saving} onPress={() => { void planning.reload(); }} accessibilityRole="button" accessibilityLabel="Refresh account data" style={{ padding: 12 }}>
       <Text style={{ color: colors.red }}>Reconnect and refresh to make changes</Text>
     </TouchableOpacity>}
   </View>;

@@ -16,7 +16,7 @@ export const DEFAULT_WEEK_BLOCKS: TimeBlockDto[] = [
 export const canRemoveWeeklyTask = (task: PlannedTaskDto) => task.status === 'unlit'
   && !task.setupPhotoUri && !task.completionPhotoUri && !task.completedAt && !task.coinsEarned;
 
-export function weeklyDayEdits(day: DraftDay): WeeklyPlanEdit[] {
+export function weeklyDayEdits(day: DraftDay, keepIds = false): WeeklyPlanEdit[] {
   const originals = new Map((day.base?.tasks ?? []).map(task => [task.id, task]));
   const desired = new Map(day.tasks.map(task => [task.id, task]));
   const edits: WeeklyPlanEdit[] = [];
@@ -28,8 +28,8 @@ export function weeklyDayEdits(day: DraftDay): WeeklyPlanEdit[] {
   }
   for (const task of day.tasks) if (!originals.has(task.id)) {
     if (!task.blockId) throw new Error('Choose a block for each new task.');
-    edits.push(task.questId ? { kind: 'addQuestTask', blockId: task.blockId, questId: task.questId }
-      : { kind: 'addAdHocTask', blockId: task.blockId, nebulaId: task.nebulaId, title: task.title });
+    edits.push(task.questId ? { kind: 'addQuestTask', blockId: task.blockId, questId: task.questId, ...(keepIds ? { taskId: task.id } : {}) }
+      : { kind: 'addAdHocTask', blockId: task.blockId, nebulaId: task.nebulaId, title: task.title, ...(keepIds ? { taskId: task.id } : {}) });
   }
   return edits;
 }

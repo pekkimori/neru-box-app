@@ -1,38 +1,37 @@
-import { Platform } from 'react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Alert } from 'react-native';
+import { useAuth } from '../auth/auth-provider';
+import { captureAccountStorage } from '../../lib/storage/account-storage';
+import * as Crypto from 'expo-crypto';
+import { formatLocalDate } from '../../utils/time';
+import { accountGacha } from './account-gacha';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 
 import {
-  SINGLE_PULL_COST,
-  TEN_PULL_COST,
   type GachaBanner,
   type GachaCreature,
   type Rarity,
-  rollFromBanner,
 } from '@/features/gacha/pokemon-catalog';
 import {
   getPokemonMedia,
   preparePokemonCry,
   primePokemonCryOnWeb,
 } from './pokemon-media';
-import { getFeaturedPokemon, toGachaResult } from './gacha-pull';
+import { getFeaturedPokemon } from './gacha-pull';
 import { loadPullMedia } from './pull-media';
-import type { GachaResult } from './use-gacha-collection';
 
 interface UseGachaPullOptions {
   catalog: GachaCreature[];
   catalogReady: boolean;
   selectedBanner: GachaBanner;
-  spendCoins: (amount: number) => boolean;
-  addGachaResults: (results: GachaResult[]) => void;
 }
 
 export function useGachaPull({
   catalog,
   catalogReady,
   selectedBanner,
-  spendCoins,
-  addGachaResults,
 }: UseGachaPullOptions) {
+  const { client, user } = useAuth();
+  const pull = useMemo(() => client && user ? accountGacha(client, captureAccountStorage(), () => Crypto.randomUUID()) : null, [client, user]);
   const [pullingCount, setPullingCount] = useState<1 | 10 | null>(null);
   const [pullResults, setPullResults] = useState<GachaCreature[]>([]);
   const [showCatch, setShowCatch] = useState(false);
@@ -64,16 +63,26 @@ export function useGachaPull({
     pullLockRef.current = false;
   }, []);
 
-  const runPull = useCallback((count: 1 | 10) => {
+  const runPull = useCallback(async (count: 1 | 10) => {
     if (pullLockRef.current || isPulling || showReveal || !catalogReady) return;
-    const cost = count === 1 ? SINGLE_PULL_COST : TEN_PULL_COST;
-    if (!spendCoins(cost)) return;
-
+    if (!pull) return;
     pullLockRef.current = true;
-    const results = Array.from(
-      { length: count },
-      () => rollFromBanner(selectedBanner, catalog),
-    );
+    setPullingCount(count);
+    let results: GachaCreature[];
+    try {
+      const saved = await pull(selectedBanner.generation, count, formatLocalDate(new Date()), catalog);
+      if (!mountedRef.current) return;
+      results = saved.map(item => {
+        const pokemon = catalog.find(pokemon => pokemon.id === item.id);
+        if (!pokemon) throw new Error('Reload the catalogue to see your saved catch.');
+        return pokemon;
+      });
+    } catch (cause) {
+      if (!mountedRef.current) return;
+      setPullingCount(null); pullLockRef.current = false;
+      Alert.alert('Could not open your catch', cause instanceof Error ? cause.message : 'Try again to finish the pending catch.');
+      return;
+    }
     const featured = getFeaturedPokemon(results);
     if (Platform.OS === 'web' && featured) primePokemonCryOnWeb(featured.id, featured.name);
     setPullingCount(count);
@@ -90,22 +99,19 @@ export function useGachaPull({
       return preparePokemonCry(featured.id, media[results.indexOf(featured)]?.cry ?? null);
     }).catch(() => undefined);
 
-    void Promise.all([mediaRequest, catchInteraction]).then(([media]) => {
+    void Promise.all([mediaRequest, catchInteraction]).then(() => {
       if (!mountedRef.current) return;
-      addGachaResults(results.map((pokemon, index) =>
-        toGachaResult(pokemon, media[index])));
       setPullResults(results);
       setShowCatch(false);
       // Present results only after the catch modal has left the native stack.
     });
   }, [
-    addGachaResults,
     catalog,
     catalogReady,
     isPulling,
     selectedBanner,
     showReveal,
-    spendCoins,
+    pull,
   ]);
 
   return {

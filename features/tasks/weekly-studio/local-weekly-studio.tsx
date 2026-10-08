@@ -5,7 +5,7 @@ import { usePreventRemove } from 'expo-router/react-navigation';
 import type { NavigationAction } from 'expo-router/react-navigation';
 import { useNavigation, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -24,7 +24,7 @@ import { useDailyPlan } from '@/hooks/useDailyPlan';
 import { useDraggableDrawer } from '@/hooks/useDraggableDrawer';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
-import type { BlockType, DailyPlan } from '@/types/tasks';
+import type { BlockType } from '@/types/tasks';
 import { AddConstellationModal } from '../observatory/add-modals';
 import { DeleteConstellationConfirmModal } from '../observatory/delete-modals';
 import {
@@ -32,7 +32,7 @@ import {
   createEmptyPlan,
   type PlanTaskWithBlock,
 } from '../plan-model';
-import { loadPlansForDates } from '../plan-repository';
+import { accountPlan } from '../account-plan';
 import {
   formatLocalDate,
   getWeekDateKeys,
@@ -40,6 +40,7 @@ import {
 } from '../time-helpers';
 import { Palette, R, useTasksPalette } from '../tokens';
 import { useWeeklyStudioDraft } from './use-weekly-studio-draft';
+import { ConnectedSaveStatus } from '../connected/connected-save-status';
 
 const BLOCKS: {
   key: BlockType;
@@ -114,6 +115,7 @@ function WeeklyStudioDrawerFrame({
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={closeDrawer}
+          accessibilityRole="button"
           accessibilityLabel="Close Weekly Studio"
         />
       </Animated.View>
@@ -185,7 +187,8 @@ export function LocalWeeklyStudio({
   const [draftBlock, setDraftBlock] = useState<BlockType>('morning');
   const [nebulaOpen, setNebulaOpen] = useState(false);
   const [deleteNebula, setDeleteNebula] = useState<{ id: string; name: string } | null>(null);
-  const [weekPlans, setWeekPlans] = useState<Record<string, DailyPlan>>({});
+
+  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const [pendingLeaveAction, setPendingLeaveAction] = useState<NavigationAction | null>(null);
   const [pendingDismiss, setPendingDismiss] = useState(false);
@@ -193,11 +196,16 @@ export function LocalWeeklyStudio({
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const {
-    constellations: storedConstellations, stars: storedStars, loaded: starsLoaded,
+    constellations: allConstellations,
+    planning: library,
+    history, stars: storedStars, loaded: starsLoaded,
   } = useConstellations();
   const {
-    plan: storedPlan, loaded: planLoaded,
+    plan: storedPlan, loaded: planLoaded, planning: selectedPlanning,
   } = useDailyPlan(selectedDate);
+  const storedConstellations = useMemo(() => allConstellations.filter(item => !library.nebulas.find(nebula => nebula.id === item.id)?.archivedAt), [allConstellations, library.nebulas]);
+  const schedules = useMemo(() => history.schedules.filter(day => day.date !== selectedDate).concat(selectedPlanning.schedule ? [selectedPlanning.schedule] : []), [history.schedules, selectedPlanning.schedule, selectedDate]);
+  const weekPlans = useMemo(() => Object.fromEntries(schedules.map(day => [day.date, accountPlan(day, day.date)])), [schedules]);
   const {
     plan,
     constellations,
@@ -211,28 +219,20 @@ export function LocalWeeklyStudio({
     addNebula,
     deleteNebula: stageNebulaDeletion,
     resetDrafts,
-    saveDrafts,
+    saveDrafts, reviewDrafts,
   } = useWeeklyStudioDraft({
     selectedDate,
     storedPlan,
     storedConstellations,
     storedStars,
+    schedules, nebulas: library.nebulas,
+    canEdit: !saving && selectedPlanning.ready && library.ready && !selectedPlanning.pending.length && !selectedPlanning.pendingPhotos.length,
   });
 
   usePreventRemove(!isDrawer && hasUnsavedChanges, ({ data }) => {
     setPendingLeaveAction(data.action);
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadWeek = async () => {
-      const loaded = await loadPlansForDates(weekDays.map((day) => day.date));
-      if (cancelled) return;
-      setWeekPlans(loaded);
-    };
-    loadWeek();
-    return () => { cancelled = true; };
-  }, [weekDays]);
 
   const selectedTasksByDomain = useMemo(() => {
     const map = new Map<string, PlanTaskWithBlock[]>();
@@ -300,13 +300,13 @@ export function LocalWeeklyStudio({
   };
 
   const createTask = () => {
-    if (taskDomainId && stageTask(draftLabel, taskDomainId, draftBlock)) {
+    if (!saving && selectedPlanning.ready && taskDomainId && stageTask(draftLabel, taskDomainId, draftBlock)) {
       closeTaskModal();
     }
   };
 
   const confirmDeleteNebula = () => {
-    if (!deleteNebula) return;
+    if (!deleteNebula || saving) return;
     stageNebulaDeletion(deleteNebula.id);
     if (taskDomainId === deleteNebula.id) closeTaskModal();
     setDeleteNebula(null);
@@ -347,7 +347,7 @@ export function LocalWeeklyStudio({
       }
       return;
     }
-    setSaving(true);
+    setSaving(true); setSaveError('');
     try {
       await saveDrafts();
       requestAnimationFrame(() => {
@@ -358,8 +358,10 @@ export function LocalWeeklyStudio({
           finishDismiss();
         }
       });
-    } catch {
-      Alert.alert('Could not save changes', 'Please try again. Your edits are still open.');
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Please try again. Your edits are still open.';
+      setSaveError(message);
+      Alert.alert('Could not save changes', message);
     } finally {
       setSaving(false);
     }
@@ -442,7 +444,7 @@ export function LocalWeeklyStudio({
               </TouchableOpacity>
               <View style={styles.headerCopy}>
                 <Text style={styles.title}>WEEKLY STUDIO</Text>
-                <Text style={styles.kicker}>On device / organize</Text>
+                <Text style={styles.kicker}>Organize your week</Text>
               </View>
               <TouchableOpacity
                 style={[styles.doneButton, saving && styles.periodDisabled]}
@@ -459,6 +461,8 @@ export function LocalWeeklyStudio({
         </>
       )}
 
+      {saveError && <View style={{ padding: 14, gap: 8 }}><Text accessibilityRole="alert" style={{ color: Palette.red }}>{saveError}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Review plan changes" onPress={() => { void reviewDrafts().then(() => setSaveError('Latest changes reviewed. Save your plan when ready.')).catch(cause => setSaveError(cause instanceof Error ? cause.message : 'Could not review changes.')); }}><Text style={{ color: Palette.red }}>Review latest changes</Text></TouchableOpacity></View>}
+      <View style={{ paddingHorizontal: 16 }}><ConnectedSaveStatus planning={selectedPlanning} /></View>
       <View style={styles.calendarFrame}>
         <View style={styles.calendar}>
           <View style={styles.weekNavigation}>

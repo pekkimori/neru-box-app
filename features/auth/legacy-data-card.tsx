@@ -1,3 +1,4 @@
+import { syncDeviceData } from '../account/server-data-boundary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
@@ -35,6 +36,7 @@ export function LegacyDataCard() {
           throw new Error('Account changed. Sign in again before reserving data.');
         }
       });
+      await syncDeviceData(client, true);
       await inspect();
       setConfirm(false);
     } catch (cause) { setError(errorMessage(cause)); }
@@ -46,18 +48,18 @@ export function LegacyDataCard() {
     <Text accessibilityRole="header" style={[authStyles.label, { color: colors.text }]}>Legacy device data</Text>
     <AuthError message={error} />
     {error && <AuthButton secondary label="Retry legacy data check" onPress={() => {
-      setError(null); void inspect().catch(cause => setError(errorMessage(cause)));
+      setError(null); if (client) void syncDeviceData(client, true).then(inspect).catch(cause => setError(errorMessage(cause))); else void inspect().catch(cause => setError(errorMessage(cause)));
     }} />}
     {inspection?.ownership === 'this-account' ? (
-      <Text style={[authStyles.note, { color: colors.textSecondary }]}>Legacy records are backed up on this device and reserved for this account. Cloud import is not enabled yet. Photos remain in their original files; keep this app’s data until upload is available.</Text>
+      <Text style={[authStyles.note, { color: colors.textSecondary }]}>These records are backed up and connected to your account. The original records are kept for recovery.</Text>
     ) : inspection?.ownership === 'another-account' ? (
       <Text style={[authStyles.note, { color: colors.textSecondary }]}>Legacy data is reserved for another account. This account will not import it.</Text>
     ) : inspection && <>
-      <Text style={[authStyles.note, { color: colors.textSecondary }]}>Task records from before sign-in were found on this device. You choose which account will receive them. Nothing is uploaded or added to your current tasks yet.</Text>
+      <Text style={[authStyles.note, { color: colors.textSecondary }]}>Task records from before sign-in were found on this device. You choose which account will receive them. Choose this account to import your tasks and photos.</Text>
       {!confirm && <AuthButton secondary label="Choose this account for legacy data" onPress={() => setConfirm(true)} />}
       {confirm && <>
-        <Text accessibilityRole="alert" style={[authStyles.note, { color: colors.text }]}>Reserve these records for {user?.email}? This saves a local backup of constellations, stars, plans, and photo references. Original records and photo files stay untouched. This choice cannot yet be changed in the app.</Text>
-        <AuthButton label="Back up and reserve for this account" loading={busy} onPress={() => { void prepare(); }} />
+        <Text accessibilityRole="alert" style={[authStyles.note, { color: colors.text }]}>Reserve these records for {user?.email}? This backs up your nebulas, tasks and diary, then imports them and their photos into this account. Existing account records and the original files are preserved.</Text>
+        <AuthButton label="Back up and import to this account" loading={busy} onPress={() => { void prepare(); }} />
         <AuthButton secondary label="Not now" disabled={busy} onPress={() => setConfirm(false)} />
       </>}
     </>}

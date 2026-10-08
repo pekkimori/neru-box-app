@@ -34,13 +34,13 @@ function galaxyStarArchiveId(
   return `${star.completionDate}:${star.starId}`;
 }
 
-export async function hideGalaxyStar(star: GalaxyStar): Promise<void> {
-  const storage = captureAccountStorage();
-  const raw = await storage.getItem(HIDDEN_NODES_KEY);
-  const parsed = safeParseArray<string>(raw ?? '');
-  const hidden = new Set(parsed.value ?? []);
+export async function hideGalaxyStar(star: GalaxyStar, client: ApiClient): Promise<void> {
+  const page = await client.request<{ revision: number; value: string[] | null }>('/account/values/galaxy-hidden-nodes');
+  const hidden = new Set(page.value ?? []);
   hidden.add(galaxyStarArchiveId(star));
-  await storage.setItem(HIDDEN_NODES_KEY, JSON.stringify([...hidden]));
+  const { randomUUID } = await import('expo-crypto');
+  await client.request('/account/values/galaxy-hidden-nodes', { method: 'PUT', body: { operationId: randomUUID(), expectedRevision: page.revision, value: [...hidden] } });
+
 }
 
 /**
@@ -155,8 +155,8 @@ export async function loadServerGalaxyStars(client: ApiClient): Promise<GalaxyRe
     if (!history) throw error;
     partialError = true;
   }
-  const hidden = safeParseArray<string>(await storage.getItem(HIDDEN_NODES_KEY) ?? '');
-  return { ...mapServerGalaxy(history.data, nebulas?.data ?? [], new Set(hidden.value ?? [])), partialError: partialError || hidden.error };
+  const hidden = await client.request<{ value: string[] | null }>('/account/values/galaxy-hidden-nodes');
+  return { ...mapServerGalaxy(history.data, nebulas?.data ?? [], new Set(hidden.value ?? [])), partialError };
 }
 
 interface ParseResult<T> {

@@ -1,167 +1,22 @@
-// hooks/useDailyPlan.ts
-import { useCallback } from 'react';
-import { useStorage } from './useStorage';
-import type {
-  BlockType,
-  DailyPlan,
-  DiaryPageStickerPlacement,
-  DiaryStickerPlacement,
-  PlannedTask,
-  TaskStatus,
-} from '../types/tasks';
-import {
-  PLAN_BLOCKS,
-  createEmptyPlan,
-  planStorageKey,
-} from '../features/tasks/plan-model';
+import { useCallback, useMemo } from 'react';
+import { useConnectedPlanning } from '../features/tasks/connected/use-connected-planning';
+import { accountPlan } from '../features/tasks/account-plan';
+import { useAccountValue } from './useAccountValue';
+import type { DailyPlan, DiaryStickerPlacement, DiaryPageStickerPlacement } from '../types/tasks';
 
+type DiaryPage = Pick<DailyPlan, 'diaryNote' | 'diaryStickers' | 'diaryDataStickers' | 'diaryPageLayout'>;
 export function useDailyPlan(date: string) {
-  const { value: plan, save: savePlan, loaded } = useStorage<DailyPlan>(
-    planStorageKey(date),
-    createEmptyPlan(date),
-  );
-
-  const assignTask = useCallback(
-    (starId: string, constellationId: string, block: BlockType) => {
-      savePlan((prev) => {
-        if (prev.blocks[block].length >= 4) return prev;
-        if (prev.blocks[block].some((t) => t.starId === starId)) return prev;
-        const task: PlannedTask = {
-          starId,
-          constellationId,
-          status: 'unlit',
-          coinsEarned: 0,
-        };
-        return {
-          ...prev,
-          blocks: { ...prev.blocks, [block]: [...prev.blocks[block], task] },
-        };
-      });
-    },
-    [savePlan]
-  );
-
-  const removeTask = useCallback(
-    (starId: string, block: BlockType) => {
-      savePlan((prev) => ({
-        ...prev,
-        blocks: {
-          ...prev.blocks,
-          [block]: prev.blocks[block].filter((t) => t.starId !== starId),
-        },
-      }));
-    },
-    [savePlan]
-  );
-
-  const moveTask = useCallback(
-    (starId: string, constellationId: string, targetBlock: BlockType) => {
-      savePlan((prev) => {
-        const existing = PLAN_BLOCKS
-          .flatMap((block) => prev.blocks[block])
-          .find((task) => task.starId === starId);
-        if (!existing || prev.blocks[targetBlock].some((task) => task.starId === starId)) return prev;
-        if (prev.blocks[targetBlock].length >= 4) return prev;
-        const blocks = {
-          morning: prev.blocks.morning.filter((task) => task.starId !== starId),
-          afternoon: prev.blocks.afternoon.filter((task) => task.starId !== starId),
-          evening: prev.blocks.evening.filter((task) => task.starId !== starId),
-        };
-        blocks[targetBlock] = [...blocks[targetBlock], { ...existing, constellationId }];
-        return { ...prev, blocks };
-      });
-    },
-    [savePlan],
-  );
-
-  const updateTaskStatus = useCallback(
-    (starId: string, block: BlockType, status: TaskStatus, photoUri?: string) => {
-      savePlan((prev) => ({
-        ...prev,
-        blocks: {
-          ...prev.blocks,
-          [block]: prev.blocks[block].map((t) => {
-            if (t.starId !== starId) return t;
-            const updated = { ...t, status };
-            if (status === 'dim' && photoUri) {
-              updated.setupPhotoUri = photoUri;
-            }
-            if (status === 'lit' && photoUri) {
-              updated.completionPhotoUri = photoUri;
-            }
-            if (status === 'lit' && !updated.completedAt) {
-              updated.completedAt = new Date().toISOString();
-            }
-            return updated;
-          }),
-        },
-      }));
-    },
-    [savePlan]
-  );
-
-  const awardCoins = useCallback(
-    (starId: string, block: BlockType, coins: number) => {
-      savePlan((prev) => ({
-        ...prev,
-        blocks: {
-          ...prev.blocks,
-          [block]: prev.blocks[block].map((t) =>
-            t.starId === starId ? { ...t, coinsEarned: t.coinsEarned + coins } : t
-          ),
-        },
-      }));
-    },
-    [savePlan]
-  );
-
-  const setMoodSticker = useCallback(
-    (sticker: string) => {
-      savePlan((prev) => ({ ...prev, moodSticker: sticker }));
-    },
-    [savePlan]
-  );
-
-  const saveDiaryNote = useCallback(
-    (text: string) => {
-      savePlan((prev) => ({ ...prev, diaryNote: text }));
-    },
-    [savePlan]
-  );
-
-  const saveDiaryStickers = useCallback(
-    (stickers: DiaryStickerPlacement[]) => {
-      savePlan((prev) => ({ ...prev, diaryStickers: stickers.slice(0, 4) }));
-    },
-    [savePlan],
-  );
-
-  const saveDiaryDataStickers = useCallback(
-    (stickers: string[]) => {
-      savePlan((prev) => ({ ...prev, diaryDataStickers: stickers.slice(0, 6) }));
-    },
-    [savePlan],
-  );
-
-  const saveDiaryPageLayout = useCallback(
-    (layout: DiaryPageStickerPlacement[]) => {
-      savePlan((prev) => ({ ...prev, diaryPageLayout: layout.slice(0, 32) }));
-    },
-    [savePlan],
-  );
-
+  const planning = useConnectedPlanning(date);
+  const page = useAccountValue<DiaryPage>(`diary/${date}`, {});
+  const plan = useMemo(() => ({ ...accountPlan(planning.schedule, date), ...page.value }), [planning.schedule, date, page.value]);
+  const patch = useCallback(async (next: Partial<DiaryPage>) => page.saveAsync(previous => ({ ...previous, ...next })), [page.saveAsync]);
   return {
-    plan,
-    loaded,
-    assignTask,
-    removeTask,
-    moveTask,
-    updateTaskStatus,
-    awardCoins,
-    saveDiaryNote,
-    saveDiaryDataStickers,
-    saveDiaryPageLayout,
-    saveDiaryStickers,
-    setMoodSticker,
+    plan, loaded: planning.loaded && page.loaded, planning,
+    diaryError: page.error, diarySaving: page.saving, retryDiary: page.retry,
+    saveDiaryNote: (diaryNote: string) => patch({ diaryNote }),
+    saveDiaryStickers: (diaryStickers: DiaryStickerPlacement[]) => patch({ diaryStickers: diaryStickers.slice(0, 4) }),
+    saveDiaryDataStickers: (diaryDataStickers: string[]) => patch({ diaryDataStickers: diaryDataStickers.slice(0, 6) }),
+    saveDiaryPageLayout: (diaryPageLayout: DiaryPageStickerPlacement[]) => patch({ diaryPageLayout: diaryPageLayout.slice(0, 32) }),
+    setMoodSticker: planning.setMood,
   };
 }

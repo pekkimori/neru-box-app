@@ -1,40 +1,17 @@
-// hooks/useCoins.ts
-import { useCallback, useEffect, useRef } from 'react';
-import { useStorage } from './useStorage';
-
-const DEV_TEST_BALANCE = 1000;
-
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../features/auth/auth-provider';
+import { subscribePlanning } from '../features/tasks/planning-events';
 export function useCoins() {
-  const { value: coins, save: saveCoins, loaded } = useStorage<number>('@neru/coins', 120);
-  const appliedDevTopUpRef = useRef(false);
-
-  useEffect(() => {
-    if (!__DEV__ || !loaded || appliedDevTopUpRef.current) return;
-    appliedDevTopUpRef.current = true;
-    saveCoins((current) => Math.max(current, DEV_TEST_BALANCE));
-  }, [loaded, saveCoins]);
-
-  const addCoins = useCallback(
-    (amount: number) => {
-      saveCoins((prev) => prev + amount);
-    },
-    [saveCoins]
-  );
-
-  const spendCoins = useCallback(
-    (amount: number): boolean => {
-      let success = false;
-      saveCoins((prev) => {
-        if (prev >= amount) {
-          success = true;
-          return prev - amount;
-        }
-        return prev;
-      });
-      return success;
-    },
-    [saveCoins]
-  );
-
-  return { coins, addCoins, spendCoins, loaded };
+  const { client, user } = useAuth();
+  const [state, setState] = useState({ owner: '', coins: 120, loaded: false, error: null as Error | null });
+  const reload = useCallback(async () => {
+    if (!client || !user) return;
+    try {
+      const result = await client.request<{ coins: number }>('/account/wallet');
+      if (client.getSnapshot().user?.id !== user.id) return;
+      setState({ owner: user.id, coins: result.coins, loaded: true, error: null });
+    } catch (cause) { if (client.getSnapshot().user?.id === user.id) setState(previous => ({ ...previous, owner: user.id, loaded: true, error: cause instanceof Error ? cause : new Error(String(cause)) })); }
+  }, [client, user]);
+  useEffect(() => { void reload(); const timer = setInterval(() => { void reload(); }, 20000); const unsubscribe = subscribePlanning(() => { void reload(); }); return () => { clearInterval(timer); unsubscribe(); }; }, [reload]);
+  return state.owner === user?.id ? { ...state, reload } : { coins: 120, loaded: false, error: null, reload };
 }

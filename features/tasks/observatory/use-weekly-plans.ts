@@ -1,10 +1,11 @@
 // features/tasks/observatory/use-weekly-plans.ts
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import type { DailyPlan } from '../../../types/tasks';
 import { getWeekDateKeys, parseLocalDate } from '../../../utils/time';
 import type { WeekDay } from '../types';
 import { createEmptyPlan, PLAN_BLOCKS } from '../plan-model';
-import { loadPlansForDates } from '../plan-repository';
+import { useConnectedHistory } from '../connected/use-connected-history';
+import { accountPlan } from '../account-plan';
 
 export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
   const weekDayLabels = useMemo((): string[] => {
@@ -23,20 +24,9 @@ export function useWeeklyPlans(livePlan: DailyPlan, liveToday: string) {
     });
   }, [weekDayLabels, liveToday]);
 
-  const [weekPlans, setWeekPlans] = useState<Record<string, DailyPlan>>({});
-  const [version, setVersion] = useState(0);
-
-  const reload = useCallback(() => setVersion((v) => v + 1), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadWeek = async () => {
-      const plans = await loadPlansForDates(weekDayLabels);
-      if (!cancelled) setWeekPlans(plans);
-    };
-    loadWeek();
-    return () => { cancelled = true; };
-  }, [weekDayLabels, version]);
+  const history = useConnectedHistory();
+  const weekPlans = useMemo(() => Object.fromEntries(history.schedules.map(day => [day.date, accountPlan(day, day.date)])), [history.schedules]);
+  const reload = history.reload;
 
   const weekProgress = useMemo(() => {
     let lit = 0;

@@ -21,7 +21,7 @@ type CanCompleteResult =
   | { can: true }
   | { can: false; reason: 'future' | 'sleep_mode' };
 
-export function useObservatoryData(online = false) {
+export function useObservatoryData() {
   const [now, setNow] = useState(() => new Date());
   const nowMin = getMinuteOfDay(now);
   const today = todayString();
@@ -45,18 +45,18 @@ export function useObservatoryData(online = false) {
     markSleepReady, resetSleepReady, loaded: sleepLoaded,
   } = useSleepSchedule();
 
-  const { coins, addCoins, loaded: coinsLoaded } = useCoins();
-  const { plan, assignTask, updateTaskStatus, awardCoins, removeTask, loaded: planLoaded } =
+  const { coins, loaded: coinsLoaded } = useCoins();
+  const { plan, planning, loaded: planLoaded } =
     useDailyPlan(today);
   const { streak: productivityStreak, loaded: streakLoaded } =
     useProductivityStreak(plan, today);
-  const routinesSync = useRoutineQuests(today, online);
+  const routinesSync = useRoutineQuests(today);
   const {
     getQuestsForBlock, isQuestComplete, toggleQuestComplete: rawToggle,
     addQuest, updateQuest, removeQuest, loaded: questsLoaded,
   } =
     routinesSync;
-  const { constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation, loaded: consLoaded } =
+  const { constellations, stars, loaded: consLoaded } =
     useConstellations();
 
   const loaded = consLoaded && questsLoaded && planLoaded && coinsLoaded
@@ -140,7 +140,7 @@ export function useObservatoryData(online = false) {
   const sleepBlocked = sleepModeActive && selectedPeriod !== 'sleep';
 
   const tasksUnlocked =
-    !routinesSync.disabled && selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
+    !routinesSync.disabled && planning.ready && !planning.saving && !planning.pending.length && !planning.pendingPhotos.length && selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
     (displayRoutines.length === 0 || displayRoutines.every((r) => isQuestComplete(r.id)));
 
   const routinesReadOnly =
@@ -178,10 +178,10 @@ export function useObservatoryData(online = false) {
       return plan.blocks[block].map((task) => ({
         block,
         task,
-        available: gateOpen && routinesComplete,
+        available: gateOpen && routinesComplete && planning.ready && !planning.saving,
       }));
     })
-  ), [plan.blocks, canCompleteBlock, getQuestsForBlock, isQuestComplete]);
+  ), [plan.blocks, canCompleteBlock, getQuestsForBlock, isQuestComplete, planning.ready, planning.saving]);
 
   const todayTasks = useMemo(() => {
     if (!selectedBlock) return [];
@@ -205,9 +205,9 @@ export function useObservatoryData(online = false) {
 
   return {
     routinesSync,
-    loaded, today, nowMin, coins, addCoins, productivityStreak,
-    constellations, stars, addConstellation, addStar, deleteStar, deleteConstellation,
-    plan, assignTask, updateTaskStatus, awardCoins, removeTask,
+    loaded, today, nowMin, coins, productivityStreak, planning,
+    constellations, stars,
+    plan,
     getQuestsForBlock, isQuestComplete, toggleQuestComplete, addQuest, updateQuest, removeQuest,
     schedule, activeSleep, isSleepWindow, sleepReady, sleepModeActive, markSleepReady, resetSleepReady,
     periods, selectedPeriod, setSelectedPeriod, selectedBlock,

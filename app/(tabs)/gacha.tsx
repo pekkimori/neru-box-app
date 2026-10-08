@@ -346,8 +346,8 @@ export default function GachaScreen() {
   const styles = useThemedStyles(themedStyles);
   const { colors: Palette } = useAppTheme();
   const { width } = useWindowDimensions();
-  const { coins, spendCoins } = useCoins();
-  const { gachaResults, addGachaResults } = useGachaCollection();
+  const { coins } = useCoins();
+  const { gachaResults } = useGachaCollection();
   const {
     catalog,
     loading: catalogLoading,
@@ -384,8 +384,6 @@ export default function GachaScreen() {
     catalog,
     catalogReady,
     selectedBanner,
-    spendCoins,
-    addGachaResults,
   });
 
   const ownedCounts = useMemo(() => {

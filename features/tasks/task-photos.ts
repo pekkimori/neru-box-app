@@ -1,3 +1,4 @@
+import { planningChanged } from './planning-events.ts';
 import type { ApiClient } from '../../lib/api/client';
 import type { KeyValueStorage } from '../../lib/storage/scoped-storage';
 
@@ -64,6 +65,7 @@ export function createTaskPhotos(
         if (response?.result?.id !== record.taskId) throw new Error('The completion receipt could not be read. Retry this save.');
       }
       await storage.setItem(PREFIX + record.photoId, 'null');
+      planningChanged();
       return photo;
     } catch (error) {
       guard();
