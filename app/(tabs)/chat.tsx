@@ -40,6 +40,7 @@ import {
   type PersonalityId,
 } from "@/features/chat/preview-model";
 import { useChat, type ChatConversation } from "@/features/chat/use-chat";
+import { formatMessageText } from "@/features/chat/message-format";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { useDraggableDrawer } from "@/hooks/useDraggableDrawer";
 
@@ -340,7 +341,11 @@ export default function ChatScreen() {
             <Text
               style={[styles.messageText, isUser && styles.userMessageText]}
             >
-              {item.text}
+              {formatMessageText(item.text).map((part, index) =>
+                part.bold ? (
+                  <Text key={index} style={styles.messageBold}>{part.text}</Text>
+                ) : part.text,
+              )}
             </Text>
           </View>
         </View>
@@ -886,6 +891,7 @@ const themedStyles = createEditorialStyles(() => ({
     borderTopRightRadius: 0,
   },
   messageText: { ...Type.body, color: Palette.ink },
+  messageBold: { fontWeight: Type.bodyStrong.fontWeight },
   userMessageText: { color: Palette.onAccent },
   typingRow: {
     flexDirection: "row",
