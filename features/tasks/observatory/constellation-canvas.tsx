@@ -1,7 +1,6 @@
-import { iconGlyph } from '../../../lib/icons/icon-reference';
 import { type ComponentProps, useEffect, useMemo, useRef } from 'react';
 import { useIsFocused } from 'expo-router/react-navigation';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import Animated, {
   cancelAnimation,
@@ -44,22 +43,6 @@ interface Props {
   selectedBlock: BlockType | null;
   onStarPress: (star: Star) => void;
   height?: number;
-}
-
-function NebulaLabels({ constellations }: { constellations: Constellation[] }) {
-  const styles = useThemedStyles(themedStyles);
-  if (constellations.length === 0) return null;
-  return <ScrollView
-    horizontal
-    style={styles.nebulaStrip}
-    contentContainerStyle={styles.nebulaStripContent}
-    showsHorizontalScrollIndicator={false}
-    accessibilityLabel="Your nebulae"
-  >
-    {constellations.map(nebula => <View key={nebula.id} style={styles.nebulaLabel}>
-      <Text style={styles.nebulaLabelText}>{iconGlyph(nebula.icon)} {nebula.name}</Text>
-    </View>)}
-  </ScrollView>;
 }
 
 type Point = { x: number; y: number };
@@ -539,7 +522,6 @@ export function ConstellationCanvas({
               : 'No tasks planned for today.'}
           </Text>
         </View>
-        <NebulaLabels constellations={constellations} />
       </Animated.View>
     );
   }
@@ -609,16 +591,11 @@ export function ConstellationCanvas({
           );
         })}
       </Svg>
-      <NebulaLabels constellations={constellations} />
     </Animated.View>
   );
 }
 
 const themedStyles = createEditorialStyles(() => ({
-  nebulaStrip: { position: 'absolute', left: 8, right: 8, bottom: 8, maxHeight: 36 },
-  nebulaStripContent: { gap: 6, alignItems: 'center' },
-  nebulaLabel: { borderRadius: R.full, backgroundColor: Palette.bgRaised, borderWidth: 1, borderColor: Palette.gray, paddingHorizontal: 9, paddingVertical: 5 },
-  nebulaLabelText: { ...Type.captionStrong, color: Palette.warmWhite },
   canvas: {
     backgroundColor: Palette.bgElevated,
     borderRadius: R.sm,
