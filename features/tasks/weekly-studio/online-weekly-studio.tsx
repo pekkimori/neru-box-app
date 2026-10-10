@@ -71,8 +71,8 @@ export function OnlineWeeklyStudio({ presentation = 'screen', onDismiss }: {
       </View>
 
       {week.loading && <ActivityIndicator color={colors.red} accessibilityLabel="Loading online week" />}
-      {week.error && <Text accessibilityRole="alert" style={S.error}>{week.error}</Text>}
-      {week.notice && <Text accessibilityLiveRegion="polite" style={S.muted}>{week.notice}</Text>}
+      {!!week.error && <Text accessibilityRole="alert" style={S.error}>{week.error}</Text>}
+      {!!week.notice && <Text accessibilityLiveRegion="polite" style={S.muted}>{week.notice}</Text>}
       {!week.fresh && !week.loading && <Text style={S.muted}>Showing saved data. Reconnect and refresh to edit. Your draft stays on this device.</Text>}
       {pending && <View style={S.card}><Text style={S.copy}>A save is waiting</Text><Text style={S.muted}>Retry before editing. The same save ID will be used after a reload.</Text>
         <TouchableOpacity style={S.button} disabled={week.busy || week.loading} accessibilityRole="button" accessibilityLabel="Retry weekly pending save" onPress={() => { void week.retry(); }}><Text style={S.buttonText}>Retry</Text></TouchableOpacity>
@@ -94,7 +94,7 @@ export function OnlineWeeklyStudio({ presentation = 'screen', onDismiss }: {
           {dayTasks.map(task => <View key={task.id} testID={`weekly-task-${task.id}`} style={S.task}>
             <Text style={S.copy}>{task.status === 'lit' ? '★' : '☆'} {task.title}</Text>
             <Text style={S.muted}>{blocks.find(block => block.id === task.blockId)?.label ?? 'Without a block'} · {task.status}</Text>
-            {task.completionPhotoUri && <ServerPhoto uri={task.completionPhotoUri} label={`Completion photo for ${task.title}`} style={{ width: 72, height: 60, borderRadius: R.sm }} />}
+            {!!task.completionPhotoUri && <ServerPhoto uri={task.completionPhotoUri} label={`Completion photo for ${task.title}`} style={{ width: 72, height: 60, borderRadius: R.sm }} />}
             <View style={S.wrap}>{blocks.filter(block => block.id !== task.blockId).map(block => <TouchableOpacity key={block.id} style={S.chip} disabled={blocked || past || tasks.filter(item => item.blockId === block.id).length >= 4} accessibilityRole="button" accessibilityLabel={`Move weekly ${task.title} to ${block.label}`} onPress={() => { void week.moveTask(selectedDate, task.id, block.id); }}><Text style={S.muted}>{block.label}</Text></TouchableOpacity>)}
               {canRemoveWeeklyTask(task) && <TouchableOpacity style={S.chip} disabled={blocked || past} accessibilityRole="button" accessibilityLabel={`Remove weekly ${task.title}`} onPress={() => { void week.removeTask(selectedDate, task.id); }}><Text style={S.error}>Remove</Text></TouchableOpacity>}
             </View>
@@ -121,7 +121,7 @@ export function OnlineWeeklyStudio({ presentation = 'screen', onDismiss }: {
           {eligibleQuests.map(quest => <TouchableOpacity key={quest.id} accessibilityRole="radio" accessibilityLabel={`Weekly star ${quest.title}`} accessibilityState={{ selected: form?.questId === quest.id }} disabled={week.busy} style={[S.chip, form?.questId === quest.id && S.selected]} onPress={() => setForm(current => current && { ...current, questId: quest.id, title: quest.title })}><Text style={[S.copy, form?.questId === quest.id && S.onRed]}>{quest.title} · {quest.completionCount}/{quest.timesRequired}</Text><Text style={[S.muted, form?.questId === quest.id && S.onRed]}>{quest.goalTitle}</Text></TouchableOpacity>)}
           {!form?.questId && <TextInput accessibilityLabel="Weekly task name" placeholder="Task name" placeholderTextColor={colors.warmMuted} style={S.input} value={form?.title ?? ''} maxLength={240} onChangeText={title => setForm(current => current && { ...current, title })} />}
           <View style={S.wrap}>{blocks.map(block => <TouchableOpacity key={block.id} style={[S.chip, form?.blockId === block.id && S.selected]} disabled={week.busy || tasks.filter(task => task.blockId === block.id).length >= 4} accessibilityRole="radio" accessibilityLabel={`Weekly block ${block.label}`} accessibilityState={{ selected: form?.blockId === block.id }} onPress={() => setForm(current => current && { ...current, blockId: block.id })}><Text style={[S.copy, form?.blockId === block.id && S.onRed]}>{block.label}</Text></TouchableOpacity>)}</View>
-          {week.error && <Text accessibilityRole="alert" style={S.error}>{week.error}</Text>}
+          {!!week.error && <Text accessibilityRole="alert" style={S.error}>{week.error}</Text>}
           <View style={S.row}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel weekly task" style={S.chip} disabled={week.busy} onPress={() => setForm(null)}><Text style={S.copy}>Cancel</Text></TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Add task to weekly draft" style={S.button} disabled={blocked || !form?.title.trim()} onPress={() => { if (form) void week.addTask(selectedDate, form.blockId, { nebulaId: form.nebulaId, title: form.title, ...(form.questId ? { questId: form.questId } : {}) }).then(ok => { if (ok) setForm(null); }); }}><Text style={S.buttonText}>Add to draft</Text></TouchableOpacity></View>
         </ScrollView>

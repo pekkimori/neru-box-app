@@ -462,7 +462,7 @@ export function LocalWeeklyStudio({
         </>
       )}
 
-      {saveError && <View style={{ padding: 14, gap: 8 }}><Text accessibilityRole="alert" style={{ color: Palette.red }}>{saveError}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Review plan changes" onPress={() => { void reviewDrafts().then(() => setSaveError('Latest changes reviewed. Save your plan when ready.')).catch(cause => setSaveError(cause instanceof Error ? cause.message : 'Could not review changes.')); }}><Text style={{ color: Palette.red }}>Review latest changes</Text></TouchableOpacity></View>}
+      {!!saveError && <View style={{ padding: 14, gap: 8 }}><Text accessibilityRole="alert" style={{ color: Palette.red }}>{saveError}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="Review plan changes" onPress={() => { void reviewDrafts().then(() => setSaveError('Latest changes reviewed. Save your plan when ready.')).catch(cause => setSaveError(cause instanceof Error ? cause.message : 'Could not review changes.')); }}><Text style={{ color: Palette.red }}>Review latest changes</Text></TouchableOpacity></View>}
       <View style={{ paddingHorizontal: 16 }}><ConnectedSaveStatus planning={selectedPlanning} /></View>
       <View style={styles.calendarFrame}>
         <View style={styles.calendar}>
