@@ -13,7 +13,7 @@ import { useThemedStyles } from '@/theme/app-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useRef } from 'react';
-import { Alert, Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConstellationCanvas } from '../../features/tasks/observatory/constellation-canvas';
 import { PeriodRail } from '../../features/tasks/observatory/period-rail';
@@ -25,6 +25,7 @@ import { Palette, R, Sp, useTasksPalette } from '../../features/tasks/tokens';
 import { WeeklyStudio } from '@/features/tasks/weekly-studio/weekly-studio';
 import type { BlockType, Star } from '../../types/tasks';
 import { RoutineSyncStatus } from '@/features/tasks/routines/routine-sync-status';
+import { TaskBlockedModal, type TaskBlockedNotice } from '@/features/tasks/observatory/task-blocked-modal';
 
 export default function TasksToday() {
   const styles = useThemedStyles(themedStyles);
@@ -32,6 +33,7 @@ export default function TasksToday() {
   const router = useRouter();
   const d = useObservatoryData();
   const [photoVisible, setPhotoVisible] = useState(false);
+  const [blockedNotice, setBlockedNotice] = useState<TaskBlockedNotice | null>(null);
   const [pendingCompletion, setPendingCompletion] = useState<{ star: Star; block: BlockType } | null>(null);
   const [weeklyStudioOpen, setWeeklyStudioOpen] = useState(false);
   const [routineEditorOpen, setRoutineEditorOpen] = useState(false);
@@ -49,19 +51,24 @@ export default function TasksToday() {
 
     const gate = d.canCompleteBlock(planned.block);
     if (!gate.can) {
-      Alert.alert(
-        'Not available yet',
-        gate.reason === 'sleep_mode'
-          ? 'Sleep mode is active. Regular tasks will be available again after your sleep session.'
-          : 'This period has not started yet.',
-      );
+      setBlockedNotice({
+        title: 'Task indisponível',
+        message: gate.reason === 'sleep_mode'
+          ? 'O período de sono está ativo. As tasks estarão disponíveis novamente ao terminar esse período.'
+          : 'O período desta task ainda não começou. Aguarde o horário para concluí-la.',
+      });
       return;
     }
 
     const routines = d.getQuestsForBlock(planned.block);
     const routinesDone = routines.length === 0 || routines.every((routine) => d.isQuestComplete(routine.id));
     if (!routinesDone) {
-      Alert.alert('Finish routines first', `Complete the ${selectedLabel.toLowerCase()} routine checklist above to unlock this task.`);
+      const periodLabel = { morning: 'manhã', afternoon: 'tarde', evening: 'noite' }[planned.block];
+      const completed = routines.filter((routine) => d.isQuestComplete(routine.id)).length;
+      setBlockedNotice({
+        title: 'Complete as rotinas primeiro',
+        message: `Complete as rotinas da ${periodLabel} no checklist para liberar esta task. ${completed}/${routines.length} rotinas concluídas.`,
+      });
       return;
     }
 
@@ -240,6 +247,7 @@ export default function TasksToday() {
         />
       </ScrollView>
 
+      <TaskBlockedModal notice={blockedNotice} onClose={() => setBlockedNotice(null)} />
       <PhotoCompletionModal
         visible={photoVisible}
         taskLabel={pendingCompletion?.star.label ?? ''}

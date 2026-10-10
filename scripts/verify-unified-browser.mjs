@@ -32,6 +32,20 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   assert.equal(await page.getByRole('button', { name: 'Create constellation', exact: true }).count(), 0);
 
   // The original checklist unlocks the original star row.
+  const lockedTask = page.getByRole('button', { name: 'Locked: Browser original star', exact: true });
+  await lockedTask.waitFor();
+  assert.equal(await page.getByRole('checkbox', { name: /not complete$/ }).count(), 4);
+  await lockedTask.click();
+  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
+  assert.match(await page.getByRole('alert').innerText(), /0\/4 rotinas concluídas/);
+  assert.equal(await page.getByRole('button', { name: 'Choose a photo from library', exact: true }).count(), 0);
+  await page.screenshot({ path: join(artifacts, 'task-locked-routines-notice.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Entendi', exact: true }).click();
+  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
+  await page.getByLabel('Browser original star, unavailable', { exact: true }).click();
+  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Entendi', exact: true }).click();
+  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
   for (let index = 0; index < 4; index++) {
     const checkbox = page.getByRole('checkbox', { name: /not complete$/ }).first();
     const reply = page.waitForResponse(response => response.url().endsWith('/routines/commands'));
@@ -39,6 +53,7 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
     assert.equal((await reply).status(), 200);
     await page.getByRole('button', { name: 'Edit routine tasks', exact: true }).waitFor();
     await page.waitForFunction(() => !document.querySelector('[aria-label="Saving routines"]'));
+    if (index < 3) await lockedTask.waitFor();
   }
   await page.getByRole('button', { name: 'Complete: Browser original star', exact: true }).waitFor();
   await page.screenshot({ path: join(artifacts, 'original-tasks-server.png'), fullPage: true });
@@ -86,5 +101,5 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
     await other.getByText('Browser original star', { exact: true }).waitFor();
     await other.screenshot({ path: join(artifacts, 'original-archive-second-device.png'), fullPage: true });
   } finally { await otherDevice.close(); }
-  console.log('Original Weekly Studio, routine gate, photo completion, server reward, diary and archive passed across two browser sessions.');
+  console.log('Original Weekly Studio, routine gate and blocked task notice from list and sky, photo completion, server reward, diary and archive passed across two browser sessions.');
 }
