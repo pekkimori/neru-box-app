@@ -51,6 +51,14 @@ test('stale edits never overwrite another device, and changed accounts cannot pu
   await store.retry(); assert.equal(store.getSnapshot().value.diaryNote, 'Other device');
   f.switchAccount(); await assert.rejects(store.save({ diaryNote: 'Wrong account' }), /Account changed/);
 });
+test('an editor keeps its opening revision even after a background refresh', async () => {
+  const f = fixture(); const store = f.create(); await store.refresh();
+  const expectedRevision = store.getSnapshot().revision;
+  f.remote({ diaryNote: 'Other device' }); await store.refresh();
+  await assert.rejects(store.save({ diaryNote: 'Draft' }, { expectedRevision }), /changed elsewhere/);
+  assert.equal(f.calls.length, 0);
+  assert.equal(store.getSnapshot().value.diaryNote, 'Other device');
+});
 test('the original constellation/star models preserve domain and repeated quest assignment identity', () => {
   const schedule = { date: '2026-10-07', blocks: [{ id: 'am', type: 'morning' }], tasks: ['one', 'two'].map(id => ({ id, questId: 'same-quest', nebulaId: 'life-domain', blockId: 'am', title: 'Repeat practice', status: id === 'one' ? 'lit' : 'unlit', coinsEarned: id === 'one' ? 11 : 0 })), reflections: {} };
   assert.deepEqual(accountPlan(schedule, schedule.date).blocks.morning.map(task => task.starId), ['one', 'two']);

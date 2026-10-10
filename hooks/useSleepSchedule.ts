@@ -26,6 +26,8 @@ export function useSleepSchedule() {
   const {
     value: storedSchedule,
     save: saveStoredSchedule,
+    saveAsync: saveStoredScheduleAsync,
+    revision,
     loaded: scheduleLoaded, error: scheduleError, retry: retrySchedule,
   } = useAccountValue<unknown>('@neru/sleep-schedule', DEFAULT_SLEEP_SCHEDULE);
 
@@ -46,6 +48,11 @@ export function useSleepSchedule() {
       });
     },
     [saveStoredSchedule],
+  );
+
+  const saveScheduleAsync = useCallback(
+    (next: SharedSleepSchedule, options?: { expectedRevision: number }) => saveStoredScheduleAsync(next, options),
+    [saveStoredScheduleAsync],
   );
 
   useEffect(() => {
@@ -113,6 +120,8 @@ export function useSleepSchedule() {
     retry: async () => { await retrySchedule(); await retryIntent(); },
     schedule,
     saveSchedule,
+    saveScheduleAsync,
+    revision,
     loaded: scheduleLoaded && intentLoaded,
     activeSleep,
     isSleepWindow,

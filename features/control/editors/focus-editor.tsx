@@ -3,7 +3,6 @@ import { ScrollView, Text, TextInput, View } from "react-native";
 
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
-import { clampMinutes } from "../model";
 import { controlStyles } from "../styles";
 
 export function FocusEditorContent({
@@ -75,7 +74,7 @@ export function FocusEditorContent({
         </View>
       </View>
       <TouchableOpacity
-        onPress={() => startFocus(clampMinutes(focusDuration, 1, 480))}
+        onPress={() => startFocus(Number(focusDuration))}
         style={styles.primaryButton}
       >
         <Ionicons name="play" size={16} color={EditorialColors.onAccent} />

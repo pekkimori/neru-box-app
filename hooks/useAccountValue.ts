@@ -29,9 +29,9 @@ export function useAccountValue<T>(name: string, initialValue: T, options?: { va
     return () => clearInterval(timer);
   }, [store]);
   useEffect(() => store ? subscribePlanning(() => { void store.refresh(); }) : undefined, [store]);
-  const saveAsync = useCallback((next: T | ((previous: T) => T)) => {
+  const saveAsync = useCallback((next: T | ((previous: T) => T), options?: { expectedRevision: number }) => {
     if (!store) return Promise.reject(new Error('Sign in to save your account.'));
-    return store.save(next as unknown);
+    return store.save(next as unknown, options);
   }, [store]);
   const save = useCallback((next: T | ((previous: T) => T)) => { void saveAsync(next).catch(() => undefined); }, [saveAsync]);
   const invalid = options?.validate && !options.validate(state.value);

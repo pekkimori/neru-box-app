@@ -39,8 +39,9 @@ export function createAccountValueStore(client: Pick<ApiClient, 'request' | 'get
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     getSnapshot: () => state,
     refresh,
-    save(next: unknown | ((previous: unknown) => unknown)) {
+    save(next: unknown | ((previous: unknown) => unknown), options?: { expectedRevision: number }) {
       try { guard(); if (!state.loaded || state.error) throw state.error ?? new Error('Wait for your account to load.'); } catch (cause) { return Promise.reject(cause); }
+      if (options && options.expectedRevision !== state.revision) return Promise.reject(new Error('These settings changed elsewhere. Reopen the editor before saving.'));
       const value = typeof next === 'function' ? next(state.value) : next;
       const version = ++edit;
       ++epoch; ++queued;
@@ -49,7 +50,8 @@ export function createAccountValueStore(client: Pick<ApiClient, 'request' | 'get
         guard();
         if (await storage.getItem(pendingKey)) throw new Error('Retry the pending save before making another change.');
         if (!state.loaded || state.error) throw state.error ?? new Error('Wait for your account to load.');
-        const body = { operationId: uuid(), expectedRevision: state.revision, value };
+        if (options && options.expectedRevision !== state.revision) throw new Error('These settings changed elsewhere. Reopen the editor before saving.');
+        const body = { operationId: uuid(), expectedRevision: options?.expectedRevision ?? state.revision, value };
         ++epoch;
         await storage.setItem(pendingKey, JSON.stringify(body));
         publish({ saving: true });

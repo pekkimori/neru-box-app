@@ -17,6 +17,7 @@ export function ScheduleEditorContent({
   setFocusBlocks,
   updateBlock,
   blockError,
+  showErrors = false,
 }: {
   schedule: SleepScheduleEntry[];
   updateSleep: (
@@ -27,6 +28,7 @@ export function ScheduleEditorContent({
   setFocusBlocks: Dispatch<SetStateAction<FocusBlock[]>>;
   updateBlock: (id: string, patch: Partial<FocusBlock>) => void;
   blockError: (block: FocusBlock) => string | null;
+  showErrors?: boolean;
 }) {
   const styles = useThemedStyles(controlStyles);
   const { colors: EditorialColors } = useAppTheme();
@@ -44,9 +46,7 @@ export function ScheduleEditorContent({
               <Text style={styles.formTitle}>{sleep.label}</Text>
               <Text style={styles.formMeta}>
                 {sleep.days.join("  ")} ·{" "}
-                {formatDuration(
-                  durationBetweenTimes(sleep.bedtime, sleep.wakeTime),
-                )}
+                {durationBetweenTimes(sleep.bedtime, sleep.wakeTime) === null ? '' : formatDuration(durationBetweenTimes(sleep.bedtime, sleep.wakeTime))}
               </Text>
             </View>
             <ToggleSwitch
@@ -79,8 +79,8 @@ export function ScheduleEditorContent({
               />
             </View>
           </View>
-          {!TIME_24_HOUR_PATTERN.test(sleep.bedtime) ||
-          !TIME_24_HOUR_PATTERN.test(sleep.wakeTime) ? (
+          {showErrors && (!TIME_24_HOUR_PATTERN.test(sleep.bedtime) ||
+          !TIME_24_HOUR_PATTERN.test(sleep.wakeTime)) ? (
             <Text style={styles.errorText}>
               Use 24-hour time, for example 23:00.
             </Text>
@@ -107,7 +107,7 @@ export function ScheduleEditorContent({
         </TouchableOpacity>
       </View>
       {focusBlocks.map((block) => {
-        const error = blockError(block);
+        const error = showErrors ? blockError(block) : null;
         return (
           <View
             key={block.id}
@@ -130,6 +130,7 @@ export function ScheduleEditorContent({
                 <Text style={styles.fieldLabel}>START</Text>
                 <TextInput
                   value={block.start}
+                  accessibilityLabel={`${block.label} start time`}
                   onChangeText={(start) => updateBlock(block.id, { start })}
                   style={styles.timeInput}
                 />
@@ -143,6 +144,7 @@ export function ScheduleEditorContent({
                 <Text style={styles.fieldLabel}>END</Text>
                 <TextInput
                   value={block.end}
+                  accessibilityLabel={`${block.label} end time`}
                   onChangeText={(end) => updateBlock(block.id, { end })}
                   style={styles.timeInput}
                 />
@@ -167,8 +169,7 @@ export function ScheduleEditorContent({
               <Text style={styles.errorText}>{error}</Text>
             ) : (
               <Text style={styles.validText}>
-                {formatDuration(durationBetweenTimes(block.start, block.end))}{" "}
-                allocated to Focus
+                {durationBetweenTimes(block.start, block.end) === null ? '' : `${formatDuration(durationBetweenTimes(block.start, block.end))} allocated to Focus`}
               </Text>
             )}
           </View>

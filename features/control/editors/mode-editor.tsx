@@ -7,16 +7,15 @@ import { AppMark, SectionLabel, ToggleSwitch } from "../components";
 import {
   EFFECT_ROWS,
   INSTALLED_APPS,
-  clampMinutes,
   type Mode,
-  type ModeEffects,
   type SelectedApp,
 } from "../model";
 import { controlStyles } from "../styles";
+import type { ModeEffectsDraft } from '../editor-draft-model';
 
-type UpdateEffect = <Key extends keyof ModeEffects>(
+type UpdateEffect = <Key extends keyof ModeEffectsDraft>(
   key: Key,
-  value: ModeEffects[Key],
+  value: ModeEffectsDraft[Key],
 ) => void;
 
 export function ModeEditorContent({
@@ -28,7 +27,7 @@ export function ModeEditorContent({
 }: {
   editingMode: Mode;
   setEditingMode: (mode: Mode) => void;
-  effects: Record<Mode, ModeEffects>;
+  effects: Record<Mode, ModeEffectsDraft>;
   updateEffect: UpdateEffect;
   selectedApps: SelectedApp[];
 }) {
@@ -109,7 +108,7 @@ export function ModeEditorContent({
                 <TextInput
                   value={String(effects[editingMode].workMinutes)}
                   onChangeText={(value) =>
-                    updateEffect("workMinutes", clampMinutes(value, 1, 180))
+                    updateEffect("workMinutes", value)
                   }
                   keyboardType="number-pad"
                   style={styles.minuteInput}
@@ -123,7 +122,7 @@ export function ModeEditorContent({
                 <TextInput
                   value={String(effects[editingMode].breakMinutes)}
                   onChangeText={(value) =>
-                    updateEffect("breakMinutes", clampMinutes(value, 1, 60))
+                    updateEffect("breakMinutes", value)
                   }
                   keyboardType="number-pad"
                   style={styles.minuteInput}

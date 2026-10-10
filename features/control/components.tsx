@@ -1,7 +1,7 @@
 import Animated from 'react-native-reanimated';
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -22,20 +22,50 @@ export function EditorModal({
   title,
   subtitle,
   onClose,
+  onSave,
+  error,
   children,
 }: {
   visible: boolean;
   title: string;
   subtitle?: string;
   onClose: () => void;
+  onSave?: () => Promise<boolean>;
+  error?: string;
   children: React.ReactNode;
 }) {
   const styles = useThemedStyles(controlStyles);
+  const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
+  const closeAfterSave = useRef(false);
   const { backdropStyle, closeDrawer, panGesture, sheetStyle } =
     useDraggableDrawer({
       visible,
       onClose,
+      onBeforeClose: () => {
+        if (!onSave || closeAfterSave.current) {
+          closeAfterSave.current = false;
+          return true;
+        }
+        void saveAndClose();
+        return false;
+      },
     });
+
+  const saveAndClose = async () => {
+    if (inFlight.current || !onSave) return;
+    inFlight.current = true;
+    setSaving(true);
+    try {
+      if (await onSave()) {
+        closeAfterSave.current = true;
+        closeDrawer();
+      }
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal
@@ -79,7 +109,16 @@ export function EditorModal({
               </View>
             </View>
           </GestureDetector>
-          <View style={styles.editorBody}>{children}</View>
+          <View style={styles.editorBody} pointerEvents={saving ? 'none' : 'auto'}>{children}</View>
+          {onSave && <View style={{ padding: 16, gap: 12 }}>
+            {!!error && <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text>}
+            <Pressable accessibilityRole="button" accessibilityLabel={`Save ${title}`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => { void saveAndClose(); }} style={styles.primaryButton}>
+              <Text style={styles.primaryButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Discard changes to ${title}`} disabled={saving} onPress={() => { closeAfterSave.current = true; closeDrawer(); }} style={styles.secondaryButton}>
+              <Text style={styles.restDismissButtonText}>Discard changes</Text>
+            </Pressable>
+          </View>}
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>

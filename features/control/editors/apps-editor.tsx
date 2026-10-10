@@ -7,7 +7,8 @@ import {
 } from "@/components/motion";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { AppMark } from "../components";
-import type { InstalledApp, SelectedApp } from "../model";
+import type { InstalledApp } from "../model";
+import type { SelectedAppDraft } from '../editor-draft-model';
 import { controlStyles } from "../styles";
 
 export function AppsEditorContent({
@@ -21,7 +22,7 @@ export function AppsEditorContent({
 }: {
   search: string;
   setSearch: (value: string) => void;
-  selectedApps: SelectedApp[];
+  selectedApps: SelectedAppDraft[];
   selectedIds: ReadonlySet<string>;
   filteredApps: InstalledApp[];
   toggleApp: (id: string) => void;
