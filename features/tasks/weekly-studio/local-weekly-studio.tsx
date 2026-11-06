@@ -377,10 +377,12 @@ export function LocalWeeklyStudio({
   };
 
   const undoDrawerChanges = () => {
+    if (saving) return;
     resetDrafts();
     closeTaskModal();
     setNebulaOpen(false);
     setDeleteNebula(null);
+    setPendingDismiss(false);
   };
 
   const changeWeek = (amount: number) => {
@@ -397,18 +399,6 @@ export function LocalWeeklyStudio({
         <Text style={styles.drawerEyebrow}>TASKS / PLAN</Text>
         <Text style={styles.drawerTitle}>Weekly studio</Text>
         <Text style={styles.drawerSubtitle}>Organize the week across your nebulae.</Text>
-      </View>
-      <View style={styles.drawerHeaderActions}>
-        <TouchableOpacity
-          style={[styles.drawerHeaderButton, !hasUnsavedChanges && styles.periodDisabled]}
-          onPress={undoDrawerChanges}
-          disabled={!hasUnsavedChanges}
-          accessibilityRole="button"
-          accessibilityLabel="Undo plan changes"
-          accessibilityState={{ disabled: !hasUnsavedChanges }}
-        >
-          <Ionicons name="arrow-undo-outline" size={20} color={Palette.warmWhite} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -768,21 +758,34 @@ export function LocalWeeklyStudio({
             </Text>
             <Text style={styles.leaveBody}>
               {pendingDismiss
-                ? 'Confirm your Weekly Studio changes and close the drawer, or keep editing.'
+                ? 'Confirm your Weekly Studio changes and close the drawer, keep editing, or undo all unsaved changes.'
                 : 'Your Weekly Studio changes will be discarded.'}
             </Text>
             <View style={styles.leaveActions}>
-              <TouchableOpacity
-                style={styles.keepEditingButton}
-                onPress={() => {
-                  setPendingLeaveAction(null);
-                  setPendingDismiss(false);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Keep editing"
-              >
-                <Text style={styles.keepEditingText}>Keep editing</Text>
-              </TouchableOpacity>
+              {pendingDismiss ? (
+                <TouchableOpacity
+                  style={[styles.keepEditingButton, saving && styles.periodDisabled]}
+                  onPress={undoDrawerChanges}
+                  disabled={saving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Undo plan changes"
+                  accessibilityState={{ disabled: saving }}
+                >
+                  <Text style={styles.undoChangesText}>Undo changes</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.keepEditingButton}
+                  onPress={() => {
+                    setPendingLeaveAction(null);
+                    setPendingDismiss(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Keep editing"
+                >
+                  <Text style={styles.keepEditingText}>Keep editing</Text>
+                </TouchableOpacity>
+              )}
               {pendingDismiss ? (
                 <TouchableOpacity
                   style={[styles.discardButton, saving && styles.periodDisabled]}
@@ -805,6 +808,19 @@ export function LocalWeeklyStudio({
                 </TouchableOpacity>
               )}
             </View>
+            {pendingDismiss && (
+              <TouchableOpacity
+                style={styles.keepEditingFooterButton}
+                onPress={() => {
+                  setPendingLeaveAction(null);
+                  setPendingDismiss(false);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Keep editing"
+              >
+                <Text style={styles.keepEditingText}>Keep editing</Text>
+              </TouchableOpacity>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -837,8 +853,6 @@ const themedStyles = createEditorialStyles(() => ({
   drawerEyebrow: { color: Palette.red, fontSize: 11, fontWeight: '800', letterSpacing: 1.1, marginBottom: 5 },
   drawerTitle: { color: Palette.warmWhite, fontSize: 24, lineHeight: 28, fontWeight: '900' },
   drawerSubtitle: { color: Palette.warmMuted, fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 },
-  drawerHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  drawerHeaderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
   headerFrame: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20 },
   header: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: Palette.gray },
   headerIcon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: Palette.bgElevated, borderWidth: 1, borderColor: Palette.gray, borderRadius: 22 },
@@ -927,6 +941,8 @@ const themedStyles = createEditorialStyles(() => ({
   keepEditingText: { color: Palette.warmDim, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   discardButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: R.sm, backgroundColor: Palette.red },
   discardText: { color: Palette.onRed, fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  keepEditingFooterButton: { width: '100%', minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: R.sm },
+  undoChangesText: { color: Palette.red, fontSize: 12, fontWeight: '800', textAlign: 'center' },
   sheet: { width: '100%', maxWidth: 760, alignSelf: 'center', backgroundColor: Palette.bgRaised, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingBottom: 24, borderWidth: 1, borderColor: Palette.gray },
   sheetGrabArea: { height: 44, justifyContent: 'center' },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Palette.gray, alignSelf: 'center' },

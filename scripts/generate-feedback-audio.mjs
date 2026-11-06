@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SOUND_SETS, createSoundSamples } from '../utils/sound-sets.ts';
 
 const sampleRate = 22_050;
 const durations = { catch: 0.11, success: 0.34 };
@@ -54,8 +55,7 @@ function writeAscii(view, offset, text) {
   }
 }
 
-function createWav(kind) {
-  const samples = createSamples(kind);
+function createWav(samples) {
   const bytes = new Uint8Array(44 + samples.length * 2);
   const view = new DataView(bytes.buffer);
   writeAscii(view, 0, 'RIFF');
@@ -79,5 +79,14 @@ function createWav(kind) {
 
 mkdirSync(outputDirectory, { recursive: true });
 for (const kind of Object.keys(durations)) {
-  writeFileSync(resolve(outputDirectory, `${kind}.wav`), createWav(kind));
+  writeFileSync(resolve(outputDirectory, `${kind}.wav`), createWav(createSamples(kind)));
+}
+
+for (const set of SOUND_SETS) {
+  if (set.id === 'classic' || set.id === 'silent') continue;
+  const directory = resolve(outputDirectory, set.id);
+  mkdirSync(directory, { recursive: true });
+  for (const kind of ['tap', 'catch', 'success']) {
+    writeFileSync(resolve(directory, `${kind}.wav`), createWav(createSoundSamples(set.id, kind)));
+  }
 }

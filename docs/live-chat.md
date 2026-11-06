@@ -2,6 +2,12 @@
 
 Chat uses authenticated `POST /agent/chat` SSE. Start the server and app with the [authentication setup](authentication.md), apply server migrations (`bun run migrate`), sign in, and open Chat. Production replies require the configured LLM provider from [the server environment example](../../nerubox-server/.env.example).
 
+## Composer and feedback
+
+Refresh and New chat show a progress toast, then confirm success or report failure. The compact message input grows for longer drafts. Tap Magic suggestions to open prompts and choose one to edit before sending.
+
+The photo button offers the camera and photo library with a removable local preview. Photos are preview-only for now: no image is uploaded or sent to NERU. Remove the preview to send text. Switching conversations or starting a new chat clears the preview.
+
 ## History and customization
 
 Conversations, user messages, complete replies, personality and editable memories are stored per account in PostgreSQL. New chat, history, rename and confirmed deletion use the server. History survives app reloads and is visible on other devices. The server also persists ADK events and session state, so a new server process continues the previous model context. The initial greeting on an empty chat is local UI text.

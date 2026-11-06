@@ -59,15 +59,14 @@ export function createConnectedPlanningStore(repository: Repository, commands: C
       return false;
     } finally { update({ loaded: true, loading: false }); }
   }
-  async function mutate(operation: () => Promise<unknown>, success: string) {
+  async function mutate(operation: () => Promise<unknown>) {
     if (saving) return false;
     saving = true;
     publish({ saving: true, error: null, notice: null });
     try {
       await operation();
-      publish({ notice: success });
       const refreshed = await reload();
-      if (!refreshed) publish({ notice: `${success} Refresh to see the latest plan.` });
+      if (!refreshed) publish({ notice: 'Refresh to see the latest plan.' });
       return true;
     } catch (cause) {
       publish({ error: message(cause) });
@@ -80,13 +79,13 @@ export function createConnectedPlanningStore(repository: Repository, commands: C
     getSnapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     reload,
-    run(command: PlanningCommand, success: string) {
+    run(command: PlanningCommand) {
       if (!state.fresh || state.loading || state.pending.length || state.pendingPhotos.length) return Promise.resolve(false);
-      return mutate(() => commands.execute(command), success);
+      return mutate(() => commands.execute(command));
     },
     uploadPhoto(taskId: string, blockId: string, purpose: 'setup' | 'completion', uri: string) {
       if (!photos || !state.fresh || state.loading || state.pending.length || state.pendingPhotos.length) return Promise.resolve(false);
-      return mutate(() => photos.upload({ date, taskId, blockId, purpose, uri }), purpose === 'setup' ? 'Setup photo saved.' : 'Task completed.');
+      return mutate(() => photos.upload({ date, taskId, blockId, purpose, uri }));
     },
     retryPending() {
       return mutate(async () => {
@@ -94,7 +93,7 @@ export function createConnectedPlanningStore(repository: Repository, commands: C
         if (photo && photos) { await photos.retry(photo.photoId); return; }
         const [next] = await commands.pending();
         if (next) await commands.retry(next.operationId);
-      }, 'Pending save delivered.');
+      });
     },
   };
 }

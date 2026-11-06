@@ -8,7 +8,8 @@ import { AppState, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { AppLaunch } from '@/components/app-launch';
 import { AppThemeProvider, useAppTheme } from '@/theme/app-theme';
-import { prepareInteractionFeedback } from '@/utils/interaction-feedback';
+import { prepareInteractionFeedback, setInteractionSoundSet } from '@/utils/interaction-feedback';
+import { isSoundSetId } from '@/utils/sound-sets';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -22,6 +23,10 @@ function ThemedRootLayout() {
   const { appearance, colors, loaded } = useAppTheme();
   const [launchVisible, setLaunchVisible] = useState(true);
   const [feedbackReady, setFeedbackReady] = useState(false);
+
+  useEffect(() => {
+    setInteractionSoundSet(isSoundSetId(appearance.soundSet) ? appearance.soundSet : 'classic');
+  }, [appearance.soundSet]);
 
   useEffect(() => {
     let mounted = true;

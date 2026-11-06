@@ -21,7 +21,6 @@ import { addLocalDays, formatLocalDate, parseLocalDate } from '@/utils/time';
 import { connectedStreak, useConnectedHistory } from '@/features/tasks/connected/use-connected-history';
 import { ConnectedSaveStatus } from '@/features/tasks/connected/connected-save-status';
 import { ServerPhoto } from '@/features/tasks/connected/server-photo';
-import { PromptModal } from '@/features/tasks/connected/prompt-modal';
 
 const diaryExtras = (colors: EditorialPalette) => ({
   paper: colors.mode === 'dark' ? '#201E25' : '#FFFEFB',
@@ -130,7 +129,6 @@ export default function DiaryScreen() {
   const [dateJumpOpen, setDateJumpOpen] = useState(false);
   const [dateJumpDraft, setDateJumpDraft] = useState(todayKey);
   const [dateJumpError, setDateJumpError] = useState('');
-  const [reflection, setReflection] = useState<{ blockId: string; label: string; initial: string } | null>(null);
   const { plan, loaded: planLoaded, planning: connected, saveDiaryDataStickers, saveDiaryNote, saveDiaryStickers, setMoodSticker, diaryError, diarySaving, retryDiary } = useDailyPlan(selectedDate);
   const history = useConnectedHistory();
   const blocked = !connected.ready || connected.loading || connected.saving || !!connected.pending.length || !!connected.pendingPhotos.length;
@@ -286,15 +284,6 @@ export default function DiaryScreen() {
             </View>
           </View>
         </View>
-        {<View style={{ gap: 10, padding: 16 }}>
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Period reflections</Text>
-          {BLOCKS.map(type => {
-            const block = connected.schedule?.groupedBlocks.find(item => item.type === type);
-            const text = connected.schedule?.reflections[type] ?? '';
-            return <Pressable key={type} disabled={blocked} accessibilityRole="button" accessibilityLabel={`Edit ${type} reflection`} onPress={() => setReflection({ blockId: block?.id ?? type, label: type, initial: text })} style={{ padding: 12, backgroundColor: colors.card, borderRadius: 10 }}><Text style={{ color: colors.text, fontWeight: '700' }}>{type}</Text><Text style={{ color: colors.textMuted }}>{text || 'Add a reflection'}</Text></Pressable>;
-          })}
-        </View>}
-        <Text style={styles.pageHint}>Your diary is saved to your account.</Text>
       </ScrollView>
 
       <Modal visible={stickerTrayOpen} transparent animationType="none" onRequestClose={() => setStickerTrayOpen(false)}>
@@ -315,7 +304,6 @@ export default function DiaryScreen() {
           </View>
         </SafeAreaView>
       </Modal>
-      <PromptModal key={reflection ? `${selectedDate}:${reflection.blockId}` : 'reflection-closed'} visible={!!reflection} title={`${reflection?.label ?? ''} reflection`} placeholder="How did this period go?" submitLabel="Save reflection" initialValue={reflection?.initial} multiline allowEmpty error={connected.error} onCancel={() => setReflection(null)} onSubmit={text => reflection ? connected.saveReflection(reflection.blockId, text) : Promise.resolve(false)} />
 
       <Modal visible={dateJumpOpen} transparent animationType="none" onRequestClose={() => setDateJumpOpen(false)}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'bottom', 'left', 'right']}>
@@ -408,7 +396,6 @@ const themedStyles = createEditorialStyles(() => ({
   emptyStickers: { minHeight: 134, alignItems: 'center', justifyContent: 'center', marginTop: 18, borderWidth: 1, borderStyle: 'dashed', borderColor: Palette.line, borderRadius: 12, backgroundColor: Palette.card, padding: 14 },
   emptyStickerTitle: { ...Type.bodyStrong, marginTop: 8, color: Palette.text, textAlign: 'center' },
   emptyStickerCopy: { ...Type.caption, marginTop: 2, color: Palette.textSecondary, textAlign: 'center' },
-  pageHint: { ...Type.caption, marginTop: 10, color: Palette.textMuted, textAlign: 'center' },
   modalSafe: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(20,20,24,0.38)' },
   modalBackdrop: { ...StyleSheet.absoluteFill },
   trayCard: { width: '100%', maxWidth: 600, maxHeight: '88%', alignSelf: 'center', borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: Palette.card, paddingHorizontal: 18, paddingBottom: 18 },

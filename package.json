@@ -58,5 +58,8 @@
     "react-test-renderer": "^19.1.0",
     "typescript": "~6.0.3"
   },
+  "overrides": {
+    "expo-router": "$expo-router"
+  },
   "private": true
 }

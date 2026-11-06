@@ -9,7 +9,7 @@ import ts from 'typescript';
 const source = await readFile(new URL('./editorial-theme.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
   .replace(/import \{\s*StyleSheet,?\s*\} from 'react-native';/, 'const StyleSheet = { create: (value) => value };');
-const { buildEditorialPalette, createEditorialPalette, createEditorialStyles, resolveEditorialStyles, setActiveEditorialPalette } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+const { getAccentTextColor, getAccentPreset, buildEditorialPalette, createEditorialPalette, createEditorialStyles, resolveEditorialStyles, setActiveEditorialPalette } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 test('reuses palettes and styles across components and theme round trips', () => {
   const light = buildEditorialPalette('light', 'neru');
@@ -34,4 +34,20 @@ test('materializing a different palette cannot leak into active screen colors', 
   assert.equal(resolveEditorialStyles(styles, dark).card.backgroundColor, dark.background);
   assert.equal(palette.background, light.background);
   assert.equal(styles.card.backgroundColor, light.background);
+});
+
+test('custom accents are distinct cached palettes with readable foregrounds in both modes', () => {
+  for (const mode of ['light', 'dark']) {
+    const pale = buildEditorialPalette(mode, 'custom', '#F5DF88');
+    const deep = buildEditorialPalette(mode, 'custom', '#32105D');
+    assert.equal(pale.accent, '#F5DF88');
+    assert.equal(pale.onAccent, '#000000');
+    assert.equal(deep.accent, '#32105D');
+    assert.equal(deep.onAccent, '#FFFFFF');
+    assert.notEqual(pale, deep);
+    assert.equal(pale, buildEditorialPalette(mode, 'custom', '#f5df88'));
+  }
+  assert.equal(getAccentPreset('custom', 'invalid').light, '#7C4DAD');
+  assert.equal(getAccentTextColor('#FFFFFF'), '#000000');
+  assert.equal(getAccentTextColor('#000000'), '#FFFFFF');
 });

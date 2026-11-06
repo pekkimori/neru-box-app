@@ -84,12 +84,12 @@ export function useChat(onConversationChange: () => void) {
     }
   },[repository,publish,persist,scope]);
   const refreshChat = useCallback(async () => {
-    if (busyRef.current || requestRef.current) return;
+    if (!repository || busyRef.current || requestRef.current) return false;
     const generation = epoch.current;
     busyRef.current = true; setBusy(true); setChatError(null);
-    try { await load(); } catch (e) { if (generation === epoch.current) { setChatError(error(e)); setReady(false); } }
+    try { await load(); return generation === epoch.current; } catch (e) { if (generation === epoch.current) { setChatError(error(e)); setReady(false); } return false; }
     finally { if (generation === epoch.current) { busyRef.current = false; setBusy(false); } }
-  },[load]);
+  },[load,repository]);
   useEffect(() => {
     const generation = ++epoch.current;
     requestRef.current?.abort(); requestRef.current = null; busyRef.current = false;
@@ -142,7 +142,10 @@ export function useChat(onConversationChange: () => void) {
   },[repository,user,pendingChange,ready,scope,load]);
   const startNewConversation = useCallback(async () => {
     const id = `conversation-${Crypto.randomUUID()}`;
-    if (await apply({ kind: 'create',conversationId: id },id)) onConversationChange();
+    if (!(await apply({ kind: 'create',conversationId: id },id))) return false;
+    setInputText('');
+    onConversationChange();
+    return true;
   },[apply,onConversationChange]);
   const selectConversation = useCallback(async (id: string) => {
     if (!repository || busyRef.current || requestRef.current) return false;

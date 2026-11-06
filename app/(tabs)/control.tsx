@@ -4,13 +4,15 @@ import { savedApps, savedEffects, type SelectedAppDraft, type ModeEffectsDraft }
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useRef, useState, type SetStateAction } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
 import { PageHeader } from "@/components/page-header";
-import { APP_ACCENT_PRESETS } from "@/theme/editorial-theme";
+import { APP_ACCENT_PRESETS, getAccentTextColor } from "@/theme/editorial-theme";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
+import { CustomAccentSettings } from "@/features/control/custom-accent";
+import { SoundSettings } from "@/features/control/sound-settings";
 import { EditorModal, SectionLabel } from "@/features/control/components";
 import {
     AppsEditorContent,
@@ -46,6 +48,7 @@ import {
 } from "@/utils/time";
 
 export default function ControlScreen() {
+  const { width } = useWindowDimensions();
   const {
     appearance,
     accentPreset,
@@ -590,6 +593,7 @@ export default function ControlScreen() {
                   onPress={() => setAccentId(preset.id)}
                   style={[
                     styles.accentOption,
+                    width < 360 && styles.accentOptionCompact,
                     selected && styles.accentOptionActive,
                   ]}
                 >
@@ -600,7 +604,7 @@ export default function ControlScreen() {
                       <Ionicons
                         name="checkmark"
                         size={16}
-                        color={Palette.onAccent}
+                        color={getAccentTextColor(swatch)}
                       />
                     ) : null}
                   </View>
@@ -614,7 +618,10 @@ export default function ControlScreen() {
               );
             })}
           </View>
+          <CustomAccentSettings />
         </View>
+
+        <SoundSettings />
 
       </ScrollView>
 

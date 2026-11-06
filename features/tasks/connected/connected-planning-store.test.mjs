@@ -19,11 +19,13 @@ function fixture() {
   return { store, repository, commands, executed: () => executed, switchAccount: () => { accountCurrent = false; } };
 }
 
-test('fresh reads map the selected date and keep local diary fields', async () => {
+test('fresh reads preserve local diary fields and successful saves stay quiet', async () => {
   const f = fixture();
   f.repository.refreshScheduleOrEmpty = async () => ({ data: { date, blocks: [], tasks: [], reflections: {} } });
   await f.store.reload();
   assert.equal(f.store.getSnapshot().fresh, true);
+  assert.equal(await f.store.run({ kind: 'setMood', date, sticker: 'happy' }), true);
+  assert.equal(f.store.getSnapshot().notice, null);
   assert.equal(f.store.getSnapshot().schedule.diaryNote, 'Keep diary');
   assert.equal(f.store.getSnapshot().schedule.date, date);
 });
@@ -37,7 +39,7 @@ test('offline reads show the cache and disable new mutations', async () => {
   assert.equal(f.store.getSnapshot().cached, true);
   assert.equal(f.store.getSnapshot().fresh, false);
   assert.match(f.store.getSnapshot().error, /offline/);
-  assert.equal(await f.store.run({ kind: 'createGoal', title: 'Duplicate', icon: 'x' }, 'Saved'), false);
+  assert.equal(await f.store.run({ kind: 'createGoal', title: 'Duplicate', icon: 'x' }), false);
   assert.equal(f.executed(), 0);
 });
 
@@ -62,13 +64,13 @@ test('double taps send one command, and a confirmed save stays successful if ref
   let calls = 0;
   f.commands.execute = () => { calls++; return reply.promise; };
   const command = { kind: 'createGoal', title: 'Piano', icon: 'x' };
-  const first = f.store.run(command, 'Saved.');
-  assert.equal(await f.store.run(command, 'Saved.'), false);
+  const first = f.store.run(command);
+  assert.equal(await f.store.run(command), false);
   f.repository.refreshGoals = async () => { throw new Error('refresh unavailable'); };
   reply.resolve({ id: 'one' });
   assert.equal(await first, true);
   assert.equal(calls, 1);
-  assert.match(f.store.getSnapshot().notice, /Saved/);
+  assert.equal(f.store.getSnapshot().notice, 'Refresh to see the latest plan.');
   assert.match(f.store.getSnapshot().error, /refresh unavailable/);
   assert.equal(f.store.getSnapshot().saving, false);
 });
@@ -78,7 +80,7 @@ test('pending writes are replayed using their recorded ID before other edits', a
   const saved = { operationId: 'original', command: { kind: 'createGoal' } };
   f.commands.pending = async () => [saved];
   await f.store.reload();
-  assert.equal(await f.store.run({ kind: 'createGoal' }, 'Saved'), false);
+  assert.equal(await f.store.run({ kind: 'createGoal' }), false);
   let retried;
   f.commands.retry = async id => { retried = id; f.commands.pending = async () => []; };
   assert.equal(await f.store.retryPending(), true);

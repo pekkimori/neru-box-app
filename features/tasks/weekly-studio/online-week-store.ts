@@ -102,7 +102,6 @@ export function createOnlineWeekStore(repository: Repository, commands: Commands
       if (weeklyDayEdits(next).length) days[date] = next; else delete days[date];
       if (weeklyCommand(weekStart, { version: 1, days }).days.reduce((count, day) => count + day.edits.length, 0) > 100) throw new Error('Save this draft before adding more weekly edits.');
       await persist({ version: 1, days });
-      publish({ notice: 'Draft saved on this device. Save week to sync.' });
     });
   }
   function requireCapacity(date: string, tasks: PlannedTaskDto[], blockId: string) {
@@ -129,7 +128,6 @@ export function createOnlineWeekStore(repository: Repository, commands: Commands
     // outbox was already cleared: replay still uses the same server receipt.
     await persist({ version: 1, days: {} });
     await readPending();
-    publish({ notice: 'Week saved online.' });
   }
   async function refreshAfter(result: boolean) {
     if (result) await reload();
@@ -176,7 +174,6 @@ export function createOnlineWeekStore(repository: Repository, commands: Commands
         else if (state.pending.length) {
           await commands.retry(state.pending[0].operationId);
           await readPending();
-          publish({ notice: 'Pending save delivered.' });
         }
       }));
     },
@@ -189,7 +186,7 @@ export function createOnlineWeekStore(repository: Repository, commands: Commands
     },
     discard() {
       if (!hydrated || state.draft.attempt) return Promise.resolve(false);
-      return operate(async () => { await persist({ version: 1, days: {} }); publish({ notice: 'Draft discarded.' }); });
+      return operate(async () => { await persist({ version: 1, days: {} }); });
     },
   };
 }

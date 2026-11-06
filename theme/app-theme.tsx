@@ -8,11 +8,12 @@ import React, {
   useState,
 } from 'react';
 import * as SystemUI from 'expo-system-ui';
-import { Appearance, Platform, Alert } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 
 import { ThemeLoadingScreen } from './theme-loading-screen';
 import {
   APP_ACCENT_PRESETS,
+  HEX_COLOR_PATTERN,
   buildEditorialPalette,
   getAccentPreset,
   setActiveEditorialPalette,
@@ -22,15 +23,19 @@ import {
   type EditorialPalette,
 } from '@/theme/editorial-theme';
 import { useAccountValue } from '@/hooks/useAccountValue';
+import { isSoundSetId, type SoundSetId } from '@/utils/sound-sets';
 
 const APPEARANCE_STORAGE_KEY = '@neru/app-appearance-v1';
 const MIN_THEME_LOADING_MS = 480;
 const THEME_COMMIT_DELAY_MS = 48;
+const THEME_PRESENTATION_FALLBACK_MS = 320;
 const THEME_SETTLE_MS = 120;
 
 export type AppAppearance = {
   mode: AppColorMode;
   accentId: AppAccentId;
+  customAccent?: string;
+  soundSet?: SoundSetId;
 };
 
 const DEFAULT_APPEARANCE: AppAppearance = {
@@ -43,7 +48,9 @@ function isAppAppearance(value: unknown): value is AppAppearance {
   const candidate = value as Partial<AppAppearance>;
   return (
     (candidate.mode === 'light' || candidate.mode === 'dark') &&
-    APP_ACCENT_PRESETS.some((preset) => preset.id === candidate.accentId)
+    (candidate.accentId === 'custom' || APP_ACCENT_PRESETS.some((preset) => preset.id === candidate.accentId)) &&
+    (candidate.customAccent === undefined || (typeof candidate.customAccent === 'string' && HEX_COLOR_PATTERN.test(candidate.customAccent))) &&
+    (candidate.accentId !== 'custom' || candidate.customAccent !== undefined)
   );
 }
 
@@ -56,6 +63,8 @@ type AppThemeContextValue = {
   retry: () => Promise<void>;
   setMode: (mode: AppColorMode) => void;
   setAccentId: (accentId: AppAccentId) => void;
+  setCustomAccent: (color: string) => void;
+  setSoundSet: (soundSet: SoundSetId) => void;
 };
 
 const AppThemeContext = createContext<AppThemeContextValue | null>(null);
@@ -72,9 +81,8 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const transitionStartedAtRef = useRef(0);
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dismissFrameRef = useRef<number | null>(null);
-  const colors = buildEditorialPalette(value.mode, value.accentId);
-  const accentPreset = getAccentPreset(value.accentId);
+  const colors = buildEditorialPalette(value.mode, value.accentId, value.customAccent);
+  const accentPreset = getAccentPreset(value.accentId, value.customAccent);
 
   // Set this before descendants render so legacy palette reads and themed
   // StyleSheets resolve to the same context value in this render pass.
@@ -92,13 +100,13 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
 
   const beginThemeTransition = useCallback((target: AppAppearance) => {
     if (pendingAppearanceRef.current) return;
-    if (target.mode === value.mode && target.accentId === value.accentId) return;
+    if (target.mode === value.mode && target.accentId === value.accentId && target.customAccent === value.customAccent) return;
 
     transitionStartedRef.current = false;
     transitionStartedAtRef.current = Date.now();
     pendingAppearanceRef.current = target;
     setPendingAppearance(target);
-  }, [value.accentId, value.mode]);
+  }, [value.accentId, value.mode, value.customAccent]);
 
   const setMode = useCallback((mode: AppColorMode) => {
     beginThemeTransition({ ...value, mode });
@@ -106,6 +114,16 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const setAccentId = useCallback((accentId: AppAccentId) => {
     beginThemeTransition({ ...value, accentId });
   }, [beginThemeTransition, value]);
+
+  const setCustomAccent = useCallback((color: string) => {
+    if (!HEX_COLOR_PATTERN.test(color)) return;
+    beginThemeTransition({ ...value, accentId: 'custom', customAccent: color.toUpperCase() });
+  }, [beginThemeTransition, value]);
+
+  const setSoundSet = useCallback((soundSet: SoundSetId) => {
+    if (!isSoundSetId(soundSet)) return;
+    void saveAsync(current => ({ ...current, soundSet })).catch(() => undefined);
+  }, [saveAsync]);
 
   const commitPendingTheme = useCallback(() => {
     if (transitionStartedRef.current) return;
@@ -116,46 +134,43 @@ export function AppThemeProvider({ children }: { children: React.ReactNode }) {
     commitTimerRef.current = setTimeout(() => {
       commitTimerRef.current = null;
       const target = pendingAppearanceRef.current;
-      if (target) void saveAsync(target).catch(cause => { pendingAppearanceRef.current = null; transitionStartedRef.current = false; setPendingAppearance(null); Alert.alert('Could not save appearance', cause instanceof Error ? cause.message : 'Try again.'); });
+      if (!target) return;
+      // Finish from the save's outcome, including rollback or a normalized
+      // server response. Matching the optimistic value can dismiss too early
+      // or leave the cover stuck forever if the saved value differs.
+      void saveAsync(current => ({ ...target, soundSet: current.soundSet }))
+        .catch(() => undefined) // The account store exposes the error and retry.
+        .finally(() => {
+          if (pendingAppearanceRef.current !== target) return;
+          const elapsed = Date.now() - transitionStartedAtRef.current;
+          const delay = Math.max(THEME_SETTLE_MS, MIN_THEME_LOADING_MS - elapsed);
+          dismissTimerRef.current = setTimeout(() => {
+            dismissTimerRef.current = null;
+            pendingAppearanceRef.current = null;
+            transitionStartedRef.current = false;
+            setPendingAppearance(null);
+          }, delay);
+        });
     }, THEME_COMMIT_DELAY_MS);
   }, [saveAsync]);
 
   useEffect(() => {
-    if (!pendingAppearance || !transitionStartedRef.current) return;
-    if (
-      value.mode !== pendingAppearance.mode
-      || value.accentId !== pendingAppearance.accentId
-    ) return;
-
-    const elapsed = Date.now() - transitionStartedAtRef.current;
-    const delay = Math.max(THEME_SETTLE_MS, MIN_THEME_LOADING_MS - elapsed);
-    dismissTimerRef.current = setTimeout(() => {
-      dismissTimerRef.current = null;
-      // Wait for the themed native tree to be committed before removing the
-      // cover. This avoids exposing a half-light, half-dark render on Android.
-      dismissFrameRef.current = requestAnimationFrame(() => {
-        dismissFrameRef.current = null;
-        pendingAppearanceRef.current = null;
-        transitionStartedRef.current = false;
-        setPendingAppearance(null);
-      });
-    }, delay);
-
-    return () => {
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      dismissTimerRef.current = null;
-    };
-  }, [pendingAppearance, value.accentId, value.mode]);
+    if (!pendingAppearance) return;
+    // onShow is tied to animation completion on web. A canceled/disabled
+    // animation must never prevent the save and leave a blocking modal open.
+    const fallback = setTimeout(commitPendingTheme, THEME_PRESENTATION_FALLBACK_MS);
+    return () => clearTimeout(fallback);
+  }, [commitPendingTheme, pendingAppearance]);
 
   useEffect(() => () => {
     if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    if (dismissFrameRef.current !== null) cancelAnimationFrame(dismissFrameRef.current);
+    pendingAppearanceRef.current = null;
   }, []);
 
   const contextValue = useMemo<AppThemeContextValue>(() => ({
-    appearance: value, colors, accentPreset, loaded, error, retry, setMode, setAccentId,
-  }), [value, colors, accentPreset, loaded, error, retry, setMode, setAccentId]);
+    appearance: value, colors, accentPreset, loaded, error, retry, setMode, setAccentId, setCustomAccent, setSoundSet,
+  }), [value, colors, accentPreset, loaded, error, retry, setMode, setAccentId, setCustomAccent, setSoundSet]);
 
   return (
     <AppThemeContext.Provider value={contextValue}>
@@ -184,5 +199,5 @@ export function useThemedStyles<T extends Record<string, unknown>>(
 ): T {
   const theme = useAppTheme();
   const appearance = explicitAppearance ?? theme.appearance;
-  return resolveEditorialStyles(themedStyles, buildEditorialPalette(appearance.mode, appearance.accentId));
+  return resolveEditorialStyles(themedStyles, buildEditorialPalette(appearance.mode, appearance.accentId, appearance.customAccent));
 }

@@ -65,7 +65,7 @@ export async function verifyCompletionBrowser({ page, browser, origin, apiUrl, t
   await page.getByRole('button', { name: 'Retry pending save', exact: true }).click();
   const request = await retry;
   assert.equal(request.postDataJSON().operationId, operationId);
-  await page.getByText('Pending save delivered.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Retry pending save', exact: true }).waitFor({ state: 'detached' });
   await card.getByText('1/2', { exact: true }).waitFor();
   await row.getByText(/·  lit/).waitFor();
   await page.unroute(apiUrl + '/planning/commands');

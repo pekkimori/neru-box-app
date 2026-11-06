@@ -34,7 +34,6 @@ export function RoutineGate({
   if (disabled) {
     return <View style={styles.gate}>
       <Text style={styles.gateLabel}>Routine gate</Text>
-      <Text style={styles.lockMessage}>Waiting for your routines to sync.</Text>
       {routines.map(quest => <Text key={quest.id} style={styles.rowText}>{quest.label}{isComplete(quest.id) ? ' ✓' : ''}</Text>)}
     </View>;
   }

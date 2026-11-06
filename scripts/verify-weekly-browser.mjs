@@ -60,7 +60,7 @@ export async function verifyWeeklyBrowser({ page, browser, origin, apiUrl, testA
   const retry = page.waitForRequest(request => request.url().endsWith('/planning/commands'));
   await page.getByRole('button', { name: 'Retry weekly pending save', exact: true }).click();
   assert.equal((await retry).postDataJSON().operationId, operationId);
-  await page.getByText('Week saved online.', { exact: true }).waitFor();
+  await page.getByText('Your online week is up to date.', { exact: true }).waitFor();
   await page.getByLabel('Loading online week', { exact: true }).waitFor({ state: 'detached' });
   await page.unroute(apiUrl + '/planning/commands');
   const getDay = async date => {
@@ -92,14 +92,14 @@ export async function verifyWeeklyBrowser({ page, browser, origin, apiUrl, testA
     await page.getByRole('button', { name: 'Move weekly Browser weekly chore to evening', exact: true }).click();
     await draftTask(otherPage, 'Browser concurrent task');
     await saveWeek(otherPage);
-    await otherPage.getByText('Week saved online.', { exact: true }).waitFor();
+    await otherPage.getByText('Your online week is up to date.', { exact: true }).waitFor();
     await saveWeek(page, 409);
     await page.getByText(/Review the latest week before saving/).waitFor();
     await page.getByRole('button', { name: 'Refresh online week', exact: true }).click();
     await page.getByRole('button', { name: 'Review latest weekly changes', exact: true }).click();
     await page.getByText('Browser concurrent task', { exact: false }).last().waitFor();
     await saveWeek(page);
-    await page.getByText('Week saved online.', { exact: true }).waitFor();
+    await page.getByText('Your online week is up to date.', { exact: true }).waitFor();
     const merged = await getDay(dates[0]);
     assert.equal(merged.tasks.length, 2);
     assert.equal(merged.tasks.find(task => task.id === first.tasks[0].id).blockId, 'evening');

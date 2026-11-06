@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { verifyUnifiedBrowser } from './verify-unified-browser.mjs';
 import { verifyControlEditorsBrowser } from './verify-control-editors-browser.mjs';
+import { verifyAppearanceBrowser } from './verify-appearance-browser.mjs';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const apiPort = process.env.NERU_AUTH_TEST_PORT ?? '4107';
@@ -183,6 +184,7 @@ try {
   await page.getByText('PRIVATE ACCOUNT A', { exact: true }).first().waitFor();
   console.log('Logout, account switching, logout-all, and login back passed.');
   await verifyControlEditorsBrowser(page);
+  await verifyAppearanceBrowser(page);
   await openTasks();
   await verifyUnifiedBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
   assert.deepEqual(failures, [], 'No uncaught browser errors');

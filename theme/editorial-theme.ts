@@ -20,7 +20,8 @@ export type AppAccentId =
   | 'kanagawa'
   | 'synthwave'
   | 'monokai'
-  | 'ayu';
+  | 'ayu'
+  | 'custom';
 
 type AppAccentPreset = {
   id: AppAccentId;
@@ -202,7 +203,27 @@ function withAlpha(hex: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-export function getAccentPreset(id: AppAccentId): AppAccentPreset {
+export const CUSTOM_ACCENT_DEFAULT = '#7C4DAD';
+export const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/** Choose the higher-contrast text color, including very light custom accents. */
+export function getAccentTextColor(hex: string) {
+  const channels = hex.slice(1).match(/.{2}/g)!.map(value => {
+    const channel = parseInt(value, 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  return (luminance + 0.05) / 0.05 > 1.05 / (luminance + 0.05) ? '#000000' : '#FFFFFF';
+}
+
+export function getAccentPreset(id: AppAccentId, customAccent?: string): AppAccentPreset {
+  if (id === 'custom') {
+    const color = customAccent && HEX_COLOR_PATTERN.test(customAccent) ? customAccent.toUpperCase() : CUSTOM_ACCENT_DEFAULT;
+    const strong = '#' + color.slice(1).match(/.{2}/g)!.map(channel =>
+      Math.round(parseInt(channel, 16) * 0.8).toString(16).padStart(2, '0'),
+    ).join('');
+    return { id, label: 'Custom', description: color, light: color, dark: color, lightStrong: strong, darkStrong: color };
+  }
   return APP_ACCENT_PRESETS.find((preset) => preset.id === id) ?? APP_ACCENT_PRESETS[0];
 }
 
@@ -211,11 +232,12 @@ const paletteCache = new Map<string, EditorialPalette>();
 export function buildEditorialPalette(
   mode: AppColorMode,
   accentId: AppAccentId,
+  customAccent?: string,
 ): EditorialPalette {
-  const key = `${mode}:${accentId}`;
+  const preset = getAccentPreset(accentId, customAccent);
+  const key = `${mode}:${accentId}:${accentId === 'custom' ? preset.light : ''}`;
   const cached = paletteCache.get(key);
   if (cached) return cached;
-  const preset = getAccentPreset(accentId);
   const accent = mode === 'dark' ? preset.dark : preset.light;
   const accentStrong = mode === 'dark' ? preset.darkStrong : preset.lightStrong;
   const dark = mode === 'dark';
@@ -230,7 +252,7 @@ export function buildEditorialPalette(
   // Legacy inverse panels now behave like ordinary, subtly raised boxes.
   const inverse = surface;
   const inverseLine = line;
-  const onAccent = dark ? '#17131C' : '#FFFFFF';
+  const onAccent = accentId === 'custom' ? getAccentTextColor(accent) : dark ? '#17131C' : '#FFFFFF';
   const onInverse = text;
 
   const palette: EditorialPalette = {

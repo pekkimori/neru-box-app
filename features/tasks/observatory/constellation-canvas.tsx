@@ -80,7 +80,7 @@ function starPosition(
   };
 }
 
-function nebulaLayout(tasks: DailyVisorTask[], constellations: Constellation[], height: number) {
+function nebulaLayout(tasks: DailyVisorTask[], height: number) {
   const ids = [...new Set(tasks.map(({ task }) => task.constellationId))];
   const columns = Math.min(3, Math.max(1, ids.length));
   const rows = Math.max(1, Math.ceil(ids.length / columns));
@@ -89,7 +89,6 @@ function nebulaLayout(tasks: DailyVisorTask[], constellations: Constellation[], 
   const seen = new Map<string, number>();
   const groups = ids.map((id, index) => ({
     id,
-    name: constellations.find(nebula => nebula.id === id)?.name ?? 'Nebula',
     center: {
       x: (index % columns + 0.5) * cellSize.width,
       y: (Math.floor(index / columns) + 0.5) * cellSize.height,
@@ -102,7 +101,7 @@ function nebulaLayout(tasks: DailyVisorTask[], constellations: Constellation[], 
     seen.set(id, index + 1);
     return starPosition(task.starId, index, counts.get(id) ?? 1, byId.get(id)!.center, cellSize);
   });
-  return { groups, positions, cellSize };
+  return { positions };
 }
 
 function truncateLabel(label: string, maxLen = 10): string {
@@ -466,7 +465,7 @@ export function ConstellationCanvas({
   const styles = useThemedStyles(themedStyles);
   const isFocused = useIsFocused();
   const canvasProgress = useSharedValue(0);
-  const layout = useMemo(() => nebulaLayout(tasks, constellations, height), [tasks, constellations, height]);
+  const layout = useMemo(() => nebulaLayout(tasks, height), [tasks, height]);
   const nodes = useMemo(() => tasks.map((entry, index) => ({
     ...entry,
     order: index,
@@ -541,15 +540,6 @@ export function ConstellationCanvas({
     >
       <SkyAtmosphere active={isFocused} />
       <Svg width="100%" height={height} viewBox={`0 0 340 ${height}`}>
-        {layout.groups.map(group => <SvgText
-          key={`nebula-${group.id}`}
-          x={group.center.x}
-          y={group.center.y - layout.cellSize.height * 0.37}
-          textAnchor="middle"
-          fill={Palette.warmMuted}
-          fontSize={11}
-          fontWeight="600"
-        >{truncateLabel(group.name, Math.floor(layout.cellSize.width / 7))}</SvgText>)}
         {completionLinks.map((link, index) => <AnimatedCompletionLine
           key={`completion-${link.key}`}
           from={link.from}

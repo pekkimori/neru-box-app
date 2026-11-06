@@ -21,8 +21,8 @@ export function ThemeLoadingScreen({
   visible,
   onPresented,
 }: ThemeLoadingScreenProps) {
-  const colors = buildEditorialPalette(appearance.mode, appearance.accentId);
-  const preset = getAccentPreset(appearance.accentId);
+  const colors = buildEditorialPalette(appearance.mode, appearance.accentId, appearance.customAccent);
+  const preset = getAccentPreset(appearance.accentId, appearance.customAccent);
   const modeLabel = appearance.mode === 'dark' ? 'Dark' : 'Light';
 
   return (

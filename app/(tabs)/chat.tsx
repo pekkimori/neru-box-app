@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   KeyboardAvoidingView,
@@ -21,7 +22,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   MotionModal as Modal,
   MotionPressable as Pressable,
-  MotionTouchableOpacity as TouchableOpacity,
 } from "@/components/motion";
 import { NeruRobot, type NeruRobotState } from "@/components/neru-robot";
 import { PageHeader } from "@/components/page-header";
@@ -33,12 +33,12 @@ import {
 import { Type } from "@/theme/typography";
 import {
   PERSONALITIES,
-  SUGGESTIONS,
   type ChatMessage,
   type MemoryItem,
   type Personality,
   type PersonalityId,
 } from "@/features/chat/preview-model";
+import { ChatComposer } from "@/features/chat/chat-composer";
 import { useChat, type ChatConversation } from "@/features/chat/use-chat";
 import { formatMessageText } from "@/features/chat/message-format";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
@@ -221,6 +221,10 @@ export default function ChatScreen() {
   const [pendingDeleteConversationId, setPendingDeleteConversationId] =
     useState<string | null>(null);
   const [typingPulse, setTypingPulse] = useState(0);
+  const [toast, setToast] = useState<{
+    message: string;
+    status: "loading" | "error";
+  } | null>(null);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
   const closeHistory = useCallback(() => {
@@ -276,6 +280,34 @@ export default function ChatScreen() {
     addMemory,
     removeMemory, editMemory, busy, canSend, refreshChat, pendingChange, retryChange, loadOlder, hasOlder, loadMoreConversations, hasMoreConversations,
   } = useChat(scrollToEnd);
+
+  useEffect(() => {
+    if (!toast || toast.status === "loading") return;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleRefresh = async () => {
+    setToast({
+      message: pendingChange ? "Retrying saved change…" : "Refreshing chat…",
+      status: "loading",
+    });
+    const success = await (pendingChange ? retryChange() : refreshChat());
+    setToast(success ? null : {
+      message: "Couldn’t refresh chat. Please try again.",
+      status: "error",
+    });
+  };
+
+  const handleNewChat = async () => {
+    setToast({ message: "Starting a new chat…", status: "loading" });
+    const success = await startNewConversation();
+    setToast(success ? null : {
+      message: "Couldn’t start a new chat. Please try again.",
+      status: "error",
+    });
+  };
+
   const handleSelectConversation = useCallback(
     async (conversationId: string) => {
       if (await selectConversation(conversationId)) closeHistoryDrawer();
@@ -368,9 +400,15 @@ export default function ChatScreen() {
             typingPulse={typingPulse}
             actions={[
               {
+                accessibilityLabel: pendingChange ? "Retry chat change" : "Refresh chat",
+                icon: "refresh-outline",
+                onPress: handleRefresh,
+                disabled: busy || isTyping,
+              },
+              {
                 accessibilityLabel: "Start a new chat",
                 icon: "add",
-                onPress: startNewConversation,
+                onPress: handleNewChat,
                 disabled: busy || isTyping || !!pendingChange,
               },
               {
@@ -386,6 +424,31 @@ export default function ChatScreen() {
             ]}
           />
 
+          {toast && (
+            <View accessibilityLiveRegion="polite" role="status" style={styles.toast}>
+              {toast.status === "loading" ? (
+                <ActivityIndicator size="small" color={Palette.red} />
+              ) : (
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={20}
+                  color={Palette.red}
+                />
+              )}
+              <Text style={styles.toastText}>{toast.message}</Text>
+              {toast.status !== "loading" && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss notification"
+                  hitSlop={8}
+                  onPress={() => setToast(null)}
+                >
+                  <Ionicons name="close" size={18} color={Palette.secondary} />
+                </Pressable>
+              )}
+            </View>
+          )}
+
           <FlatList
             ref={flatListRef}
             ListHeaderComponent={hasOlder ? <Pressable accessibilityRole="button" disabled={busy} onPress={loadOlder}><Text style={styles.memoryIntro}>Load earlier messages</Text></Pressable> : null}
@@ -400,56 +463,17 @@ export default function ChatScreen() {
           />
 
           {chatError && <Text accessibilityRole="alert" style={styles.errorBanner}>{chatError}</Text>}
-          {busy ? <Text style={styles.memoryIntro}>Syncing chat…</Text> : null}
-          <Pressable accessibilityRole="button" accessibilityLabel={pendingChange ? "Retry chat change" : "Refresh chat"} disabled={busy || isTyping} onPress={pendingChange ? retryChange : refreshChat}><Text style={styles.memoryIntro}>{pendingChange ? "Retry saved change" : "Refresh history"}</Text></Pressable>
 
-          <ScrollView
-            horizontal
-            style={styles.suggestionStrip}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.suggestions}
-            keyboardShouldPersistTaps="handled"
-          >
-            {SUGGESTIONS.map((suggestion) => (
-              <Pressable
-                key={suggestion.label}
-                onPress={() => handleInputTextChange(suggestion.value)}
-                style={({ pressed }) => [
-                  styles.suggestion,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.suggestionText}>{suggestion.label}</Text>
-                <Ionicons name="arrow-forward" size={13} color={Palette.red} />
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          <View style={styles.composer}>
-            <TextInput
-              accessibilityLabel="Message NERU"
-              style={styles.textInput}
-              value={inputText}
-              onChangeText={handleInputTextChange}
-              placeholder="Tell NERU what's on your mind..."
-              placeholderTextColor={Palette.muted}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              accessibilityLabel={isTyping ? "Stop response" : "Send message"}
-              accessibilityRole="button"
-              activeOpacity={0.8}
-              disabled={!isTyping && (!inputText.trim() || !canSend)}
-              onPress={isTyping ? cancelPendingReply : sendMessage}
-              style={[
-                styles.sendButton,
-                (!isTyping && !inputText.trim()) && styles.sendButtonDisabled,
-              ]}
-            >
-              <Ionicons name={isTyping ? "stop" : "arrow-up"} size={21} color={Palette.onAccent} />
-            </TouchableOpacity>
-          </View>
+          <ChatComposer
+            key={activeConversationId}
+            inputText={inputText}
+            onChangeText={handleInputTextChange}
+            isTyping={isTyping}
+            canSend={canSend}
+            onSend={sendMessage}
+            onStop={cancelPendingReply}
+            onNotify={setToast}
+          />
           <Text style={styles.localNote}>
             CHAT HISTORY AND PREFERENCES ARE SAVED TO YOUR ACCOUNT
           </Text>
@@ -914,52 +938,23 @@ const themedStyles = createEditorialStyles(() => ({
     borderRadius: 3,
     backgroundColor: Palette.secondary,
   },
-  suggestionStrip: { flexGrow: 0, height: 46 },
-  suggestions: { gap: 8, paddingTop: 4, paddingBottom: 6 },
-  suggestion: {
+  toast: {
+    position: "absolute",
+    top: 80,
+    left: 20,
+    right: 20,
+    zIndex: 20,
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 10,
+    padding: 14,
     borderWidth: 1,
     borderColor: Palette.line,
-    borderRadius: 18,
-    paddingHorizontal: 13,
-    height: 36,
+    borderRadius: 12,
     backgroundColor: Palette.card,
+    boxShadow: "0 4px 18px rgba(0, 0, 0, 0.1)",
   },
-  suggestionText: { ...Type.bodySmall, color: Palette.secondary },
-  composer: {
-    minHeight: 58,
-    maxHeight: 122,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 8,
-    paddingLeft: 15,
-    paddingRight: 7,
-    paddingVertical: 7,
-    backgroundColor: Palette.card,
-  },
-  textInput: {
-    ...Type.body,
-    flex: 1,
-    maxHeight: 96,
-    minHeight: 42,
-    paddingVertical: 10,
-    color: Palette.ink,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Palette.red,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  sendButtonDisabled: { backgroundColor: Palette.muted },
+  toastText: { ...Type.bodySmall, flex: 1, color: Palette.ink },
   localNote: {
     ...Type.microLabel,
     color: Palette.muted,

@@ -49,8 +49,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow NERU to choose a photo as proof of task completion.",
-          "cameraPermission": "Allow NERU to take a photo as proof of task completion.",
+          "photosPermission": "Allow NERU to choose photos for chat previews and task completion.",
+          "cameraPermission": "Allow NERU to take photos for chat previews and task completion.",
           "microphonePermission": false
         }
       ],

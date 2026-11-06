@@ -84,7 +84,7 @@ export async function verifyConnectedPlanning({ page, browser, origin, apiUrl, t
   const retryRequest = page.waitForRequest(request => request.url().endsWith('/planning/commands'));
   await page.getByRole('button', { name: 'Retry pending save', exact: true }).click();
   assert.equal((await retryRequest).postDataJSON().operationId, operationId);
-  await page.getByText('Pending save delivered.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Retry pending save', exact: true }).waitFor({ state: 'detached' });
   await page.getByTestId(`online-task-${committed.id}`).waitFor();
   assert.equal(await page.getByTestId(`online-task-${committed.id}`).count(), 1);
   assert.equal(await page.locator('[data-testid^="online-task-"]').count(), 2);
