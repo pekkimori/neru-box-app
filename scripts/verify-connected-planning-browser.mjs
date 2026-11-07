@@ -11,8 +11,8 @@ async function command(page, action) {
 export async function verifyConnectedPlanning({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi }) {
   await page.getByRole('button', { name: 'Manage your sky', exact: true }).click();
   await page.getByRole('button', { name: 'Create constellation', exact: true }).click();
-  await page.getByLabel('Domain name', { exact: true }).fill('Browser constellation');
-  await page.getByLabel('Domain icon', { exact: true }).fill('🎹');
+  await page.getByLabel('Constellation name', { exact: true }).fill('Browser constellation');
+  await page.getByLabel('Constellation icon', { exact: true }).fill('🎹');
   const goal = await command(page, () => page.getByRole('button', { name: 'Create', exact: true }).click());
   await page.getByText('Constellation created.', { exact: true }).waitFor();
   const goalCard = page.getByTestId(`online-goal-${goal.id}`);

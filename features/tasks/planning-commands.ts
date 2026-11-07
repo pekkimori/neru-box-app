@@ -7,6 +7,7 @@ export type WeeklyPlanEdit =
   | { kind: 'addQuestTask'; blockId: string; questId: string; taskId?: string }
   | { kind: 'addAdHocTask'; blockId: string; nebulaId: string; title: string; taskId?: string }
   | { kind: 'moveTask'; taskId: string; blockId: string | null; targetBlockId: string }
+  | { kind: 'editTask'; taskId: string; blockId: string | null; title: string; targetBlockId?: string }
   | { kind: 'removeTask'; taskId: string; blockId: string | null };
 export interface WeeklyPlanDay { date: string; expectedUpdatedAt: string | null; edits: WeeklyPlanEdit[] }
 

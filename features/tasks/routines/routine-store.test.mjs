@@ -92,3 +92,39 @@ test('prevents another click while saving and ignores late results after account
   assert.equal(store.getSnapshot().fresh, false);
   assert.ok([...storage.values.values()].some(raw => raw.includes('operationId')));
 });
+
+test('retrying a multi-row editor resumes uncertain creates without duplicating earlier saved changes', async () => {
+  let snapshot = initial();
+  const applied = new Map();
+  const posts = [];
+  let loseCreateResponse = true;
+  let sequence = 0;
+  const store = createRoutineStore({
+    async read() { return structuredClone(snapshot); },
+    async apply(attempt) {
+      posts.push(structuredClone(attempt));
+      if (applied.has(attempt.operationId)) return applied.get(attempt.operationId);
+      const command = attempt.command;
+      assert.equal(command.revision, snapshot.revision);
+      if (command.kind === 'update') snapshot.quests[0] = { ...snapshot.quests[0], label: command.label, icon: command.icon };
+      if (command.kind === 'create') snapshot.quests.push({ id: 'new-routine', label: command.label, icon: command.icon, block: command.block, isDefault: false });
+      snapshot.revision++;
+      const result = { id: command.id ?? 'new-routine', revision: snapshot.revision };
+      applied.set(attempt.operationId, result);
+      if (command.kind === 'create' && loseCreateResponse) { loseCreateResponse = false; throw new Error('Lost response'); }
+      return result;
+    },
+  }, device(), date, () => `operation-${++sequence}`, () => {});
+  await store.reload();
+  const update = { kind: 'update', id: 'water', label: 'Drink water', icon: 'water' };
+  const create = { kind: 'create', label: 'Stretch', icon: 'sparkles', block: 'morning' };
+  assert.equal(await store.run(update, 'draft-update'), true);
+  assert.equal(await store.run(create, 'draft-create'), false);
+  assert.equal(await store.run(update, 'draft-update'), true);
+  assert.equal(await store.run(create, 'draft-create'), true);
+  assert.equal(posts.length, 3);
+  assert.deepEqual(posts[1], posts[2], 'An uncertain save reuses its operation ID, revision and payload');
+  assert.equal(store.getSnapshot().snapshot.quests.length, 2);
+  assert.equal(store.getSnapshot().snapshot.quests[0].label, 'Drink water');
+  assert.equal(store.getSnapshot().pending.length, 0);
+});

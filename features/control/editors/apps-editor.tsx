@@ -1,11 +1,13 @@
+import { SectionHeading } from '@/components/section-heading';
+import { AppBox } from '@/components/app-box';
+import { ScrollView } from '@/components/feedback-scroll-view';
+import { ButtonLabel, ChoiceChip } from '@/components/app-controls';
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 
-import {
-  MotionPressable as Pressable,
-  MotionTouchableOpacity as TouchableOpacity,
-} from "@/components/motion";
+
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
+import { AppCheckbox } from "@/components/native-controls";
 import { AppMark } from "../components";
 import type { InstalledApp } from "../model";
 import type { SelectedAppDraft } from '../editor-draft-model';
@@ -33,10 +35,12 @@ export function AppsEditorContent({
 
   return (
     <ScrollView
+      style={{ flex: 1 }}
       contentContainerStyle={styles.editorContent}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.searchBox}>
+      <SectionHeading>Installed apps</SectionHeading>
+      <AppBox variant="field" padding="field" style={styles.searchBox}>
         <Ionicons name="search" size={18} color={EditorialColors.muted} />
         <TextInput
           value={search}
@@ -46,7 +50,7 @@ export function AppsEditorContent({
           style={styles.searchInput}
           accessibilityLabel="Search installed apps"
         />
-      </View>
+      </AppBox>
       <Text style={styles.selectionCount}>
         {selectedApps.length} APPS SELECTED
       </Text>
@@ -55,60 +59,30 @@ export function AppsEditorContent({
           const selected = selectedIds.has(app.id);
           const selectedApp = selectedApps.find((item) => item.id === app.id);
           return (
-            <View key={app.id} style={styles.appRowWrap}>
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
-                onPress={() => toggleApp(app.id)}
-                style={({ pressed }) => [
-                  styles.appRow,
-                  pressed && styles.pressed,
-                ]}
-              >
+            <AppBox variant="group" key={app.id} style={styles.appRowWrap}>
+              <View style={styles.appRow}>
                 <AppMark app={app} />
                 <View style={styles.appCopy}>
-                  <Text style={styles.appName}>{app.name}</Text>
+                  <AppCheckbox label={app.name} value={selected} onValueChange={() => toggleApp(app.id)} />
                   <Text style={styles.appCategory}>{app.category}</Text>
                 </View>
-                <View
-                  style={[styles.checkbox, selected && styles.checkboxSelected]}
-                >
-                  {selected ? (
-                    <Ionicons
-                      name="checkmark"
-                      size={17}
-                      color={EditorialColors.onAccent}
-                    />
-                  ) : null}
-                </View>
-              </Pressable>
+              </View>
               {selected && selectedApp ? (
-                <View style={styles.limitEditor}>
+                <AppBox variant="inset" padding="sm" style={styles.limitEditor}>
                   <Text style={styles.limitLabel}>Daily limit</Text>
                   <View style={styles.chipRow}>
                     {[15, 30, 60, 120].map((minutes) => (
-                      <TouchableOpacity
+                      <ChoiceChip selected={selectedApp.limitMinutes === minutes}
                         key={minutes}
                         accessibilityLabel={`${app.name}, ${minutes} minute daily limit`}
                         onPress={() => updateLimit(app.id, minutes)}
-                        style={[
-                          styles.chip,
-                          selectedApp.limitMinutes === minutes &&
-                            styles.chipActive,
-                        ]}
                       >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            selectedApp.limitMinutes === minutes &&
-                              styles.chipTextActive,
-                          ]}
-                        >
+                        <ButtonLabel>
                           {minutes < 60 ? `${minutes}m` : `${minutes / 60}h`}
-                        </Text>
-                      </TouchableOpacity>
+                        </ButtonLabel>
+                      </ChoiceChip>
                     ))}
-                    <View style={styles.customLimit}>
+                    <AppBox variant="field" padding="field" style={styles.customLimit}>
                       <TextInput
                         value={String(selectedApp.limitMinutes)}
                         onChangeText={(value) => updateLimit(app.id, value)}
@@ -117,11 +91,11 @@ export function AppsEditorContent({
                         accessibilityLabel={`${app.name} custom limit in minutes`}
                       />
                       <Text style={styles.unit}>min</Text>
-                    </View>
+                    </AppBox>
                   </View>
-                </View>
+                </AppBox>
               ) : null}
-            </View>
+            </AppBox>
           );
         })
       ) : (
@@ -131,7 +105,7 @@ export function AppsEditorContent({
             size={28}
             color={EditorialColors.muted}
           />
-          <Text style={styles.emptyTitle}>No apps found</Text>
+          <SectionHeading>No apps found</SectionHeading>
           <Text style={styles.emptyCopy}>
             Try a different app name or category.
           </Text>

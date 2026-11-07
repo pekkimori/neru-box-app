@@ -83,10 +83,10 @@ for (const kind of Object.keys(durations)) {
 }
 
 for (const set of SOUND_SETS) {
-  if (set.id === 'classic' || set.id === 'silent') continue;
+  if (set.id === 'silent') continue;
   const directory = resolve(outputDirectory, set.id);
   mkdirSync(directory, { recursive: true });
-  for (const kind of ['tap', 'catch', 'success']) {
+  for (const kind of set.id === 'classic' ? ['swipe'] : ['tap', 'catch', 'success', 'swipe']) {
     writeFileSync(resolve(directory, `${kind}.wav`), createWav(createSoundSamples(set.id, kind)));
   }
 }

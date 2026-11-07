@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { verifyUnifiedBrowser } from './verify-unified-browser.mjs';
 import { verifyControlEditorsBrowser } from './verify-control-editors-browser.mjs';
-import { verifyAppearanceBrowser } from './verify-appearance-browser.mjs';
+import { openConfigurations, verifyAppearanceBrowser } from './verify-appearance-browser.mjs';
+import { verifyOverlayPatternBrowser } from './verify-overlay-pattern-browser.mjs';
+import { verifyNativeSurfacesBrowser } from './verify-native-surfaces-browser.mjs';
 
 const cwd = fileURLToPath(new URL('..', import.meta.url));
 const apiPort = process.env.NERU_AUTH_TEST_PORT ?? '4107';
@@ -79,11 +81,11 @@ async function register(address) {
 }
 
 try {
-  await start('rtk', ['proxy', 'bun', 'scripts/verify-auth-server.mjs', '--serve'], {
+  await start('bun', ['scripts/verify-auth-server.mjs', '--serve'], {
     NERU_AUTH_TEST_PORT: apiPort, NERU_AUTH_TEST_ORIGIN: origin,
   }, 'Ephemeral auth server ready');
   console.log('Isolated server contract checks passed; starting the app.');
-  await start('rtk', ['proxy', 'node', 'node_modules/expo/bin/cli', 'start', '--clear', '--host', 'localhost', '--port', webPort], {
+  await start(process.execPath, ['node_modules/expo/bin/cli', 'start', '--clear', '--host', 'localhost', '--port', webPort], {
     EXPO_PUBLIC_API_URL: apiUrl, EXPO_OFFLINE: '1', CI: '1', EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '', EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: '',
   }, 'Waiting on http');
   browser = await chromium.launch({
@@ -96,11 +98,12 @@ try {
   // developer's running API on that port.
   const proxyApi = async route => {
     const target = testApiUrl + new URL(route.request().url()).pathname + new URL(route.request().url()).search;
-    await route.fulfill({ response: await route.fetch({ url: target }) });
+    await route.fulfill({ response: await route.fetch({ url: target, maxRetries: 2 }) });
   };
   await context.route(apiUrl + '/**', proxyApi);
   page = await context.newPage();
   page.setDefaultTimeout(20_000);
+  page.setDefaultNavigationTimeout(90_000);
   page.on('pageerror', error => failures.push(error.message));
   page.on('requestfailed', request => {
     if (request.resourceType() === 'fetch') console.log('Failed browser request:', request.url(), request.failure()?.errorText);
@@ -112,6 +115,11 @@ try {
   console.log('Protected route shows only sign-in; mobile screen rendered.');
 
   const id = await register(email);
+  if (process.env.NERU_OVERLAYS_ONLY === '1') {
+    await verifyOverlayPatternBrowser(page, artifacts);
+    assert.deepEqual(failures, [], 'No uncaught browser errors');
+    console.log(`Overlay patterns passed. Screenshots: ${artifacts}`);
+  } else {
   await page.evaluate(({ id, apiUrl }) => {
     localStorage.setItem('@neru/constellations', JSON.stringify([{ id: 'legacy', name: 'LEGACY PRIVATE DATA', icon: '⭐', createdAt: new Date().toISOString() }]));
     const prefix = `@neru/accounts/${encodeURIComponent(apiUrl)}/${encodeURIComponent(id)}/@neru/`;
@@ -138,6 +146,12 @@ try {
   console.log('Registration, reload/session restoration, and scoped data passed.');
 
   await page.getByRole('tab', { name: 'Control', exact: true }).click();
+  await page.getByRole('button', { name: 'Play with NERU', exact: true }).click({ delay: 500 });
+  assert.equal(new URL(page.url()).pathname, '/control', 'Releasing the mascot before two seconds should leave Control open');
+  assert.equal(await page.getByRole('button', { name: 'Open your account' }).count(), 0);
+  assert.equal(await page.getByRole('heading', { name: 'Appearance', exact: true }).count(), 0);
+  assert.equal(await page.getByRole('heading', { name: 'Sound effects', exact: true }).count(), 0);
+  await openConfigurations(page);
   await page.getByRole('button', { name: 'Open your account' }).click();
   await page.getByText(email, { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Revoke session', exact: true }).first().waitFor();
@@ -155,12 +169,16 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('@neru/constellations')), legacyBefore);
   console.log('Legacy backup requires consent, preserves original records, and reserves the selected account.');
   await page.screenshot({ path: join(artifacts, 'account.png'), fullPage: true });
+  await page.getByRole('dialog', { name: 'Account', exact: true }).getByRole('button', { name: 'Dismiss', exact: true }).click();
+  await page.waitForURL('**/configurations');
   await page.route(apiUrl + '/**', route => route.abort('failed'));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Try again', exact: true }).waitFor();
   assert.equal(await page.evaluate(() => Object.keys(sessionStorage).some(key => key.startsWith('neru.refresh.'))), true);
   await page.unroute(apiUrl + '/**');
   await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await openTasks();
+  await page.goto(origin + '/account');
   await page.getByText(email, { exact: true }).waitFor();
   console.log('Offline restore retained credentials; retry recovered the session.');
 
@@ -185,10 +203,12 @@ try {
   console.log('Logout, account switching, logout-all, and login back passed.');
   await verifyControlEditorsBrowser(page);
   await verifyAppearanceBrowser(page);
+  await verifyNativeSurfacesBrowser(page, artifacts);
   await openTasks();
   await verifyUnifiedBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi });
   assert.deepEqual(failures, [], 'No uncaught browser errors');
   console.log(`Browser authentication, device import, original Tasks/Weekly Studio, photos, rewards, diary and archive walkthrough passed. Screenshots: ${artifacts}`);
+}
 } catch (error) {
   if (page) {
     await page.screenshot({ path: join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);
@@ -199,6 +219,10 @@ try {
   }
   throw error;
 } finally {
+  if (page) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.context().unrouteAll({ behavior: 'ignoreErrors' });
+  }
   if (browser) await browser.close();
   await Promise.all(children.map(stop));
 }

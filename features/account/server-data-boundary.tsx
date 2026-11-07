@@ -1,8 +1,9 @@
+import { ButtonLabel, TextButton } from '@/components/app-controls';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Text, View, Pressable } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../auth/auth-provider';
 import { captureAccountStorage } from '../../lib/storage/account-storage';
 import { importDeviceData } from './import-device-data';
@@ -42,7 +43,7 @@ export function ServerDataBoundary({ children }: { children: ReactNode }) {
   return <DataReady.Provider value={ready}><View style={{ flex: 1 }}>
     {children}
     {!ready && <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', padding: 28, gap: 16, backgroundColor: colors.background }}>
-      {state.error ? <><Text accessibilityRole="alert" style={{ color: colors.text }}>{state.error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry account sync" onPress={() => setRetry(value => value + 1)}><Text style={{ color: colors.accent }}>Retry</Text></Pressable></> : <><ActivityIndicator color={colors.accent} /><Text style={{ color: colors.text }}>Syncing your saved data…</Text></>}
+      {state.error ? <><Text accessibilityRole="alert" style={{ color: colors.text }}>{state.error}</Text><TextButton accessibilityRole="button" accessibilityLabel="Retry account sync" onPress={() => setRetry(value => value + 1)}><ButtonLabel>Retry</ButtonLabel></TextButton></> : <><ActivityIndicator color={colors.accent} /><Text style={{ color: colors.text }}>Syncing your saved data…</Text></>}
     </View>}
   </View></DataReady.Provider>;
 }

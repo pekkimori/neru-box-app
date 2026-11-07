@@ -114,18 +114,22 @@ export function createFeedbackPlayer(player: AudioPlayer, replayReadyDelayMs = 7
     get isLoaded() { return player.isLoaded; },
     get isReady() { return ready && !disposed && player.isLoaded; },
     prepare,
-    play() {
+    play(playbackRate = 1) {
       if (!ready || disposed || !player.isLoaded) return false;
       ready = false;
       try {
         if (replayFallback) clearTimeout(replayFallback);
+        // Apply to every play, including reused pool slots. Turning off pitch
+        // correction makes the small rate changes audible on iOS and Android.
+        player.shouldCorrectPitch = false;
+        player.setPlaybackRate(playbackRate);
         player.play();
         // A few Android/Media3 versions occasionally omit didJustFinish for
         // repeated short clips. Re-arm the player even if that event is lost.
         replayFallback = setTimeout(() => {
           replayFallback = null;
           if (!ready && !preparing && !disposed) void prepare();
-        }, replayReadyDelayMs);
+        }, Math.ceil(replayReadyDelayMs / playbackRate));
         (replayFallback as ReturnType<typeof setTimeout> & { unref?: () => void }).unref?.();
         return true;
       } catch {

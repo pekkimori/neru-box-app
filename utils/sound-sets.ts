@@ -1,4 +1,4 @@
-export type InteractionSound = 'tap' | 'catch' | 'success';
+export type InteractionSound = 'tap' | 'catch' | 'success' | 'swipe';
 export type AudibleSoundSetId = 'classic' | 'soft' | 'arcade' | 'crystal' | 'wood' | 'bubble' | 'cosmic' | 'typewriter';
 export type SoundSetId = AudibleSoundSetId | 'silent';
 
@@ -19,7 +19,7 @@ export function isSoundSetId(value: unknown): value is SoundSetId {
 }
 
 export const FEEDBACK_SAMPLE_RATE = 22_050;
-export const SOUND_DURATION: Record<InteractionSound, number> = { tap: 0.24, catch: 0.2, success: 0.52 };
+export const SOUND_DURATION: Record<InteractionSound, number> = { tap: 0.24, catch: 0.2, success: 0.52, swipe: 0.19 };
 
 function sweptSine(t: number, duration: number, startHz: number, endHz: number) {
   return Math.sin(Math.PI * 2 * (startHz * t + (endHz - startHz) / duration * 0.5 * t * t));
@@ -47,7 +47,24 @@ export function createSoundSamples(set: AudibleSoundSetId, kind: InteractionSoun
     const success = kind === 'success';
     const frequency = kind === 'tap' ? 440 : 660;
     let sample = 0;
-    if (set === 'classic') {
+    if (kind === 'swipe') {
+      // Low, rounded sweeps only. The former shared "air" oscillator aliased
+      // into piercing high tones in every set, even with a quiet base note.
+      const [startHz, endHz, overtone] = {
+        classic: [340, 200, 0.08],
+        soft: [220, 160, 0],
+        arcade: [400, 240, 0.12],
+        crystal: [480, 320, 0.06],
+        wood: [260, 180, 0.18],
+        bubble: [190, 330, 0.04],
+        cosmic: [360, 160, 0.1],
+        typewriter: [300, 210, 0.2],
+      }[set];
+      const envelope = Math.sin(Math.PI * Math.min(1, x / (duration - 0.018))) ** 2;
+      const sweepDuration = duration - 0.018;
+      sample = envelope * (sweptSine(x, sweepDuration, startHz, endHz)
+        + overtone * sweptSine(x, sweepDuration, startHz * 1.5, endHz * 1.5));
+    } else if (set === 'classic') {
       if (kind === 'tap') {
         sample = (local < 0 ? Math.sin(Math.PI * 2 * 240 * t) * (t / 0.018) * 0.07 : 0)
           + attack * (sweptSine(x, 0.222, 1_250, 520) * Math.exp(-x * 18) * 0.82
@@ -98,7 +115,7 @@ export function createSoundSamples(set: AudibleSoundSetId, kind: InteractionSoun
     samples[index] = sample;
     peak = Math.max(peak, Math.abs(sample));
   }
-  const level = set === 'soft' ? 0.48 : 0.9;
+  const level = kind === 'swipe' ? (set === 'soft' ? 0.22 : 0.38) : set === 'soft' ? 0.48 : 0.9;
   if (peak) for (let i = 0; i < samples.length; i += 1) samples[i] *= level / peak;
   return samples;
 }

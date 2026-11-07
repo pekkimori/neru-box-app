@@ -1,23 +1,23 @@
+import { boxStyle } from '@/theme/boxes';
+import { ButtonIcon, IconButton, InteractiveSurface } from '@/components/app-controls';
 // features/tasks/galaxy/galaxy-controls.tsx
 // Overlay controls: zoom buttons and an aspect-correct tap-to-pan mini-map.
 // Rendered absolutely on top of the SVG canvas.
 // The Return/Back control lives in the route shell top-bar — not here.
 
 import { useCallback, useRef } from 'react';
-import { type View } from 'react-native';
-import Svg, { Circle, Line, Rect } from 'react-native-svg';
+import { type ViewInstance } from 'react-native';
+import Svg, { Circle, Rect } from 'react-native-svg';
 import Animated, {
   FadeInDown,
   ReduceMotion,
 } from 'react-native-reanimated';
-import { MotionPressable as Pressable } from '@/components/motion';
-import { R } from '../tokens';
+
 import { GalaxyPalette } from './galaxy-theme';
 import type { GalaxyStar, ViewBox } from './galaxy-geometry';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
 
-const TARGET = 44;
 
 interface Props {
   fullExtent: ViewBox;
@@ -41,7 +41,7 @@ export function GalaxyControls({
   onCenterViewBox,
 }: Props) {
   const styles = useThemedStyles(themedStyles);
-  const minimapRef = useRef<View>(null);
+  const minimapRef = useRef<ViewInstance>(null);
   const mmW = 80;
   const mmH = 80;
   const minimapScale = Math.min(mmW / fullExtent.w, mmH / fullExtent.h);
@@ -68,13 +68,13 @@ export function GalaxyControls({
         Math.max(fullExtent.y + (locationY - minimapOffsetY) / minimapScale, fullExtent.y),
         fullExtent.y + fullExtent.h,
       );
-      const centerX = visibleViewport.w >= fullExtent.w
+      const centerX = visibleViewport.w>= fullExtent.w
         ? fullExtent.x + fullExtent.w / 2
         : Math.min(
           Math.max(worldX, fullExtent.x + visibleViewport.w / 2),
           fullExtent.x + fullExtent.w - visibleViewport.w / 2,
         );
-      const centerY = visibleViewport.h >= fullExtent.h
+      const centerY = visibleViewport.h>= fullExtent.h
         ? fullExtent.y + fullExtent.h / 2
         : Math.min(
           Math.max(worldY, fullExtent.y + visibleViewport.h / 2),
@@ -132,51 +132,39 @@ export function GalaxyControls({
         style={styles.zoomControls}
         entering={FadeInDown.duration(260).reduceMotion(ReduceMotion.System)}
       >
-        <Pressable
-          style={styles.btn}
+        <IconButton
+
           onPress={onZoomIn}
           accessibilityRole="button"
           accessibilityLabel="Zoom in"
         >
-          <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={12} y1={7} x2={12} y2={17} stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={7} y1={12} x2={17} y2={12} stroke={GalaxyPalette.text} strokeWidth={2} />
-          </Svg>
-        </Pressable>
+          <ButtonIcon name="add" />
+        </IconButton>
 
-        <Pressable
-          style={styles.btn}
+        <IconButton
+
           onPress={onZoomOut}
           accessibilityRole="button"
           accessibilityLabel="Zoom out"
         >
-          <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={7} y1={12} x2={17} y2={12} stroke={GalaxyPalette.text} strokeWidth={2} />
-          </Svg>
-        </Pressable>
+          <ButtonIcon name="remove" />
+        </IconButton>
 
-        <Pressable
-          style={styles.btn}
+        <IconButton
+
           onPress={onResetView}
           accessibilityRole="button"
           accessibilityLabel="Reset galaxy view"
         >
-          <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Circle cx={12} cy={12} r={11} fill="none" stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={12} y1={5} x2={12} y2={10} stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={8} y1={7} x2={12} y2={5} stroke={GalaxyPalette.text} strokeWidth={2} />
-            <Line x1={16} y1={7} x2={12} y2={5} stroke={GalaxyPalette.text} strokeWidth={2} />
-          </Svg>
-        </Pressable>
+          <ButtonIcon name="scan-outline" />
+        </IconButton>
       </Animated.View>
 
       <Animated.View
         style={styles.minimap}
         entering={FadeInDown.delay(90).duration(280).reduceMotion(ReduceMotion.System)}
       >
-        <Pressable
+        <InteractiveSurface
           ref={minimapRef}
           pressScale={1}
           onPress={handleMinimapPress}
@@ -198,7 +186,7 @@ export function GalaxyControls({
                 opacity={0.8}
               />
             ))}
-            {viewportRight > viewportLeft && viewportBottom > viewportTop ? (
+            {viewportRight> viewportLeft && viewportBottom> viewportTop ? (
               <Rect
                 x={viewportLeft}
                 y={viewportTop}
@@ -211,23 +199,13 @@ export function GalaxyControls({
               />
             ) : null}
           </Svg>
-        </Pressable>
+        </InteractiveSurface>
       </Animated.View>
     </>
   );
 }
 
 const themedStyles = createEditorialStyles(() => ({
-  btn: {
-    width: TARGET,
-    height: TARGET,
-    borderRadius: R.full,
-    backgroundColor: GalaxyPalette.surfaceRaised,
-    borderWidth: 1,
-    borderColor: GalaxyPalette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   zoomControls: {
     position: 'absolute',
     bottom: 24,
@@ -235,16 +213,5 @@ const themedStyles = createEditorialStyles(() => ({
     gap: 8,
     zIndex: 20,
   },
-  minimap: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    width: 84,
-    backgroundColor: GalaxyPalette.surface,
-    borderRadius: R.sm,
-    borderWidth: 1,
-    borderColor: GalaxyPalette.border,
-    padding: 2,
-    zIndex: 20,
-  },
+  minimap: { ...boxStyle(GalaxyPalette, { variant: 'media', padding: 'none' }), position: 'absolute', bottom: 24, right: 16, width: 84, zIndex: 20 },
 }));

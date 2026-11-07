@@ -1,6 +1,6 @@
+import { AppButton } from '@/components/native-controls';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
-import { AuthButton } from './auth-ui';
 import { errorMessage } from '@/lib/api/client';
 
 export type GoogleButtonProps = {
@@ -37,5 +37,5 @@ export function GoogleButton({ busy, onBusy, onToken, onError }: GoogleButtonPro
       onBusy(false);
     }
   };
-  return <AuthButton secondary label="Continue with Google" disabled={busy} onPress={() => { void signIn(); }} />;
+  return <AppButton variant="secondary" label="Continue with Google" disabled={busy} onPress={() => { void signIn(); }} />;
 }

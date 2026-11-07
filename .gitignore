@@ -31,7 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+!.env.*.example
 
 # typescript
 *.tsbuildinfo
@@ -46,3 +49,14 @@ app-example
 .omo/
 .superpowers/
 .claude/
+.agents/
+.codex/
+.codegraph
+skills-lock.json
+
+# browser verification output
+.playwright-cli/
+/output/
+/playwright-report/
+/test-results/
+/coverage/

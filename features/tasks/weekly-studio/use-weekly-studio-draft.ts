@@ -52,6 +52,7 @@ export function useWeeklyStudioDraft({
   const constellations = draftConstellations ?? storedConstellations;
   const stars = useMemo(() => [...new Map([...storedStars, ...(draftStars ?? [])].map(star => [star.id, star])).values()], [storedStars, draftStars]);
   const plan = draftPlans[selectedDate] ?? storedPlan;
+  const taskEditingDisabled = !canEdit || inFlight.current || uncertain;
 
   const stagePlanUpdate = (update: (current: DailyPlan) => DailyPlan) => {
     if (!canEdit || inFlight.current || uncertain) return;
@@ -72,7 +73,7 @@ export function useWeeklyStudioDraft({
     if (!canEdit || inFlight.current || uncertain || !trimmedLabel || plan.blocks[block].length >= 4) return false;
     const starId = Crypto.randomUUID();
     setDraftStars((current) => [
-      ...(current ?? storedStars),
+      ...(current ?? []),
       { id: starId, constellationId, label: trimmedLabel },
     ]);
     stagePlanUpdate((current) => ({
@@ -100,23 +101,29 @@ export function useWeeklyStudioDraft({
     }));
   };
 
-  const moveTask = (
+  const editTask = (
     starId: string,
-    constellationId: string,
+    label: string,
     targetBlock: BlockType,
-  ) => {
+  ): boolean => {
+    const existing = allPlanTasks(plan).find(item => item.task.starId === starId);
+    const star = stars.find(item => item.id === starId);
+    const trimmedLabel = label.trim();
+    if (taskEditingDisabled || !existing || !star || !trimmedLabel ||
+        (existing.block !== targetBlock && plan.blocks[targetBlock].length >= 4)) return false;
+    if (existing.block === targetBlock && star.label === trimmedLabel) return true;
+    if (star.label !== trimmedLabel) {
+      setDraftStars(current => [...(current ?? []).filter(item => item.id !== starId), { ...star, label: trimmedLabel }]);
+    }
     stagePlanUpdate((current) => {
-      const existing = allPlanTasks(current)
-        .find((item) => item.task.starId === starId)?.task;
-      if (!existing || current.blocks[targetBlock].length >= 4) return current;
-      const blocks = {
-        morning: current.blocks.morning.filter((task) => task.starId !== starId),
-        afternoon: current.blocks.afternoon.filter((task) => task.starId !== starId),
-        evening: current.blocks.evening.filter((task) => task.starId !== starId),
-      };
-      blocks[targetBlock] = [...blocks[targetBlock], { ...existing, constellationId }];
-      return { ...current, blocks };
+      if (existing.block === targetBlock) return current;
+      return { ...current, blocks: {
+        ...current.blocks,
+        [existing.block]: current.blocks[existing.block].filter(task => task.starId !== starId),
+        [targetBlock]: [...current.blocks[targetBlock], existing.task],
+      } };
     });
+    return true;
   };
 
   const addNebula = (name: string, icon: string): boolean => {
@@ -162,7 +169,7 @@ export function useWeeklyStudioDraft({
     if (!canEdit) throw new Error('Reconnect and refresh before saving your plan.');
     const days = Object.entries(draftPlans).map(([date, plan]) => {
       const base = bases.current[date] ?? null;
-      const tasks = studioTasks(plan, base, stars);
+      const tasks = studioTasks(plan, base, draftStars ?? []);
       return { date, expectedUpdatedAt: base?.updatedAt ?? null, edits: weeklyDayEdits({ base, tasks }, true) };
     }).filter(day => day.edits.length);
     const changes: StudioNebulaEdit[] = constellations.filter(item => !nebulas.some(nebula => nebula.id === item.id)).map(item => ({ kind: 'create', id: item.id, name: item.name, icon: item.icon }));
@@ -178,7 +185,7 @@ export function useWeeklyStudioDraft({
     const repository = createServerRepository(client, captureAccountStorage());
     const latestDays = await Promise.all(Object.keys(draftPlans).map(async date => [date, (await repository.refreshScheduleOrEmpty(date)).data] as const));
     const latest = Object.fromEntries(latestDays);
-    const reviewed = reviewWeeklyDraft({ version: 1, days: Object.fromEntries(Object.entries(draftPlans).map(([date, plan]) => [date, { base: bases.current[date] ?? null, tasks: studioTasks(plan, bases.current[date] ?? null, stars) }])) }, latest);
+    const reviewed = reviewWeeklyDraft({ version: 1, days: Object.fromEntries(Object.entries(draftPlans).map(([date, plan]) => [date, { base: bases.current[date] ?? null, tasks: studioTasks(plan, bases.current[date] ?? null, draftStars ?? []) }])) }, latest);
     const domains = (await repository.refreshNebulas()).data;
     for (const [id, base] of Object.entries(nebulaBases.current)) {
       const fresh = domains.find(item => item.id === id);
@@ -186,11 +193,12 @@ export function useWeeklyStudioDraft({
       nebulaBases.current[id] = fresh;
     }
     bases.current = latest;
-    setDraftPlans(Object.fromEntries(Object.entries(reviewed.days).map(([date, day]) => {
+    const reviewedSchedules = Object.entries(reviewed.days).map(([date, day]) => {
       const base: ScheduleDto = day.base ?? { id: '', userId: user.id, date, blocks: DEFAULT_WEEK_BLOCKS, tasks: [], reflections: {}, createdAt: '', updatedAt: '' };
-      return [date, accountPlan({ ...base, tasks: day.tasks }, date)];
-    })));
-    setDraftStars(current => [...accountStars(latestDays.flatMap(([, day]) => day ? [day] : [])), ...(current ?? [])]);
+      return { ...base, tasks: day.tasks };
+    });
+    setDraftPlans(Object.fromEntries(reviewedSchedules.map(day => [day.date, accountPlan(day, day.date)])));
+    setDraftStars(accountStars(reviewedSchedules));
   };
 
   const resetDrafts = () => {
@@ -206,12 +214,12 @@ export function useWeeklyStudioDraft({
     plan,
     constellations,
     stars,
-    draftPlans,
     hasUnsavedChanges,
     setHasUnsavedChanges,
     createTask,
     removeTask,
-    moveTask,
+    editTask,
+    taskEditingDisabled,
     addNebula,
     deleteNebula,
     resetDrafts,

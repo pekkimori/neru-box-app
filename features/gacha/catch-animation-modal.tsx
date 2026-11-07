@@ -1,5 +1,6 @@
+import { InteractiveSurface } from '@/components/app-controls';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
 
 import { MotionModal as Modal } from '@/components/motion';
 import { RARITY_COLORS, type Rarity } from '@/features/gacha/pokemon-catalog';
@@ -42,13 +43,13 @@ export function CatchAnimationModal({
   const [focused, setFocused] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [opened, setOpened] = useState(false);
-  const isBatch = pullCount > 1;
+  const isBatch = pullCount> 1;
   const batchExtraTaps = isBatch ? BATCH_EXTRA_TAPS : 0;
   const requiredTaps = CATCH_TAPS_BY_RARITY[rarity] + batchExtraTaps;
   const epicSequenceTaps = CATCH_TAPS_BY_RARITY.epic + batchExtraTaps;
   const legendaryRevealTap = LEGENDARY_REVEAL_TAP + batchExtraTaps;
-  const rarityRevealed = tapCount >= RARITY_REVEAL_TAP;
-  const legendaryUpgraded = rarity === 'legendary' && tapCount >= legendaryRevealTap;
+  const rarityRevealed = tapCount>= RARITY_REVEAL_TAP;
+  const legendaryUpgraded = rarity === 'legendary' && tapCount>= legendaryRevealTap;
   const signalRarity = rarity === 'legendary' && !legendaryUpgraded ? 'epic' : rarity;
   const signalColor = rarityRevealed ? RARITY_COLORS[signalRarity] : NEUTRAL_SIGNAL_COLOR;
   const useNativeDriver = Platform.OS !== 'web';
@@ -111,7 +112,7 @@ export function CatchAnimationModal({
   }, [ballScale, flash, glow, onComplete, open, useNativeDriver]);
 
   const handleBallPress = useCallback(() => {
-    if (completedRef.current || tapsRef.current >= requiredTaps) return;
+    if (completedRef.current || tapsRef.current>= requiredTaps) return;
 
     const nextTap = tapsRef.current + 1;
     const direction = nextTap % 2 === 0 ? -1 : 1;
@@ -173,12 +174,12 @@ export function CatchAnimationModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onDismiss={handleDismiss} onRequestClose={onComplete}>
-      <Pressable
+      <InteractiveSurface customFeedback
         accessibilityRole="button"
         accessibilityLabel={opened ? 'Poké Ball opened' : `Catching ${pullCount === 1 ? 'one Pokémon' : `${pullCount} Pokémon`}, ${announcedRemainingTaps} ${announcedRemainingTaps === 1 ? 'tap' : 'taps'} remaining`}
         accessibilityHint="Tap anywhere repeatedly to continue the capture sequence"
-        accessibilityState={{ disabled: opened || tapCount >= requiredTaps }}
-        disabled={opened || tapCount >= requiredTaps}
+        accessibilityState={{ disabled: opened || tapCount>= requiredTaps }}
+        disabled={opened || tapCount>= requiredTaps}
         onBlur={() => setFocused(false)}
         onFocus={() => setFocused(true)}
         onPress={handleBallPress}
@@ -222,7 +223,7 @@ export function CatchAnimationModal({
                 <View style={styles.ballHighlight} />
               </Animated.View>
               <Animated.View style={[styles.ballButtonOuter, { opacity: buttonOpacity, transform: [{ scale: buttonScale }] }]}>
-                <View style={[styles.ballButtonInner, tapCount > 0 && { backgroundColor: signalColor }]} />
+                <View style={[styles.ballButtonInner, tapCount> 0 && { backgroundColor: signalColor }]} />
               </Animated.View>
             </View>
           </Animated.View>
@@ -243,7 +244,7 @@ export function CatchAnimationModal({
             );
           })}
         </View>
-      </Pressable>
+      </InteractiveSurface>
     </Modal>
   );
 }

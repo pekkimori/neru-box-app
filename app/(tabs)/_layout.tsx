@@ -1,3 +1,4 @@
+import { tabSceneBottom } from '@/theme/layout';
 import { useServerDataReady } from '@/features/account/server-data-boundary';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
@@ -5,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingTabBar } from '@/components/floating-tab-bar';
 import { useAppTheme } from '@/theme/app-theme';
+
+export const unstable_settings = { initialRouteName: 'tasks' };
 
 export default function TabLayout() {
   const ready = useServerDataReady();
@@ -16,7 +19,6 @@ export default function TabLayout() {
   return (
     <Tabs
       detachInactiveScreens={!isWeb}
-      initialRouteName="tasks"
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         animation: 'none',
@@ -26,7 +28,7 @@ export default function TabLayout() {
         tabBarHideOnKeyboard: true,
         sceneStyle: {
           backgroundColor: colors.background,
-          paddingBottom: Math.max(Platform.OS === 'ios' ? 44 : 30, insets.bottom),
+          paddingBottom: tabSceneBottom(insets.bottom, Platform.OS === 'ios'),
         },
       }}
     >

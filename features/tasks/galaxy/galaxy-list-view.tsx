@@ -1,3 +1,5 @@
+import { boxStyle } from '@/theme/boxes';
+import { AppBox } from '@/components/app-box';
 // features/tasks/galaxy/galaxy-list-view.tsx
 // Accessible searchable SectionList grouped by constellation + ISO week
 // descending. Includes typed search filtering by label, nebula, or week.
@@ -10,7 +12,7 @@ import {
   View,
   TextInput,
 } from 'react-native';
-import { Sp, R } from '../tokens';
+import { Sp } from '../tokens';
 import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { compareByCompletion } from './galaxy-edges';
 import { GalaxyPalette } from './galaxy-theme';
@@ -71,7 +73,7 @@ export function GalaxyListView({ stars }: Props) {
 
   const renderItem = useCallback(
     ({ item }: { item: GalaxyStar }) => (
-      <View
+      <AppBox variant="card" padding="sm"
         style={styles.row}
         accessibilityLabel={`${item.label}, ${item.constellationName}, completed ${formatCompletionDate(item.completionDate)}, ${item.coinsEarned} coins earned`}
       >
@@ -89,7 +91,7 @@ export function GalaxyListView({ stars }: Props) {
           </Text>
         </View>
         <Text style={styles.coins}>{item.coinsEarned}</Text>
-      </View>
+      </AppBox>
     ),
     [styles],
   );
@@ -115,7 +117,7 @@ export function GalaxyListView({ stars }: Props) {
     () =>
       query.trim().length > 0 ? (
         <Text style={styles.emptyText}>No stars match &ldquo;{query}&rdquo;</Text>
-      ) : null,
+      ) : undefined,
     [query, styles],
   );
 
@@ -156,18 +158,7 @@ const themedStyles = createEditorialStyles(() => ({
     paddingTop: Sp.sm,
     paddingBottom: Sp.xs,
   },
-  searchInput: {
-    backgroundColor: GalaxyPalette.surface,
-    borderWidth: 1,
-    borderColor: GalaxyPalette.border,
-    borderRadius: R.sm,
-    paddingHorizontal: Sp.sm,
-    paddingVertical: 10,
-    color: GalaxyPalette.text,
-    fontSize: 14,
-    fontWeight: '600',
-    minHeight: 44,
-  },
+  searchInput: { ...boxStyle(GalaxyPalette, { variant: 'field' }), color: GalaxyPalette.text, fontSize: 14, fontWeight: '600', minHeight: 44 },
   list: { paddingHorizontal: Sp.lg, paddingBottom: 120 },
   emptyText: {
     color: GalaxyPalette.textDim,
@@ -194,18 +185,7 @@ const themedStyles = createEditorialStyles(() => ({
     fontSize: 12,
     fontWeight: '600',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: Sp.sm,
-    borderRadius: R.sm,
-    backgroundColor: GalaxyPalette.surface,
-    borderWidth: 1,
-    borderColor: GalaxyPalette.border,
-    marginBottom: Sp.xs,
-    minHeight: 52,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: Sp.xs, minHeight: 52 },
   rowIcon: {
     width: 32,
     height: 32,

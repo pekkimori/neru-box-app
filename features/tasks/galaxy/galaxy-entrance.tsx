@@ -201,7 +201,6 @@ export function GalaxyEntrance({
         </Animated.View>
 
         <Animated.View style={[styles.copy, copyStyle]}>
-          <Text style={styles.eyebrow}>DEEP-SKY ARRAY · 07</Text>
           <Text style={styles.title}>SKY OBSERVER</Text>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, ready && styles.statusDotReady]} />
@@ -310,13 +309,6 @@ const themedStyles = createEditorialStyles(() => ({
   copy: {
     alignItems: 'center',
     marginTop: 28,
-  },
-  eyebrow: {
-    color: GalaxyPalette.textMuted,
-    fontSize: 9,
-    lineHeight: 13,
-    fontWeight: '800',
-    letterSpacing: 1.8,
   },
   title: {
     color: GalaxyPalette.text,

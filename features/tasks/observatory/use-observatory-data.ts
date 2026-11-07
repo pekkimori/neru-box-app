@@ -63,7 +63,10 @@ export function useObservatoryData() {
     && sleepLoaded && streakLoaded;
 
   const trueActivePeriod = getActivePeriod(activeSleep, now);
-  const [selectedPeriod, setSelectedPeriod] = useState<DisplayPeriod>(trueActivePeriod);
+  // Follow the actual period until the user makes a selection. The saved
+  // sleep schedule arrives asynchronously, so the initial default can change.
+  const [requestedPeriod, setSelectedPeriod] = useState<DisplayPeriod | null>(null);
+  const selectedPeriod = requestedPeriod ?? trueActivePeriod;
   const [selectedNebulaId, setSelectedNebulaId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
 
@@ -71,7 +74,7 @@ export function useObservatoryData() {
   // Correct the derived selection during render so hidden Sleep content is
   // never exposed for an extra effect-driven render.
   if (selectedPeriod === 'sleep' && trueActivePeriod !== 'sleep') {
-    setSelectedPeriod(trueActivePeriod);
+    setSelectedPeriod(null);
   }
 
   const periods = useMemo((): PeriodConfig[] => {
@@ -139,8 +142,12 @@ export function useObservatoryData() {
   const sleepModeActive = isSleepWindow;
   const sleepBlocked = sleepModeActive && selectedPeriod !== 'sleep';
 
+  // Availability describes the routine/time gate, not a transient refresh.
+  // Keep its presentation stable while separately disabling account actions.
+  const taskActionsDisabled = routinesSync.disabled || !planning.ready || planning.saving
+    || planning.pending.length > 0 || planning.pendingPhotos.length > 0;
   const tasksUnlocked =
-    !routinesSync.disabled && planning.ready && !planning.saving && !planning.pending.length && !planning.pendingPhotos.length && selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
+    selectedPeriod !== 'sleep' && !isSelectedFuture && !sleepModeActive &&
     (displayRoutines.length === 0 || displayRoutines.every((r) => isQuestComplete(r.id)));
 
   const routinesReadOnly =
@@ -178,10 +185,10 @@ export function useObservatoryData() {
       return plan.blocks[block].map((task) => ({
         block,
         task,
-        available: gateOpen && routinesComplete && planning.ready && !planning.saving,
+        available: gateOpen && routinesComplete,
       }));
     })
-  ), [plan.blocks, canCompleteBlock, getQuestsForBlock, isQuestComplete, planning.ready, planning.saving]);
+  ), [plan.blocks, canCompleteBlock, getQuestsForBlock, isQuestComplete]);
 
   const todayTasks = useMemo(() => {
     if (!selectedBlock) return [];
@@ -214,7 +221,7 @@ export function useObservatoryData() {
     trueActivePeriod, periodStateMap,
     isSelectedFuture, sleepBlocked, routinesReadOnly, canCompleteBlock,
     selectedNebulaId, setSelectedNebulaId, editMode, setEditMode,
-    displayRoutines, tasksUnlocked, plannedByStar, todayTasks, filteredTodayTasks, dailyVisorTasks,
+    displayRoutines, tasksUnlocked, taskActionsDisabled, plannedByStar, todayTasks, filteredTodayTasks, dailyVisorTasks,
     weekDays, weekProgress, domainProgress, reloadWeekly,
   } as const;
 }

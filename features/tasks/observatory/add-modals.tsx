@@ -1,132 +1,47 @@
-import { iconKey } from '../../../lib/icons/icon-reference';
-// features/tasks/observatory/add-modals.tsx
-import { useRef, useState, type ReactNode } from 'react';
-import {
-  KeyboardAvoidingView, Platform, Pressable, Text, TextInput,
-  View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { SectionHeading } from '@/components/section-heading';
+import { LayoutStyles } from '@/theme/layout';
+import { boxStyle } from '@/theme/boxes';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { TextInput, View } from 'react-native';
+import { AppEditor, type AppEditorHandle } from '@/components/app-editor';
+import { iconKey } from '@/lib/icons/icon-reference';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
-import { Palette, Sp, R, useTasksPalette } from '../tokens';
+import { Type } from '@/theme/typography';
+import { Palette, Sp,  useTasksPalette } from '../tokens';
 
-// ── Shared styles for add modals ──────────────────────────────────────
-const themedS = createEditorialStyles(() => ({
-  backdrop: {
-    flex: 1, backgroundColor: Palette.backdrop,
-    alignItems: 'center', justifyContent: 'center', padding: Sp.lg,
-  },
-  card: {
-    width: '100%', maxWidth: 440, backgroundColor: Palette.bgRaised,
-    borderRadius: R.lg, borderWidth: 1, borderColor: Palette.gray,
-    padding: Sp.lg, gap: Sp.md,
-  },
-  title: { color: Palette.warmWhite, fontSize: 20, fontWeight: '800' },
-  input: {
-    minHeight: 48, borderRadius: R.md, backgroundColor: Palette.bgElevated,
-    borderWidth: 1, borderColor: Palette.gray, paddingHorizontal: Sp.md,
-    color: Palette.warmWhite, fontSize: 16, fontWeight: '600',
-  },
-  iconInput: { width: 72, textAlign: 'center' },
-  nameInput: { flex: 1, minWidth: 0 },
-  inlineRow: { flexDirection: 'row', gap: Sp.sm },
-  actions: { flexDirection: 'row', gap: Sp.sm },
-  btnPrimary: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: Sp.xs,
-    backgroundColor: Palette.red, borderRadius: R.md,
-    paddingVertical: 10, minHeight: 44,
-  },
-  btnPrimaryText: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
-  btnDisabled: { opacity: 0.45 },
-  btnSecondary: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray,
-    paddingVertical: 10, minHeight: 44,
-  },
-  btnSecondaryText: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
-}));
-
-interface AddConstellationModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (name: string, icon: string) => boolean | Promise<boolean>;
-  error?: string | null;
-  entity?: 'nebula' | 'constellation';
-  children?: ReactNode;
-}
-
-export function AddConstellationModal({
-  visible, onClose, onSubmit, error, entity = 'nebula', children,
-}: AddConstellationModalProps) {
-  const S = useThemedStyles(themedS);
-  const Palette = useTasksPalette();
+export function AddConstellationModal({ visible, onClose, onSubmit, error, entity = 'nebula', children }: {
+  visible: boolean; onClose: () => void; onSubmit: (name: string, icon: string) => boolean | Promise<boolean>;
+  error?: string | null; entity?: 'nebula' | 'constellation'; children?: ReactNode;
+}) {
+  const styles = useThemedStyles(themedStyles);
+  const colors = useTasksPalette();
+  const editor = useRef<AppEditorHandle>(null);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('✨');
-  const [submitting, setSubmitting] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const inFlight = useRef(false);
-  const close = () => { if (!inFlight.current) onClose(); };
-
-  const handleSubmit = async () => {
-    const trimmed = name.trim();
-    if (!trimmed || inFlight.current) return;
-    inFlight.current = true;
-    setSubmitting(true); setLocalError(null);
-    try {
-      if (await onSubmit(trimmed, iconKey(icon.trim() || 'sparkles'))) { setName(''); setIcon('✨'); onClose(); }
-    } catch (cause) { setLocalError(cause instanceof Error ? cause.message : 'Could not save. Please retry.'); }
-    finally { inFlight.current = false; setSubmitting(false); }
-  };
-
-  return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onDismiss={() => { setName(''); setIcon('✨'); }}
-      onRequestClose={close}
-    >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Pressable style={S.backdrop} onPress={close}>
-        <Pressable style={S.card} onPress={(e) => e.stopPropagation()}>
-          <Text style={S.title}>New {entity}</Text>
-          <View style={S.inlineRow}>
-            <TextInput
-              accessibilityLabel="Domain icon"
-              value={icon} onChangeText={setIcon}
-              placeholder="✨" placeholderTextColor={Palette.warmMuted}
-              style={[S.input, S.iconInput]} maxLength={64}
-            />
-            <TextInput
-              accessibilityLabel="Domain name"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-              value={name} onChangeText={setName}
-              placeholder={entity === 'nebula' ? 'Nebula name' : 'Constellation name'} placeholderTextColor={Palette.warmMuted}
-              style={[S.input, S.nameInput]} autoFocus maxLength={30}
-            />
-          </View>
-          {children}
-          {(error || localError) && <Text accessibilityRole="alert" style={{ color: Palette.red }}>{error || localError}</Text>}
-          <View style={S.actions}>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel" style={S.btnSecondary} onPress={close} disabled={submitting}>
-              <Text style={S.btnSecondaryText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.btnPrimary, !name.trim() && S.btnDisabled]}
-              accessibilityRole="button"
-              accessibilityLabel="Create"
-              onPress={() => { void handleSubmit(); }} disabled={!name.trim() || submitting}
-            >
-              <Ionicons name="add-circle" size={16} color={Palette.onRed} />
-              <Text style={S.btnPrimaryText}>{submitting ? 'Saving…' : 'Create'}</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
+  const entityLabel = entity === 'nebula' ? 'Nebula' : 'Constellation';
+  useEffect(() => { if (!visible) { setName(''); setIcon('✨'); } }, [visible]);
+  const save = () => onSubmit(name.trim(), iconKey(icon.trim() || 'sparkles'));
+  return <AppEditor ref={editor} visible={visible} title={`New ${entity}`} onDismiss={onClose} onSave={save}
+    saveLabel="Create" dismissLabel="Cancel" error={error} disabled={!name.trim()}>
+    <View style={styles.body}>
+      <SectionHeading>{`${entityLabel} details`}</SectionHeading>
+      <View style={styles.row}>
+        <TextInput accessibilityLabel={`${entityLabel} icon`} value={icon} onChangeText={setIcon}
+          placeholder="✨" placeholderTextColor={colors.warmMuted} style={[styles.input, styles.icon]} maxLength={64} />
+        <TextInput accessibilityLabel={`${entityLabel} name`} returnKeyType="done" onSubmitEditing={() => editor.current?.submit()} value={name} onChangeText={setName}
+          placeholder={`${entityLabel} name`} placeholderTextColor={colors.warmMuted}
+          style={[styles.input, styles.name]} autoFocus maxLength={30} />
+      </View>
+      {children}
+    </View>
+  </AppEditor>;
 }
+
+const themedStyles = createEditorialStyles(() => ({
+  body: { ...LayoutStyles.presentationBody },
+  row: { flexDirection: 'row', gap: Sp.sm },
+  input: { ...boxStyle(Palette, { variant: 'field' }), ...Type.input, minHeight: 48, color: Palette.warmWhite },
+  icon: { width: 72, textAlign: 'center' },
+  name: { flex: 1, minWidth: 0 },
+}));

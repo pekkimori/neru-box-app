@@ -14,6 +14,8 @@ Conversations, user messages, complete replies, personality and editable memorie
 
 Choose Warm, Direct or Curious in Customize. Add, edit or remove up to 50 memories (500 characters each). Changes are saved before the UI confirms them and affect the next agent turn. The server reads its own saved preferences; client request metadata cannot supply another user's identity or override tool authorization. Memory text is personal context, not permission to execute tools. Removing a memory removes it from current preferences; existing messages are still part of conversation history until that conversation is deleted.
 
+The Chat page also offers a short personality quiz: three questions match the user to Warm, Direct or Curious, with the explicit reply preference breaking a tie. A fourth step gathers a current goal, an optional preferred name and an optional focus time. The result previews the personality and details before saving them together in one preferences command. Details appear as editable memories in Personalize; retaking the quiz updates those entries and preserves other memories. Leaving the quiz before saving changes no preferences.
+
 History pages contain up to 50 conversations or turns. Use Load more conversations / Load earlier messages for older records. Cached history is account/server scoped and remains readable offline; sending requires a successful refresh. Rename/delete/preferences use expected revisions to prevent a stale device overwriting newer changes. An uncertain save keeps its exact operation ID/input on the device and offers Retry saved change after reload. Another change is blocked until that attempt is resolved.
 
 ## Interruption and actions

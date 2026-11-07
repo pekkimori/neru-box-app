@@ -1,19 +1,16 @@
+import { AppLayout, Space } from '@/theme/layout';
+import { AppBox } from '@/components/app-box';
+import { ButtonIcon, IconButton } from '@/components/app-controls';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
-import {
-  Pressable,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { NeruRobot, type NeruRobotState } from '@/components/neru-robot';
 import { useCoins } from '@/hooks/useCoins';
 import { createEditorialPalette, createEditorialStyles } from '@/theme/editorial-theme';
-import { useAppTheme, useThemedStyles } from '@/theme/app-theme';
+import { useThemedStyles } from '@/theme/app-theme';
 import { Type } from '@/theme/typography';
-import { playTapFeedback } from '@/utils/interaction-feedback';
 
 const Palette = createEditorialPalette();
 
@@ -28,6 +25,7 @@ export type PageHeaderAction = {
 type PageHeaderProps = {
   title: string;
   tabIndex: number;
+  showCoins?: boolean;
   actions?: readonly PageHeaderAction[];
   robotState?: NeruRobotState;
   typingPulse?: number;
@@ -37,19 +35,20 @@ type PageHeaderProps = {
 export function PageHeader({
   title,
   tabIndex,
+  showCoins = false,
   actions = [],
   robotState = 'idle',
   typingPulse,
   style,
 }: PageHeaderProps) {
   const styles = useThemedStyles(themedStyles);
-  const { colors } = useAppTheme();
   const { coins } = useCoins();
 
   return (
     <View style={[styles.header, style]}>
       <View style={styles.identity}>
         <NeruRobot
+          onOpenConfigurations={() => router.navigate('/configurations')}
           reactToButtons
           size={42}
           state={robotState}
@@ -62,7 +61,7 @@ export function PageHeader({
       </View>
 
       <View style={styles.controls}>
-        <View
+        {showCoins && <AppBox variant="badge"
           accessibilityLabel={`${coins} coins`}
           accessibilityRole="text"
           style={styles.coinPill}
@@ -73,10 +72,10 @@ export function PageHeader({
           <Text numberOfLines={1} style={styles.coinValue}>
             {coins}
           </Text>
-        </View>
+        </AppBox>}
 
         {actions.map((action) => (
-          <Pressable
+          <IconButton selected={action.active}
             key={action.accessibilityLabel}
             accessibilityLabel={action.accessibilityLabel}
             accessibilityRole="button"
@@ -84,20 +83,12 @@ export function PageHeader({
             disabled={action.disabled}
             hitSlop={4}
             onPress={action.onPress}
-            onPressIn={() => playTapFeedback()}
-            style={({ pressed }) => [
-              styles.actionButton,
-              action.active && styles.actionButtonActive,
-              action.disabled && styles.disabled,
-              pressed && styles.pressed,
-            ]}
           >
-            <Ionicons
+            <ButtonIcon
               name={action.icon}
               size={20}
-              color={action.active ? colors.onAccent : colors.text}
             />
-          </Pressable>
+          </IconButton>
         ))}
       </View>
     </View>
@@ -111,7 +102,8 @@ const themedStyles = createEditorialStyles(() => ({
     // NERU's tab-change jump rises roughly 14px above its resting position.
     // Keep enough room inside the sticky header so the safe-area boundary does
     // not cut off the top of the mascot.
-    height: 72,
+    minHeight: AppLayout.headerHeight,
+    paddingVertical: Space.sm,
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'center',
@@ -142,19 +134,7 @@ const themedStyles = createEditorialStyles(() => ({
     marginLeft: 'auto',
     gap: 6,
   },
-  coinPill: {
-    minWidth: 50,
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 8,
-    backgroundColor: Palette.card,
-  },
+  coinPill: { minWidth: 50, height: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   coinMark: {
     width: 20,
     height: 20,
@@ -169,22 +149,6 @@ const themedStyles = createEditorialStyles(() => ({
     maxWidth: 48,
     color: Palette.text,
     fontVariant: ['tabular-nums'],
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    flexGrow: 0,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 8,
-    backgroundColor: Palette.card,
-  },
-  actionButtonActive: {
-    borderColor: Palette.accent,
-    backgroundColor: Palette.accent,
   },
   disabled: { opacity: 0.36 },
   pressed: { opacity: 0.62 },

@@ -14,10 +14,6 @@ import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 function ThemedRootLayout() {
   const { status, user } = useAuth();
   const { appearance, colors, loaded } = useAppTheme();
@@ -74,22 +70,23 @@ function ThemedRootLayout() {
           accessibilityElementsHidden={launchVisible}
           importantForAccessibility={launchVisible ? 'no-hide-descendants' : 'auto'}
         >
-          <Stack key={user?.id ?? 'signed-out'} screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
+          {status !== 'loading' && <Stack key={user?.id ?? 'signed-out'} screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Protected guard={status === 'signedIn'}>
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="tasks" options={{ headerShown: false }} />
               <Stack.Screen name="gacha" options={{ headerShown: false }} />
-              <Stack.Screen name="account" options={{ headerShown: false }} />
+              <Stack.Screen name="configurations" options={{ title: 'Configurations' }} />
+              <Stack.Screen name="account" options={{ headerShown: false, presentation: 'transparentModal', animation: 'none', contentStyle: { backgroundColor: 'transparent' } }} />
             </Stack.Protected>
             <Stack.Protected guard={status !== 'signedIn'}>
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
             </Stack.Protected>
-          </Stack>
+          </Stack>}
         </View>
 
         {launchVisible && (
-          <AppLaunch colors={colors} ready={loaded && feedbackReady} onFinish={finishLaunch} />
+          <AppLaunch colors={colors} ready={loaded && feedbackReady && status !== 'loading'} onFinish={finishLaunch} />
         )}
 
         <StatusBar style={appearance.mode === 'dark' ? 'light' : 'dark'} />

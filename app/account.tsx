@@ -1,11 +1,15 @@
+import { SectionHeading } from '@/components/section-heading';
+import { AppBox } from '@/components/app-box';
+import { ScrollView } from '@/components/feedback-scroll-view';
+import { ActionButton, ActionRow, ButtonLabel, IconButton } from '@/components/app-controls';
+import { AppButton } from '@/components/native-controls';
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MotionPressable } from '@/components/motion';
-import { PageHeader } from '@/components/page-header';
-import { AccountButton, AccountFeedback } from '@/features/account/account-ui';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { AppDialog } from '@/components/app-dialog';
+
+import { AccountFeedback } from '@/features/account/account-ui';
 import { accountStyles } from '@/features/account/styles';
 import { useAuth } from '@/features/auth/auth-provider';
 import { LegacyDataCard } from '@/features/auth/legacy-data-card';
@@ -59,56 +63,45 @@ export default function AccountScreen() {
   ] as const;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} stickyHeaderIndices={[0]} showsVerticalScrollIndicator={false}>
-        <PageHeader title="Account" tabIndex={0} actions={[{
-          accessibilityLabel: 'Back to Control', icon: 'arrow-back-outline',
-          onPress: () => router.dismissTo('/control'),
-        }]} />
-
-        <View style={styles.profile}>
-          <View style={styles.identity}>
-            <View style={styles.avatar}><Ionicons name="person-outline" size={24} color={colors.onAccent} /></View>
-            <View style={styles.copy}>
-              <Text style={styles.eyebrow}>Personal space</Text>
-              <Text accessibilityRole="header" style={styles.title}>Your account</Text>
+    <AppDialog visible title="Account" fill busy={!!busy} onDismiss={() => router.dismissTo('/configurations')}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <SectionHeading>Profile</SectionHeading>
+          <AppBox variant="inset" padding="lg" style={styles.profile}>
+            <View style={styles.identity}>
+              <AppBox variant="icon" padding="none" tone="solid" style={styles.avatar}><Ionicons name="person-outline" size={24} color={colors.onAccent} /></AppBox>
             </View>
-          </View>
-          <Text selectable style={styles.email}>{user?.email}</Text>
-          <View style={styles.profileFooter}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
-            <Text style={styles.note}>Manage your sign-ins and account access.</Text>
-          </View>
+            <Text selectable style={styles.email}>{user?.email}</Text>
+          </AppBox>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>Active sessions</Text>
+            <SectionHeading style={{ flex: 1 }}>Active sessions</SectionHeading>
             {!loading && !sessionError && <Text accessibilityLabel={`${sessions.length} active sessions`} style={styles.count}>{sessions.length}</Text>}
-            <MotionPressable
+            <IconButton
               accessibilityRole="button" accessibilityLabel="Refresh sessions"
               accessibilityState={{ disabled: !!busy || loading, busy: loading || busy === 'refresh' }}
               disabled={!!busy || loading}
               onPress={() => { void act('refresh', load); }}
-              style={[styles.iconButton, (!!busy || loading) && styles.disabled]}
             >
               {loading || busy === 'refresh' ? <ActivityIndicator size="small" color={colors.accent} /> : <Ionicons name="refresh-outline" size={19} color={colors.text} />}
-            </MotionPressable>
+            </IconButton>
           </View>
           <Text style={styles.note}>Review your sign-ins, newest first. Revoking a session stops it from renewing; sign-out may take a few minutes.</Text>
-          <View style={styles.card}>
+          <AppBox variant="group" style={styles.card}>
             {loading && sessions.length === 0 ? (
               <View style={styles.loading}><ActivityIndicator color={colors.accent} /><Text style={styles.note}>Loading sessions…</Text></View>
             ) : sessions.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons name={sessionError ? 'cloud-offline-outline' : 'shield-checkmark-outline'} size={26} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>{sessionError ? 'Sessions unavailable' : 'No active sessions'}</Text>
+                <SectionHeading>{sessionError ? 'Sessions unavailable' : 'No active sessions'}</SectionHeading>
                 <Text style={styles.emptyCopy}>{sessionError ? 'Refresh to try again.' : 'Refresh to check for recent sign-ins.'}</Text>
               </View>
             ) : sessions.map((session, index) => (
-              <View key={session.id} style={[styles.session, index > 0 && styles.divider]}>
+              <View key={session.id} style={[styles.session, index> 0 && styles.divider]}>
                 <View style={styles.sessionHeading}>
-                  <View style={styles.icon}><Ionicons name="key-outline" size={20} color={colors.text} /></View>
+                  <AppBox variant="icon" style={styles.icon}><Ionicons name="key-outline" size={20} color={colors.text} /></AppBox>
                   <View style={styles.copy}>
                     <Text style={styles.rowTitle}>Signed in {new Date(session.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
                     <Text style={styles.note}>{new Date(session.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -116,34 +109,34 @@ export default function AccountScreen() {
                 </View>
                 <View style={styles.sessionFooter}>
                   <Text style={styles.note}>Expires {new Date(session.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
-                  <MotionPressable
+                  <ActionButton variant="destructive"
                     accessibilityRole="button" accessibilityLabel="Revoke session"
                     accessibilityHint={`Revoke the session signed in ${new Date(session.createdAt).toLocaleString()}`}
                     accessibilityState={{ disabled: !!busy || loading, busy: busy === session.id }}
-                    disabled={!!busy || loading} style={[styles.revoke, (!!busy || loading) && styles.disabled]}
+                    disabled={!!busy || loading}
                     onPress={() => { if (client) void act(session.id, async () => {
                       await client.revokeSession(session.id);
                       await load();
                     }); }}
                   >
                     {busy === session.id && <ActivityIndicator size="small" color={colors.textSecondary} />}
-                    <Text style={styles.revokeText}>Revoke session</Text>
-                  </MotionPressable>
+                    <ButtonLabel>Revoke session</ButtonLabel>
+                  </ActionButton>
                 </View>
               </View>
             ))}
-          </View>
+          </AppBox>
           <AccountFeedback message={sessionError} error />
         </View>
 
         <LegacyDataCard />
 
         <View style={styles.section}>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>Account access</Text>
-          <View style={styles.card}>
+          <SectionHeading>Account access</SectionHeading>
+          <AppBox variant="group" style={styles.card}>
             {signOutOptions.map((option, index) => (
-              <View key={option.id} style={index > 0 && styles.divider}>
-                <MotionPressable
+              <View key={option.id} style={index> 0 && styles.divider}>
+                <ActionRow
                   accessibilityRole="button" accessibilityLabel={option.id === 'local' ? 'Sign out locally without connecting' : option.title}
                   accessibilityState={{ disabled: !!busy, expanded: option.id !== 'sign-out' ? confirm === option.id : undefined, busy: busy === option.id }}
                   disabled={!!busy} style={[styles.actionRow, !!busy && styles.disabled]}
@@ -153,35 +146,35 @@ export default function AccountScreen() {
                     else setConfirm(confirm === option.id ? null : option.id);
                   }}
                 >
-                  <View style={[styles.icon, option.id === 'sign-out' && styles.accentIcon]}>
+                  <AppBox variant="icon" style={[styles.icon, option.id === 'sign-out' && styles.accentIcon]}>
                     <Ionicons name={option.icon} size={20} color={option.id === 'sign-out' ? colors.accent : colors.text} />
-                  </View>
+                  </AppBox>
                   <View style={styles.copy}>
                     <Text style={[styles.rowTitle, option.id === 'sign-out' && styles.accentText]}>{option.title}</Text>
                     <Text style={styles.note}>{option.detail}</Text>
                   </View>
                   {busy === option.id ? <ActivityIndicator size="small" color={colors.accent} /> : <Ionicons name={confirm === option.id ? 'chevron-up' : 'chevron-forward'} size={16} color={colors.textMuted} />}
-                </MotionPressable>
+                </ActionRow>
                 {confirm === option.id && (
-                  <View style={styles.confirmation}>
-                    <Text accessibilityRole="header" style={styles.confirmationTitle}>{confirm === 'all' ? 'Sign out everywhere?' : 'Remove your saved login?'}</Text>
+                  <AppBox variant="inset" style={styles.confirmation}>
+                    <SectionHeading>{confirm === 'all' ? 'Sign out everywhere?' : 'Remove your saved login?'}</SectionHeading>
                     <Text accessibilityRole="alert" style={styles.body}>{confirm === 'all'
                       ? 'This signs out every session, including this one. You’ll need to sign in again to continue.'
                       : 'Your saved login will be removed from this device. The server session stays active until it expires or you revoke it.'}</Text>
                     <View style={styles.buttonRow}>
-                      <AccountButton label="Confirm sign-out" disabled={!!busy} loading={busy === option.id} onPress={() => {
+                      <AppButton label="Confirm sign-out" disabled={!!busy} loading={busy === option.id} onPress={() => {
                         if (client) void act(option.id, confirm === 'all' ? client.logoutAll : client.forgetSession, true);
                       }} />
-                      <AccountButton label="Cancel" secondary disabled={!!busy} onPress={() => { setConfirm(null); setSignOutError(null); }} />
+                      <AppButton label="Cancel" variant="secondary" disabled={!!busy} onPress={() => { setConfirm(null); setSignOutError(null); }} />
                     </View>
-                  </View>
+                  </AppBox>
                 )}
               </View>
             ))}
-          </View>
+          </AppBox>
           <AccountFeedback message={signOutError} error />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </AppDialog>
   );
 }

@@ -19,16 +19,18 @@ const SOUND_VOLUME: Record<InteractionSound, number> = {
   // Phone speakers tend to swallow very short, quiet transients. Keep the tap
   // crisp, but give it enough level to remain audible on Android hardware.
   tap: 0.9,
+  swipe: 0.19,
   catch: 0.38,
   success: 0.38,
 };
 
-// Pokémon cries are intentionally kept near the UI sound level so opening a
-// result never produces a sudden volume jump after the capture clicks.
-export const POKEMON_CRY_VOLUME = 0.34;
+// Cry recordings are much louder than the generated UI effects. Attenuate
+// every playback path so reveals and replays stay comfortable.
+export const POKEMON_CRY_VOLUME = 0.1;
 
 const POOL_SIZE: Record<InteractionSound, number> = {
   tap: 3,
+  swipe: 2,
   catch: 2,
   success: 1,
 };
@@ -36,7 +38,8 @@ const POOL_SIZE: Record<InteractionSound, number> = {
 // Close enough to feel like one sound family, but far enough apart that a run
 // of taps does not repeat the exact same note and decay every time.
 const PLAYBACK_RATES: Record<InteractionSound, readonly number[]> = {
-  tap: [0.92, 1, 1.08, 1.14],
+  tap: [0.94, 0.98, 1.02, 1.06],
+  swipe: [0.94, 1, 1.06],
   catch: [0.94, 1.02, 1.1],
   success: [0.97, 1.04],
 };
@@ -44,8 +47,8 @@ const PLAYBACK_RATES: Record<InteractionSound, readonly number[]> = {
 const nativePools = new Map<InteractionSound, PlayerPool>();
 const INTERACTION_SOUNDS = Object.keys(SOUND_DURATION) as InteractionSound[];
 const webBufferCache = new Map<string, AudioBuffer>();
-const lastPlayedAt: Record<InteractionSound, number> = { tap: 0, catch: 0, success: 0 };
-const lastVariantIndex: Record<InteractionSound, number> = { tap: -1, catch: -1, success: -1 };
+const lastPlayedAt: Record<InteractionSound, number> = { tap: 0, catch: 0, success: 0, swipe: 0 };
+const lastVariantIndex: Record<InteractionSound, number> = { tap: -1, catch: -1, success: -1, swipe: -1 };
 let activeSoundSet: SoundSetId = 'classic';
 let soundGeneration = 0;
 let nativePrepared = false;
@@ -221,10 +224,10 @@ function takeNextNativePlayer(kind: InteractionSound) {
   return null;
 }
 
-function playNativeSound(kind: InteractionSound) {
+function playNativeSound(kind: InteractionSound, playbackRate: number) {
   const selection = takeNextNativePlayer(kind);
   if (selection) {
-    selection.player.play();
+    selection.player.play(playbackRate);
     return;
   }
   // Never queue a late click behind loading/seek operations. Startup and
@@ -235,7 +238,7 @@ function playNativeSound(kind: InteractionSound) {
 function playSound(kind: InteractionSound, preferBright = false) {
   if (activeSoundSet === 'silent') return;
   const now = Date.now();
-  const minimumSpacing = kind === 'tap' ? 34 : 24;
+  const minimumSpacing = kind === 'swipe' ? 160 : kind === 'tap' ? 34 : 24;
   if (now - lastPlayedAt[kind] < minimumSpacing) return;
   lastPlayedAt[kind] = now;
   const playbackRate = choosePlaybackRate(kind, preferBright);
@@ -244,7 +247,7 @@ function playSound(kind: InteractionSound, preferBright = false) {
     const generation = soundGeneration;
     void playWebSound(kind, playbackRate, activeSoundSet, () => generation === soundGeneration).catch(() => undefined);
   }
-  else playNativeSound(kind);
+  else playNativeSound(kind, playbackRate);
 }
 
 let previewGeneration = 0;
@@ -261,7 +264,7 @@ export function stopInteractionSoundPreview() {
   previewWebSources.clear();
 }
 
-/** Audition all three effects without changing the saved set or triggering haptics. */
+/** Audition each effect without changing the saved set or triggering haptics. */
 export async function previewInteractionSoundSet(set: AudibleSoundSetId): Promise<boolean> {
   stopInteractionSoundPreview();
   const generation = previewGeneration;
@@ -271,7 +274,7 @@ export async function previewInteractionSoundSet(set: AudibleSoundSetId): Promis
       // Resume directly from the press gesture, before scheduling later notes.
       if (!await playWebSound('tap', 1, set, current, true)) return false;
       if (!current()) return false;
-      for (const [kind, delay] of [['catch', 280], ['success', 560]] as const) {
+      for (const [kind, delay] of [['catch', 280], ['success', 560], ['swipe', 840]] as const) {
         previewTimers.push(setTimeout(() => {
           if (current()) void playWebSound(kind, 1, set, current, true).catch(() => undefined);
         }, delay));
@@ -310,6 +313,11 @@ export function playTapFeedback() {
   // beginning of this very short effect.
   playSound('tap');
   if (Platform.OS !== 'web') void performTapHaptic().catch(() => undefined);
+}
+
+/** One quiet sound per user drag; scrolling does not produce haptics. */
+export function playSwipeFeedback() {
+  playSound('swipe');
 }
 
 export function playCatchFeedback(finalTap: boolean) {

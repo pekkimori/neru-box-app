@@ -1,18 +1,15 @@
+import { SectionHeading } from '@/components/section-heading';
+import { AppButton } from '@/components/native-controls';
+import { AppBox } from '@/components/app-box';
+import { boxStyle } from '@/theme/boxes';
+import { ActionButton, ActionRow, ButtonIcon, ButtonLabel, DismissSurface } from '@/components/app-controls';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Platform,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
-import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+import { ActivityIndicator, Alert, Animated, Platform, Text, View } from 'react-native';
+import { MotionModal as Modal } from '@/components/motion';
 import { useThemedStyles } from '@/theme/app-theme';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { Palette, R, useTasksPalette } from '@/features/tasks/tokens';
@@ -208,28 +205,13 @@ export function PhotoCompletionModal({
       onDismiss={reset}
       onRequestClose={handleClose}
     >
-      <Pressable style={styles.backdrop} onPress={step === 'processing' ? undefined : handleClose}>
-        <Pressable style={styles.card} onPress={(event) => event.stopPropagation()}>
-          {(step === 'choose' || step === 'preview') && (
-            <View style={styles.header}>
-              <View style={styles.headerIcon}>
-                <Ionicons name={step === 'choose' ? 'camera-outline' : 'image-outline'} size={20} color={Palette.red} />
-              </View>
-              <View style={styles.headerCopy}>
-                <Text style={styles.eyebrow}>PHOTO PROOF</Text>
-                <Text style={styles.title}>{step === 'choose' ? purpose === 'setup' ? 'Set up this task' : 'Complete this task' : 'Use this photo?'}</Text>
-                <Text style={styles.taskName} numberOfLines={1}>{taskLabel}</Text>
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={handleClose} accessibilityRole="button" accessibilityLabel="Close photo completion">
-                <Ionicons name="close" size={19} color={Palette.warmDim} />
-              </TouchableOpacity>
-            </View>
-          )}
-
+      <DismissSurface style={styles.backdrop} onPress={step === 'processing' ? undefined : handleClose}>
+        <DismissSurface style={styles.card} onPress={(event) => event.stopPropagation()}>
+          {(step === 'choose' || step === 'preview') && <SectionHeading>Photo proof</SectionHeading>}
           {step === 'choose' && (
             <>
               <Text style={styles.description}>Choose a {purpose} photo for this task.</Text>
-              <TouchableOpacity
+              <ActionRow
                 style={styles.cameraButton}
                 onPress={handleCamera}
                 disabled={sourceBusy !== null}
@@ -246,26 +228,26 @@ export function PhotoCompletionModal({
                   <Text style={styles.cameraHint}>Take a picture now</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Palette.onRed} />
-              </TouchableOpacity>
+              </ActionRow>
 
-              <TouchableOpacity
+              <ActionRow
                 style={styles.galleryButton}
                 onPress={handleGallery}
                 disabled={sourceBusy !== null}
                 accessibilityRole="button"
                 accessibilityLabel="Choose a photo from library"
               >
-                <View style={styles.galleryIcon}>
+                <AppBox variant="icon" padding="none" tone="accent" style={styles.galleryIcon}>
                   {sourceBusy === 'gallery'
                     ? <ActivityIndicator size="small" color={Palette.red} />
                     : <Ionicons name="images-outline" size={21} color={Palette.red} />}
-                </View>
+                </AppBox>
                 <View style={styles.sourceCopy}>
                   <Text style={styles.galleryLabel}>{sourceBusy === 'gallery' ? 'Opening photos…' : 'Photo library'}</Text>
                   <Text style={styles.galleryHint}>Choose an existing picture</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Palette.warmMuted} />
-              </TouchableOpacity>
+              </ActionRow>
               <Text style={styles.privacyNote}>{onSavePhoto ? 'Your photo is saved privately to your account.' : 'Your photo stays attached to this task on this device.'}</Text>
             </>
           )}
@@ -275,17 +257,19 @@ export function PhotoCompletionModal({
               <Image source={{ uri: photoUri }} style={styles.previewImage} contentFit="cover" />
               {saveError && <Text accessibilityRole="alert" style={{ color: Palette.red }}>{saveError}</Text>}
               <View style={styles.previewActions}>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => { setPhotoUri(null); setSaveError(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
-                  <Ionicons name="refresh" size={17} color={Palette.warmDim} />
-                  <Text style={styles.secondaryText}>Choose again</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.primaryButton} onPress={handleProcess} accessibilityRole="button" accessibilityLabel={purpose === 'setup' ? 'Use photo and set up task' : 'Use photo and complete task'}>
-                  <Ionicons name="checkmark" size={18} color={Palette.onRed} />
-                  <Text style={styles.primaryText}>Use photo</Text>
-                </TouchableOpacity>
+                <ActionButton style={{ flex: 1 }}   onPress={() => { setPhotoUri(null); setSaveError(null); setStep('choose'); }} accessibilityRole="button" accessibilityLabel="Choose another photo">
+                  <ButtonIcon name="refresh" size={17} />
+                  <ButtonLabel>Choose again</ButtonLabel>
+                </ActionButton>
+                <ActionButton style={{ flex: 1 }} variant="primary"  onPress={handleProcess} accessibilityRole="button" accessibilityLabel={purpose === 'setup' ? 'Use photo and set up task' : 'Use photo and complete task'}>
+                  <ButtonIcon name="checkmark" size={18} />
+                  <ButtonLabel>Use photo</ButtonLabel>
+                </ActionButton>
               </View>
             </>
           )}
+
+          {(step === 'choose' || step === 'preview') && <AppButton label="Dismiss" variant="secondary" onPress={handleClose} />}
 
           {step === 'processing' && (
             <View style={styles.processing}>
@@ -293,7 +277,7 @@ export function PhotoCompletionModal({
                 {photoUri && <Image source={{ uri: photoUri }} style={styles.processingImage} contentFit="cover" />}
                 <View style={styles.processingBadge}><ActivityIndicator size="small" color={Palette.onRed} /></View>
               </View>
-              <Text style={styles.processingTitle}>{purpose === 'setup' ? 'Setting up your star' : 'Lighting your star'}</Text>
+              <SectionHeading>{purpose === 'setup' ? 'Setting up your star' : 'Lighting your star'}</SectionHeading>
               <Text style={styles.processingText}>Saving your {purpose} photo for “{taskLabel}”.</Text>
               <View style={styles.steps}>
                 <View style={styles.stepRow}><Ionicons name="checkmark-circle" size={17} color={Palette.red} /><Text style={styles.stepDone}>Photo added</Text></View>
@@ -309,26 +293,25 @@ export function PhotoCompletionModal({
           {step === 'success' && (
             <View style={styles.success}>
               <View style={styles.successIcon}><Ionicons name="star" size={34} color={Palette.onRed} /></View>
-              <Text style={styles.successTitle}>{purpose === 'setup' ? 'Setup saved' : 'Star lit'}</Text>
+              <SectionHeading>{purpose === 'setup' ? 'Setup saved' : 'Star lit'}</SectionHeading>
               <Text style={styles.processingText}>{purpose === 'setup' ? `“${taskLabel}” is ready to begin.` : `“${taskLabel}” is complete and now shines in your sky.`}</Text>
             </View>
           )}
-        </Pressable>
-      </Pressable>
+        </DismissSurface>
+      </DismissSurface>
     </Modal>
   );
 }
 
 const themedStyles = createEditorialStyles(() => ({
-  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 18, backgroundColor: Palette.backdrop },
-  card: { width: '100%', maxWidth: 420, padding: 16, gap: 13, borderRadius: R.lg, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgRaised, shadowColor: '#171717', shadowOpacity: 0.12, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 7 },
+  backdrop: { ...boxStyle(Palette, { variant: 'backdrop' }), flex: 1, alignItems: 'center', justifyContent: 'center' },
+  card: { ...boxStyle(Palette, { variant: 'dialog' }), width: '100%', maxWidth: 420, gap: 13 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redSoft },
+  headerIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, minWidth: 0 },
   eyebrow: { color: Palette.warmMuted, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
   title: { color: Palette.warmWhite, fontSize: 18, lineHeight: 22, fontWeight: '800' },
   taskName: { color: Palette.warmDim, fontSize: 11, fontWeight: '600', marginTop: 1 },
-  closeButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.graySoft },
   description: { color: Palette.warmDim, fontSize: 12, lineHeight: 17, fontWeight: '600' },
   cameraButton: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, backgroundColor: Palette.red },
   cameraIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redDark },
@@ -336,21 +319,16 @@ const themedStyles = createEditorialStyles(() => ({
   cameraLabel: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
   cameraHint: { color: Palette.onRed, opacity: 0.78, fontSize: 10, fontWeight: '600', marginTop: 1 },
   galleryButton: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 12, borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
-  galleryIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.sm, backgroundColor: Palette.redSoft },
+  galleryIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   galleryLabel: { color: Palette.warmWhite, fontSize: 14, fontWeight: '800' },
   galleryHint: { color: Palette.warmMuted, fontSize: 10, fontWeight: '600', marginTop: 1 },
   privacyNote: { color: Palette.warmMuted, fontSize: 9, lineHeight: 13, fontWeight: '600', textAlign: 'center' },
   previewImage: { width: '100%', aspectRatio: 4 / 3, borderRadius: R.md, backgroundColor: Palette.graySoft },
   previewActions: { flexDirection: 'row', gap: 8 },
-  secondaryButton: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: R.sm, borderWidth: 1, borderColor: Palette.gray, backgroundColor: Palette.bgElevated },
-  secondaryText: { color: Palette.warmDim, fontSize: 12, fontWeight: '800' },
-  primaryButton: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: R.sm, backgroundColor: Palette.red },
-  primaryText: { color: Palette.onRed, fontSize: 12, fontWeight: '800' },
   processing: { alignItems: 'center', paddingVertical: 8, gap: 10 },
   processingVisual: { width: 88, height: 88, position: 'relative' },
   processingImage: { width: 88, height: 88, borderRadius: R.md, backgroundColor: Palette.graySoft },
   processingBadge: { position: 'absolute', right: -7, bottom: -7, width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: Palette.red, borderWidth: 3, borderColor: Palette.bgRaised },
-  processingTitle: { color: Palette.warmWhite, fontSize: 18, fontWeight: '800', marginTop: 3 },
   processingText: { maxWidth: 310, color: Palette.warmDim, fontSize: 12, lineHeight: 17, fontWeight: '600', textAlign: 'center' },
   steps: { width: '100%', gap: 7, paddingHorizontal: 8, marginTop: 3 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -361,5 +339,4 @@ const themedStyles = createEditorialStyles(() => ({
   progressFill: { width: '100%', height: 5, borderRadius: 3, backgroundColor: Palette.red, transformOrigin: 'left center' },
   success: { alignItems: 'center', gap: 10, paddingVertical: 20 },
   successIcon: { width: 68, height: 68, alignItems: 'center', justifyContent: 'center', borderRadius: 34, backgroundColor: Palette.red },
-  successTitle: { color: Palette.warmWhite, fontSize: 20, fontWeight: '800' },
 }));

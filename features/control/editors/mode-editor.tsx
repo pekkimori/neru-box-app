@@ -1,9 +1,13 @@
+import { SectionHeading } from '@/components/section-heading';
+import { AppBox } from '@/components/app-box';
+import { ScrollView } from '@/components/feedback-scroll-view';
+import { AppSwitch } from '@/components/native-controls';
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 
-import { MotionPressable as Pressable } from "@/components/motion";
+import { AppCheckbox, AppSegments } from "@/components/native-controls";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
-import { AppMark, SectionLabel, ToggleSwitch } from "../components";
+import { AppMark } from "../components";
 import {
   EFFECT_ROWS,
   INSTALLED_APPS,
@@ -36,75 +40,42 @@ export function ModeEditorContent({
 
   return (
     <ScrollView
+      style={{ flex: 1 }}
       contentContainerStyle={styles.editorContent}
       keyboardShouldPersistTaps="handled"
     >
-      <View accessibilityRole="tablist" style={styles.modeTabs}>
-        {(["normal", "focus", "sleep"] as Mode[]).map((mode) => (
-          <Pressable
-            key={mode}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: editingMode === mode }}
-            onPress={() => setEditingMode(mode)}
-            style={[
-              styles.modeTab,
-              editingMode === mode && styles.modeTabActive,
-            ]}
-          >
-            <Ionicons
-              name={
-                mode === "normal"
-                  ? "radio-button-on"
-                  : mode === "focus"
-                    ? "locate"
-                    : "moon"
-              }
-              size={16}
-              color={
-                editingMode === mode
-                  ? EditorialColors.onAccent
-                  : EditorialColors.secondary
-              }
-            />
-            <Text
-              style={[
-                styles.modeTabText,
-                editingMode === mode && styles.modeTabTextActive,
-              ]}
-            >
-              {mode[0].toUpperCase() + mode.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <SectionLabel>Effects</SectionLabel>
-      <View style={styles.settingsCard}>
+      <SectionHeading>Choose a mode</SectionHeading>
+      <AppSegments options={[{ value: 'normal', label: 'Normal' }, { value: 'focus', label: 'Focus' }, { value: 'sleep', label: 'Sleep' }]} value={editingMode} onChange={setEditingMode} />
+      <SectionHeading>Effects</SectionHeading>
+      <AppBox variant="group" style={styles.settingsCard}>
         {EFFECT_ROWS.map((row, index) => (
           <View
             key={row.key}
             style={[styles.settingRow, index > 0 && styles.menuBorder]}
           >
-            <View style={styles.settingIcon}>
+            <AppBox variant="icon" style={styles.settingIcon}>
               <Ionicons name={row.icon} size={20} color={EditorialColors.ink} />
-            </View>
+            </AppBox>
             <View style={styles.menuCopy}>
               <Text style={styles.menuTitle}>{row.label}</Text>
               <Text style={styles.menuDetail}>{row.detail}</Text>
             </View>
-            <ToggleSwitch
+            <AppSwitch
+              label={row.label}
+              compact
               value={effects[editingMode][row.key]}
               onValueChange={(value) => updateEffect(row.key, value)}
             />
           </View>
         ))}
-      </View>
+      </AppBox>
       {effects[editingMode].pomodoro ? (
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Pomodoro timing</Text>
+        <AppBox variant="card" style={styles.formCard}>
+          <SectionHeading>Pomodoro timing</SectionHeading>
           <View style={styles.timeRow}>
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>WORK</Text>
-              <View style={styles.minuteField}>
+              <AppBox variant="field" padding="field" style={styles.minuteField}>
                 <TextInput
                   value={String(effects[editingMode].workMinutes)}
                   onChangeText={(value) =>
@@ -114,11 +85,11 @@ export function ModeEditorContent({
                   style={styles.minuteInput}
                 />
                 <Text style={styles.unit}>min</Text>
-              </View>
+              </AppBox>
             </View>
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>BREAK</Text>
-              <View style={styles.minuteField}>
+              <AppBox variant="field" padding="field" style={styles.minuteField}>
                 <TextInput
                   value={String(effects[editingMode].breakMinutes)}
                   onChangeText={(value) =>
@@ -128,15 +99,15 @@ export function ModeEditorContent({
                   style={styles.minuteInput}
                 />
                 <Text style={styles.unit}>min</Text>
-              </View>
+              </AppBox>
             </View>
           </View>
-        </View>
+        </AppBox>
       ) : null}
       {editingMode !== "normal" ? (
         <>
-          <SectionLabel>Apps allowed in this mode</SectionLabel>
-          <View style={styles.settingsCard}>
+          <SectionHeading>Apps allowed in this mode</SectionHeading>
+          <AppBox variant="group" style={styles.settingsCard}>
             {selectedApps.length ? (
               selectedApps.map((selected, index) => {
                 const app = INSTALLED_APPS.find(
@@ -147,55 +118,27 @@ export function ModeEditorContent({
                   app.id,
                 );
                 return (
-                  <Pressable
-                    key={app.id}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked }}
-                    onPress={() =>
-                      updateEffect(
-                        "allowedAppIds",
-                        checked
-                          ? effects[editingMode].allowedAppIds.filter(
-                              (id) => id !== app.id,
-                            )
-                          : [...effects[editingMode].allowedAppIds, app.id],
-                      )
-                    }
-                    style={[styles.allowedRow, index > 0 && styles.menuBorder]}
-                  >
+                  <View key={app.id} style={[styles.allowedRow, index > 0 && styles.menuBorder]}>
                     <AppMark app={app} size={34} />
-                    <Text style={[styles.appName, styles.allowedName]}>
-                      {app.name}
-                    </Text>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        checked && styles.checkboxSelected,
-                      ]}
-                    >
-                      {checked ? (
-                        <Ionicons
-                          name="checkmark"
-                          size={17}
-                          color={EditorialColors.onAccent}
-                        />
-                      ) : null}
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppCheckbox label={app.name} value={checked} onValueChange={(value) => updateEffect('allowedAppIds',
+                        value ? [...effects[editingMode].allowedAppIds, app.id] : effects[editingMode].allowedAppIds.filter(id => id !== app.id))} />
                     </View>
-                  </Pressable>
+                  </View>
                 );
               })
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No limited apps yet</Text>
+                <SectionHeading>No limited apps yet</SectionHeading>
                 <Text style={styles.emptyCopy}>
                   Select apps in Apps & limits first.
                 </Text>
               </View>
             )}
-          </View>
+          </AppBox>
         </>
       ) : (
-        <View style={styles.infoCard}>
+        <AppBox variant="notice" style={styles.infoCard}>
           <Ionicons
             name="information-circle-outline"
             size={20}
@@ -205,7 +148,7 @@ export function ModeEditorContent({
             Normal is the default for every unassigned time. All selected apps
             use their shared daily limit.
           </Text>
-        </View>
+        </AppBox>
       )}
     </ScrollView>
   );

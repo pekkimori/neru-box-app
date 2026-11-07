@@ -1,8 +1,9 @@
+import { InteractiveSurface } from '@/components/app-controls';
 import { Image } from 'expo-image';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, Text, View, type ImageStyle } from 'react-native';
-import { MotionPressable as Pressable } from '@/components/motion';
+
 
 import type { GachaCreature } from '@/features/gacha/pokemon-catalog';
 import { replaceAudioPlayerSource, restartAudioPlayer } from '@/utils/audio-player';
@@ -146,7 +147,7 @@ export function PokemonPresentation({
     : { width: size, height: size };
 
   return (
-    <Pressable
+    <InteractiveSurface
       accessibilityRole="button"
       accessibilityLabel={`Replay ${pokemon.name} cry and flip animation`}
       accessibilityState={{ disabled: !media }}
@@ -171,7 +172,7 @@ export function PokemonPresentation({
         </View>
       )}
       {Platform.OS === 'web' && media?.cry ? <View style={styles.audioHint}><Text style={styles.audioHintText}>Tap for cry</Text></View> : null}
-    </Pressable>
+    </InteractiveSurface>
   );
 }
 

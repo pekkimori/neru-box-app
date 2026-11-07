@@ -17,12 +17,12 @@ async function choosePhoto(page) {
 export async function verifyCompletionBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi }) {
   await page.goto(origin + '/tasks/connected');
   await page.getByRole('button', { name: 'Create nebula', exact: true }).click();
-  await page.getByLabel('Domain name', { exact: true }).fill('Browser home');
-  await page.getByLabel('Domain icon', { exact: true }).fill('🏠');
+  await page.getByLabel('Nebula name', { exact: true }).fill('Browser home');
+  await page.getByLabel('Nebula icon', { exact: true }).fill('🏠');
   await command(page, () => page.getByRole('button', { name: 'Create', exact: true }).click());
   await page.getByText('Nebula created.', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Create constellation', exact: true }).click();
-  await page.getByLabel('Domain name', { exact: true }).fill('Browser proof goal');
+  await page.getByLabel('Constellation name', { exact: true }).fill('Browser proof goal');
   await page.getByRole('radio', { name: '🏠 Browser home', exact: true }).click();
   const goal = await command(page, () => page.getByRole('button', { name: 'Create', exact: true }).click());
   await page.getByText('Constellation created.', { exact: true }).waitFor();

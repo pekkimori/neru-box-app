@@ -1,7 +1,9 @@
+import { AppBox } from '@/components/app-box';
+import { ActionRow, ButtonIcon, ChoiceCard, IconButton } from '@/components/app-controls';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
 import { Type } from '@/theme/typography';
@@ -74,32 +76,32 @@ function PeriodRailContent({
   if (isSleepTime && !sleepDismissed && sleepPeriod) {
     return (
       <View style={styles.sleepControl}>
-        <TouchableOpacity
+        <ActionRow
           style={styles.sleepMain}
           onPress={() => onSelect('sleep')}
           accessibilityRole="tab"
           accessibilityLabel={`Sleep time, active, ${sleepTimeLeft} left`}
           accessibilityState={{ selected: selectedPeriod === 'sleep' }}
         >
-          <View style={styles.sleepIcon}>
+          <AppBox variant="icon" padding="none" tone="accent" style={styles.sleepIcon}>
             <Ionicons name="bed" size={20} color={Palette.red} />
-          </View>
+          </AppBox>
           <View style={styles.sleepCopy}>
             <Text style={styles.sleepLabel}>Sleep time</Text>
             <Text style={styles.sleepHint} numberOfLines={1}>
               {sleepTimeLeft} left · Periods paused
             </Text>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.closeButton}
+        </ActionRow>
+        <IconButton
+
           onPress={dismissSleep}
           accessibilityRole="button"
           accessibilityLabel="Close sleep time and show regular periods"
           hitSlop={8}
         >
-          <Ionicons name="close" size={20} color={Palette.warmDim} />
-        </TouchableOpacity>
+          <ButtonIcon name="close" size={20} />
+        </IconButton>
       </View>
     );
   }
@@ -113,7 +115,7 @@ function PeriodRailContent({
           ? formatDurationMinutes(minutesUntilClockTime(currentMinute, period.getEndMin()))
           : null;
         return (
-          <TouchableOpacity
+          <ChoiceCard
             key={period.key}
             style={[
               styles.control,
@@ -161,7 +163,7 @@ function PeriodRailContent({
               {period.label}
               {timeLeft && <Text style={styles.timeLeft}>{` · ${timeLeft}`}</Text>}
             </Text>
-          </TouchableOpacity>
+          </ChoiceCard>
         );
       })}
     </View>
@@ -221,22 +223,8 @@ const themedStyles = createEditorialStyles(() => ({
     gap: 10,
     paddingLeft: 12,
   },
-  sleepIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: R.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Palette.redSoft,
-  },
+  sleepIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   sleepCopy: { flex: 1, minWidth: 0 },
   sleepLabel: { ...Type.bodyStrong, color: Palette.red },
   sleepHint: { ...Type.caption, color: Palette.warmDim, marginTop: 1 },
-  closeButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 2,
-  },
 }));

@@ -1,7 +1,9 @@
+import { SectionHeading } from '@/components/section-heading';
+import { AppBox } from '@/components/app-box';
 import { Ionicons } from "@expo/vector-icons";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 
-import { MotionTouchableOpacity as TouchableOpacity } from "@/components/motion";
+import { AppButton, AppSegments } from "@/components/native-controls";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import { controlStyles } from "../styles";
 
@@ -18,51 +20,20 @@ export function FocusEditorContent({
   const { colors: EditorialColors } = useAppTheme();
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.editorContent}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={styles.editorContent}>
+      <SectionHeading>Focus timer</SectionHeading>
       <View style={styles.focusHero}>
-        <View style={styles.focusHeroIcon}>
+        <AppBox variant="icon" padding="none" tone="accent" style={styles.focusHeroIcon}>
           <Ionicons name="locate" size={28} color={EditorialColors.red} />
-        </View>
-        <Text style={styles.focusHeroTitle}>How long do you need?</Text>
+        </AppBox>
         <Text style={styles.focusHeroCopy}>
           The timer runs while this screen remains open.
         </Text>
       </View>
-      <View style={styles.durationGrid}>
-        {[25, 45, 60].map((minutes) => (
-          <TouchableOpacity
-            key={minutes}
-            onPress={() => setFocusDuration(String(minutes))}
-            style={[
-              styles.durationButton,
-              focusDuration === String(minutes) && styles.durationButtonActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.durationValue,
-                focusDuration === String(minutes) && styles.durationValueActive,
-              ]}
-            >
-              {minutes}
-            </Text>
-            <Text
-              style={[
-                styles.durationUnit,
-                focusDuration === String(minutes) && styles.durationValueActive,
-              ]}
-            >
-              MINUTES
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <AppSegments options={[{ value: '25', label: '25 min' }, { value: '45', label: '45 min' }, { value: '60', label: '60 min' }]} value={focusDuration} onChange={setFocusDuration} />
       <View style={styles.customDurationRow}>
-        <Text style={styles.formTitle}>Custom duration</Text>
-        <View style={styles.customLimit}>
+        <SectionHeading>Custom duration</SectionHeading>
+        <AppBox variant="field" padding="field" style={styles.customLimit}>
           <TextInput
             value={focusDuration}
             onChangeText={setFocusDuration}
@@ -71,57 +42,32 @@ export function FocusEditorContent({
             accessibilityLabel="Custom focus duration in minutes"
           />
           <Text style={styles.unit}>min</Text>
-        </View>
+        </AppBox>
       </View>
-      <TouchableOpacity
-        onPress={() => startFocus(Number(focusDuration))}
-        style={styles.primaryButton}
-      >
-        <Ionicons name="play" size={16} color={EditorialColors.onAccent} />
-        <Text style={styles.primaryButtonText}>Start focus</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <AppButton label="Start focus" onPress={() => startFocus(Number(focusDuration))} />
+    </View>
   );
 }
 
 export function RestPromptContent({
   restMinutes,
   startRest,
-  dismiss,
 }: {
   restMinutes: number;
   startRest: () => void;
-  dismiss: () => void;
 }) {
   const styles = useThemedStyles(controlStyles);
   const { colors: EditorialColors } = useAppTheme();
 
   return (
     <View style={styles.editorContent}>
+      <SectionHeading>Break timer</SectionHeading>
       <View style={styles.focusHero}>
-        <View style={styles.focusHeroIcon}>
+        <AppBox variant="icon" padding="none" tone="accent" style={styles.focusHeroIcon}>
           <Ionicons name="cafe" size={28} color={EditorialColors.red} />
-        </View>
-        <Text style={styles.focusHeroTitle}>Nice work. Take a breather?</Text>
-        <Text style={styles.focusHeroCopy}>
-          Step away for {restMinutes} {restMinutes === 1 ? "minute" : "minutes"}
-          {" "}
-          before beginning another focus session.
-        </Text>
+        </AppBox>
       </View>
-      <TouchableOpacity onPress={startRest} style={styles.primaryButton}>
-        <Ionicons
-          name="timer-outline"
-          size={17}
-          color={EditorialColors.onAccent}
-        />
-        <Text style={styles.primaryButtonText}>
-          Start {restMinutes} min rest
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={dismiss} style={styles.secondaryButton}>
-        <Text style={styles.restDismissButtonText}>Not now</Text>
-      </TouchableOpacity>
+      <AppButton label={`Start ${restMinutes} min rest`} onPress={startRest} />
     </View>
   );
 }

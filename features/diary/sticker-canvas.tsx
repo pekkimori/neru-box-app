@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
-import { playTapFeedback } from '@/utils/interaction-feedback';
+import { playSwipeFeedback, playTapFeedback } from '@/utils/interaction-feedback';
 
 export const DIARY_ARTBOARD_WIDTH = 540;
 export const DIARY_ARTBOARD_HEIGHT = 700;
@@ -371,6 +371,7 @@ export function TransformableSticker({
     },
     onPanResponderRelease: (_, gestureState) => {
       const wasMultiTouch = usedMultiTouch.current;
+      if (!wasMultiTouch && Math.hypot(gestureState.dx, gestureState.dy) >= 12) playSwipeFeedback();
       const next = constrainTopLeft(
         pixelPosition.current,
         liveTransform.current.rotation,

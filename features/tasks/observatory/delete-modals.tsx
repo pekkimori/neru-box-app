@@ -1,74 +1,19 @@
-// features/tasks/observatory/delete-modals.tsx
-import { Pressable, Text, View } from 'react-native';
-import { MotionModal as Modal, MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
-import { Ionicons } from '@expo/vector-icons';
-import { createEditorialStyles } from '@/theme/editorial-theme';
-import { useThemedStyles } from '@/theme/app-theme';
-import { Palette, Sp, R, useTasksPalette } from '../tokens';
+import { LayoutStyles } from '@/theme/layout';
+import { Text } from 'react-native';
+import { AppDialog } from '@/components/app-dialog';
+import { AppButton } from '@/components/native-controls';
+import { useAppTheme } from '@/theme/app-theme';
+import { Type } from '@/theme/typography';
 
-// ── Shared styles ─────────────────────────────────────────────────────
-const themedS = createEditorialStyles(() => ({
-  backdrop: {
-    flex: 1, backgroundColor: Palette.backdrop,
-    alignItems: 'center', justifyContent: 'center', padding: Sp.lg,
-  },
-  card: {
-    width: '100%', maxWidth: 440, backgroundColor: Palette.bgRaised,
-    borderRadius: R.lg, borderWidth: 1, borderColor: Palette.gray,
-    padding: Sp.lg, gap: Sp.md,
-  },
-  title: { color: Palette.warmWhite, fontSize: 20, fontWeight: '800' },
-  body: { color: Palette.warmDim, fontSize: 14, fontWeight: '600', lineHeight: 20 },
-  actions: { flexDirection: 'row', gap: Sp.sm },
-  btnPrimary: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: Sp.xs,
-    backgroundColor: Palette.red, borderRadius: R.md,
-    paddingVertical: 10, minHeight: 44,
-  },
-  btnPrimaryText: { color: Palette.onRed, fontSize: 14, fontWeight: '800' },
-  btnSecondary: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    borderRadius: R.md, borderWidth: 1, borderColor: Palette.gray,
-    paddingVertical: 10, minHeight: 44,
-  },
-  btnSecondaryText: { color: Palette.warmDim, fontSize: 14, fontWeight: '800' },
-}));
-
-interface DeleteConstellationConfirmModalProps {
-  visible: boolean;
-  name: string;
-  busy?: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-export function DeleteConstellationConfirmModal({
-  visible, name, busy, onClose, onConfirm,
-}: DeleteConstellationConfirmModalProps) {
-  const S = useThemedStyles(themedS);
-  const Palette = useTasksPalette();
-  return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
-      <Pressable style={S.backdrop} onPress={onClose}>
-        <Pressable style={S.card} onPress={(e) => e.stopPropagation()}>
-          <Text style={S.title}>Delete nebula?</Text>
-          <Text style={S.body}>{name} and its stars will be removed.</Text>
-          <View style={S.actions}>
-            <TouchableOpacity style={S.btnSecondary} onPress={onClose} disabled={busy}>
-              <Text style={S.btnSecondaryText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.btnPrimary, busy && { opacity: 0.5 }]}
-              onPress={onConfirm}
-              disabled={busy}
-            >
-              <Ionicons name="trash" size={16} color={Palette.onRed} />
-              <Text style={S.btnPrimaryText}>{busy ? 'Deleting…' : 'Delete'}</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
+export function DeleteConstellationConfirmModal({ visible, name, busy, onClose, onConfirm }: {
+  visible: boolean; name: string; busy?: boolean; onClose: () => void; onConfirm: () => void;
+}) {
+  const { colors } = useAppTheme();
+  return <AppDialog visible={visible} title="Delete nebula?" busy={busy} onDismiss={onClose}
+    footer={<>
+      <AppButton label="Cancel" variant="secondary" disabled={busy} onPress={onClose} />
+      <AppButton variant="destructive" label="Delete" loading={busy} onPress={onConfirm} />
+    </>}>
+    <Text style={{ ...Type.body, color: colors.textSecondary, ...LayoutStyles.presentationBody }}>{name} and its stars will be removed.</Text>
+  </AppDialog>;
 }

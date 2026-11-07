@@ -1,3 +1,4 @@
+import { boxStyle } from '@/theme/boxes';
 import { type ComponentProps, useEffect, useMemo, useRef } from 'react';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -22,7 +23,7 @@ import { Type } from '@/theme/typography';
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
 import { playTapFeedback } from '@/utils/interaction-feedback';
-import { Palette, R, Sp, useTasksPalette } from '../tokens';
+import { Palette,  Sp, useTasksPalette } from '../tokens';
 import type {
   BlockType,
   Constellation,
@@ -586,14 +587,7 @@ export function ConstellationCanvas({
 }
 
 const themedStyles = createEditorialStyles(() => ({
-  canvas: {
-    backgroundColor: Palette.bgElevated,
-    borderRadius: R.sm,
-    borderWidth: 1,
-    borderColor: Palette.gray,
-    overflow: 'hidden',
-    position: 'relative',
-  },
+  canvas: { ...boxStyle(Palette, { variant: 'media' }), overflow: 'hidden', position: 'relative' },
   ambientOrbit: {
     position: 'absolute',
     borderWidth: 1,

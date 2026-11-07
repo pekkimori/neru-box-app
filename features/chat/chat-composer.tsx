@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { AppBox } from '@/components/app-box';
+import { ActionButton, ButtonIcon, ButtonLabel, IconButton } from '@/components/app-controls';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
@@ -12,10 +13,7 @@ import {
   View,
 } from "react-native";
 
-import {
-  MotionPressable as Pressable,
-  MotionTouchableOpacity as TouchableOpacity,
-} from "@/components/motion";
+
 import { SUGGESTIONS } from "@/features/chat/preview-model";
 import { useAppTheme, useThemedStyles } from "@/theme/app-theme";
 import {
@@ -53,7 +51,7 @@ export function ChatComposer({
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [inputHeight, setInputHeight] = useState(32);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<import('react-native').TextInputInstance>(null);
 
   const handlePickPhoto = async (source: "camera" | "library") => {
     if (photoBusy) return;
@@ -115,26 +113,25 @@ export function ChatComposer({
   return (
     <>
       {composerPanel && (
-        <View style={styles.composerPanel}>
+        <AppBox variant="card" padding="sm" style={styles.composerPanel}>
           <View style={styles.composerPanelHeader}>
             <Text style={styles.composerPanelTitle}>
               {composerPanel === "suggestions"
                 ? "A little inspiration"
                 : "Add a photo"}
             </Text>
-            <Pressable
+            <IconButton
               accessibilityRole="button"
               accessibilityLabel="Close composer options"
               hitSlop={8}
               onPress={() => setComposerPanel(null)}
-              style={styles.panelClose}
             >
-              <Ionicons name="close" size={18} color={Palette.secondary} />
-            </Pressable>
+              <ButtonIcon name="close" size={18} />
+            </IconButton>
           </View>
           {composerPanel === "suggestions" ? (
             SUGGESTIONS.map((suggestion) => (
-              <Pressable
+              <ActionButton
                 key={suggestion.label}
                 accessibilityRole="button"
                 accessibilityLabel={suggestion.label}
@@ -143,14 +140,10 @@ export function ChatComposer({
                   setComposerPanel(null);
                   inputRef.current?.focus();
                 }}
-                style={({ pressed }) => [
-                  styles.suggestion,
-                  pressed && styles.pressed,
-                ]}
               >
-                <Text style={styles.suggestionText}>{suggestion.label}</Text>
-                <Ionicons name="arrow-forward" size={16} color={Palette.red} />
-              </Pressable>
+                <ButtonLabel>{suggestion.label}</ButtonLabel>
+                <ButtonIcon name="arrow-forward" size={16} />
+              </ActionButton>
             ))
           ) : (
             <>
@@ -164,21 +157,16 @@ export function ChatComposer({
                     ["camera", "camera-outline", "Take a photo"],
                   ] as const
                 ).map(([source, icon, label]) => (
-                  <Pressable
+                  <ActionButton style={{ flex: 1 }}
                     key={source}
                     accessibilityRole="button"
                     accessibilityLabel={label}
                     disabled={photoBusy}
                     onPress={() => handlePickPhoto(source)}
-                    style={({ pressed }) => [
-                      styles.photoSource,
-                      photoBusy && styles.pressed,
-                      pressed && styles.pressed,
-                    ]}
                   >
-                    <Ionicons name={icon} size={22} color={Palette.red} />
-                    <Text style={styles.suggestionText}>{label}</Text>
-                  </Pressable>
+                    <ButtonIcon name={icon} size={22} />
+                    <ButtonLabel>{label}</ButtonLabel>
+                  </ActionButton>
                 ))}
               </View>
               {photoBusy && (
@@ -190,11 +178,11 @@ export function ChatComposer({
               )}
             </>
           )}
-        </View>
+        </AppBox>
       )}
 
       {photo && (
-        <View style={styles.photoPreview}>
+        <AppBox variant="media" padding="sm" style={styles.photoPreview}>
           <Image
             source={{ uri: photo.uri }}
             style={styles.photoThumbnail}
@@ -209,19 +197,18 @@ export function ChatComposer({
               Preview only. Remove photo to send text.
             </Text>
           </View>
-          <Pressable
+          <IconButton
             accessibilityRole="button"
             accessibilityLabel="Remove photo"
             onPress={() => setPhoto(null)}
-            style={styles.composerAction}
           >
-            <Ionicons name="close" size={20} color={Palette.secondary} />
-          </Pressable>
-        </View>
+            <ButtonIcon name="close" size={20} />
+          </IconButton>
+        </AppBox>
       )}
 
-      <View style={styles.composer}>
-        <Pressable
+      <AppBox variant="field" padding="field" style={styles.composer}>
+        <IconButton selected={composerPanel === "photos"}
           accessibilityRole="button"
           accessibilityLabel="Add a photo"
           accessibilityState={{
@@ -234,18 +221,13 @@ export function ChatComposer({
               current === "photos" ? null : "photos",
             )
           }
-          style={[
-            styles.composerAction,
-            composerPanel === "photos" && styles.composerActionActive,
-          ]}
         >
-          <Ionicons
+          <ButtonIcon
             name="image-outline"
             size={21}
-            color={composerPanel === "photos" ? Palette.red : Palette.secondary}
           />
-        </Pressable>
-        <Pressable
+        </IconButton>
+        <IconButton selected={composerPanel === "suggestions"}
           accessibilityRole="button"
           accessibilityLabel="Magic suggestions"
           accessibilityState={{ expanded: composerPanel === "suggestions" }}
@@ -254,19 +236,12 @@ export function ChatComposer({
               current === "suggestions" ? null : "suggestions",
             )
           }
-          style={[
-            styles.composerAction,
-            composerPanel === "suggestions" && styles.composerActionActive,
-          ]}
         >
-          <Ionicons
+          <ButtonIcon
             name="sparkles-outline"
             size={20}
-            color={
-              composerPanel === "suggestions" ? Palette.red : Palette.secondary
-            }
           />
-        </Pressable>
+        </IconButton>
         <TextInput
           ref={inputRef}
           accessibilityLabel="Message NERU"
@@ -284,40 +259,26 @@ export function ChatComposer({
           }
           maxLength={500}
         />
-        <TouchableOpacity
+        <IconButton variant="primary"
           accessibilityLabel={isTyping ? "Stop response" : "Send message"}
           accessibilityRole="button"
-          activeOpacity={0.8}
+
           disabled={!isTyping && (!inputText.trim() || !canSend || !!photo)}
           onPress={isTyping ? onStop : onSend}
-          style={[
-            styles.sendButton,
-            !isTyping &&
-              (!inputText.trim() || !canSend || !!photo) &&
-              styles.sendButtonDisabled,
-          ]}
         >
-          <Ionicons
+          <ButtonIcon
             name={isTyping ? "stop" : "arrow-up"}
             size={21}
-            color={Palette.onAccent}
           />
-        </TouchableOpacity>
-      </View>
+        </IconButton>
+      </AppBox>
     </>
   );
 }
 
 const themedStyles = createEditorialStyles(() => ({
   pressed: { opacity: 0.62 },
-  composerPanel: {
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 12,
-    backgroundColor: Palette.card,
-  },
+  composerPanel: { marginBottom: 8 },
   composerPanelHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -325,68 +286,12 @@ const themedStyles = createEditorialStyles(() => ({
     marginBottom: 4,
   },
   composerPanelTitle: { ...Type.bodyStrong, color: Palette.ink },
-  panelClose: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  suggestion: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 7,
-    minHeight: 44,
-    paddingHorizontal: 8,
-  },
-  suggestionText: { ...Type.bodySmall, color: Palette.secondary },
   photoNote: { ...Type.caption, color: Palette.muted },
   photoSources: { flexDirection: "row", gap: 8, marginTop: 12 },
-  photoSource: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    minHeight: 80,
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 8,
-    backgroundColor: Palette.surface,
-  },
-  photoPreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 10,
-    backgroundColor: Palette.card,
-  },
+  photoPreview: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
   photoThumbnail: { width: 56, height: 56, borderRadius: 6 },
   photoPreviewCopy: { flex: 1, minWidth: 0, gap: 4 },
-  composer: {
-    minHeight: 46,
-    maxHeight: 108,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    borderWidth: 1,
-    borderColor: Palette.line,
-    borderRadius: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-    backgroundColor: Palette.card,
-  },
-  composerAction: {
-    width: 36,
-    height: 38,
-    alignSelf: "flex-end",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-  },
-  composerActionActive: { backgroundColor: Palette.redSoft },
+  composer: { minHeight: 46, maxHeight: 108, flexDirection: "row", alignItems: "flex-end" },
   textInput: {
     ...Type.body,
     fontWeight: "400",
@@ -399,16 +304,4 @@ const themedStyles = createEditorialStyles(() => ({
     paddingHorizontal: 4,
     color: Palette.ink,
   },
-  sendButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Palette.red,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 4,
-    marginRight: 2,
-  },
-  sendButtonDisabled: { backgroundColor: Palette.muted },
 }));

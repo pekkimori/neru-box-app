@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/auth-provider';
 import { captureAccountStorage } from '../../../lib/storage/account-storage';
 import { routineRepository } from './routine-repository';
 import { createRoutineStore } from './routine-store';
+import type { RoutineChange } from './routine-repository';
 
 export function useConnectedRoutines(date: string, active: boolean) {
   const { client, user } = useAuth();
@@ -22,6 +23,12 @@ export function useConnectedRoutines(date: string, active: boolean) {
   const { quests, status } = state.snapshot;
   const disabled = !state.fresh || state.loading || state.saving || state.pending.length > 0;
   return {
+    saveRoutineChanges: async (changes: { id: string; change: RoutineChange }[]) => {
+      for (const item of changes) {
+        if (!await store.run(item.change, item.id)) return false;
+      }
+      return true;
+    },
     quests, status, loaded: state.loaded, disabled,
     error: state.error, saving: state.saving, pending: state.pending,
     reload: store.reload, retry: store.retry,

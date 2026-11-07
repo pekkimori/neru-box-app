@@ -1,3 +1,4 @@
+import { AppLayout, Space } from '@/theme/layout';
 // features/tasks/tokens.ts
 // Shared Tasks tokens. The main Tasks dashboard uses the editorial light
 // shell; the galaxy keeps the same semantic names so both surfaces remain
@@ -43,12 +44,12 @@ export function useTasksPalette() {
 }
 
 export const Sp = {
-  xs: 6,
-  sm: 10,
-  md: 14,
-  lg: 20,
-  xl: 28,
-  bottom: 86,
+  xs: Space.sm,
+  sm: Space.md,
+  md: Space.lg,
+  lg: Space.xl,
+  xl: Space.section,
+  bottom: AppLayout.tabClearance,
   canvas: 180,
 } as const;
 

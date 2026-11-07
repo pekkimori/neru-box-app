@@ -1,13 +1,15 @@
+import { boxStyle } from '@/theme/boxes';
+import { ScrollView } from '@/components/feedback-scroll-view';
+import { ChoiceCard } from '@/components/app-controls';
 // Obsidian-inspired completed-task graph with semantic edges only.
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   LayoutChangeEvent,
-  ScrollView,
   Text,
   View,
 } from 'react-native';
-import { MotionPressable as Pressable } from '@/components/motion';
+
 import { playTapFeedback } from '@/utils/interaction-feedback';
 import Svg from 'react-native-svg';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -226,7 +228,7 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0) {
+    if (width> 0 && height> 0) {
       setCanvasW(width);
       setCanvasH(height);
     }
@@ -236,9 +238,9 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
     if (canvasW <= 0 || canvasH <= 0) return graphStars;
     return graphStars.filter((star) => {
       const screen = svgToScreen(star, viewBox, canvasW, canvasH);
-      return screen.x + NODE_VISUAL_RADIUS_SCREEN >= 0
+      return screen.x + NODE_VISUAL_RADIUS_SCREEN>= 0
         && screen.x - NODE_VISUAL_RADIUS_SCREEN <= canvasW
-        && screen.y + NODE_VISUAL_RADIUS_SCREEN >= 0
+        && screen.y + NODE_VISUAL_RADIUS_SCREEN>= 0
         && screen.y - NODE_VISUAL_RADIUS_SCREEN <= canvasH;
     });
   }, [canvasH, canvasW, graphStars, viewBox]);
@@ -338,7 +340,7 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
           accessibilityLabel="Domain color legend"
         >
           {domains.map((domain) => (
-            <Pressable
+            <ChoiceCard selected={highlightedDomainId === domain.constellationId}
               key={domain.constellationId}
               style={[
                 styles.legendItem,
@@ -364,7 +366,7 @@ export function GalaxyCanvas({ stars, domains, onStarExclude }: Props) {
               >
                 {domain.name}
               </Text>
-            </Pressable>
+            </ChoiceCard>
           ))}
         </ScrollView>
       </View>
@@ -435,17 +437,7 @@ const themedStyles = createEditorialStyles(() => ({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: GalaxyPalette.surface,
-    borderWidth: 1,
-    borderColor: GalaxyPalette.border,
-  },
+  legendItem: { ...boxStyle(GalaxyPalette, { variant: 'badge' }), flexDirection: 'row', alignItems: 'center', gap: 6, height: 30 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: GalaxyPalette.textDim, fontSize: 11, fontWeight: '700' },
   legendTextActive: { color: GalaxyPalette.text },

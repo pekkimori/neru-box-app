@@ -1,5 +1,7 @@
+import { SectionHeading } from '@/components/section-heading';
+import { boxCSSStyle } from '@/theme/box-css';
+import { DomButton, DomDismissSurface } from '@/components/dom-button';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { playTapFeedback } from '@/utils/interaction-feedback';
 import { formatCompletionDate, type GalaxyStar } from './galaxy-geometry';
 import { GalaxyPalette } from './galaxy-theme';
 import { ServerPhoto } from '../connected/server-photo';
@@ -98,12 +100,10 @@ export function GalaxyHoverTarget({
   }, [handleDismiss, pinned]);
 
   const handlePin = () => {
-    playTapFeedback();
     onPin();
   };
 
   const handleExcludeRequest = () => {
-    playTapFeedback();
     onPin();
     setConfirmExclude(true);
     setExcludeError(false);
@@ -141,9 +141,9 @@ export function GalaxyHoverTarget({
         event.stopPropagation();
       }}
     >
-      <button
+      <DomButton
         type="button"
-        className="galaxy-node-button"
+        variant="surface" className="galaxy-node-button"
         data-testid={`galaxy-node-hover-${targetKey}`}
         aria-label={`${pinned ? 'Pinned archive record' : 'Pin archive record'} for ${star.label}, completed ${formatCompletionDate(star.completionDate)}`}
         aria-expanded={pinned}
@@ -174,7 +174,7 @@ export function GalaxyHoverTarget({
       />
 
       {pinned && (
-        <div
+        <DomDismissSurface
           className="galaxy-drawer-backdrop"
           aria-hidden="true"
           onClick={(event) => { event.stopPropagation(); handleDismiss(); }}
@@ -194,10 +194,7 @@ export function GalaxyHoverTarget({
           height: CARD_HEIGHT,
           boxSizing: 'border-box',
           overflow: 'visible',
-          borderRadius: 18,
-          border: 0,
-          background: GalaxyPalette.translucentSurface,
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.28)',
+          ...boxCSSStyle(GalaxyPalette, { variant: 'dialog', padding: 'none' }),
           color: GalaxyPalette.text,
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           backdropFilter: 'blur(18px)',
@@ -209,7 +206,7 @@ export function GalaxyHoverTarget({
           <div className="galaxy-popup-content">
             <div className="galaxy-popup-heading">
               <div className="galaxy-popup-heading-copy">
-                <div className="galaxy-popup-record">COMPLETED TASK</div>
+                <SectionHeading>Completed task</SectionHeading>
                 <div
                   className="galaxy-popup-domain"
                   style={{ borderColor: `${star.domainColor}3D`, background: `${star.domainColor}12` }}
@@ -220,7 +217,7 @@ export function GalaxyHoverTarget({
               </div>
             </div>
 
-            <div className="galaxy-popup-title">{star.label}</div>
+            <div className="galaxy-popup-title"><SectionHeading>{star.label}</SectionHeading></div>
             <div className="galaxy-popup-date">Completed {formatCompletionDate(star.completionDate)}</div>
 
             <div className="galaxy-popup-photo">
@@ -233,7 +230,7 @@ export function GalaxyHoverTarget({
               ) : (
                 <div className="galaxy-popup-photo-empty">
                   <span className="galaxy-popup-photo-icon" style={{ color: star.domainColor, background: `${star.domainColor}18` }}>▧</span>
-                  <strong>{photoUnavailable ? 'Photo unavailable' : 'No completion photo'}</strong>
+                  <SectionHeading>{photoUnavailable ? 'Photo unavailable' : 'No completion photo'}</SectionHeading>
                   <span>{photoUnavailable ? 'This image could not be loaded.' : 'This task was completed without an image.'}</span>
                 </div>
               )}
@@ -243,7 +240,7 @@ export function GalaxyHoverTarget({
             <div className="galaxy-popup-reward">
               <span className="galaxy-popup-reward-icon" style={{ color: star.domainColor, background: `${star.domainColor}18` }}>✦</span>
               <span className="galaxy-popup-reward-copy">
-                <small>REWARD EARNED</small>
+                <SectionHeading>Reward earned</SectionHeading>
                 <strong>+{star.coinsEarned} coins</strong>
               </span>
               <span className="galaxy-popup-order">#{recordNumber}</span>
@@ -253,37 +250,37 @@ export function GalaxyHoverTarget({
               {confirmExclude ? (
                 <>
                   <div className="galaxy-popup-confirm-copy">
-                    <strong>{excludeError ? 'Could not exclude' : 'Exclude this task?'}</strong>
+                    <SectionHeading>{excludeError ? 'Could not exclude' : 'Exclude this task?'}</SectionHeading>
                     <span>{excludeError ? 'Please try again.' : 'The task and coins stay safe.'}</span>
                   </div>
                   <div className="galaxy-popup-confirm-actions">
-                    <button
+                    <DomButton
                       type="button"
                       className="galaxy-popup-cancel"
                       disabled={excluding}
                       onClick={(event) => { event.stopPropagation(); setConfirmExclude(false); setExcludeError(false); }}
                     >
                       Keep
-                    </button>
-                    <button
+                    </DomButton>
+                    <DomButton
                       type="button"
-                      className="galaxy-popup-exclude-confirm"
+                      variant="destructive" className="galaxy-popup-exclude-confirm"
                       disabled={excluding}
                       onClick={(event) => { event.stopPropagation(); void handleExclude(); }}
                     >
                       {excluding ? 'Excluding…' : 'Exclude'}
-                    </button>
+                    </DomButton>
                   </div>
                 </>
               ) : (
-                <button
+                <DomButton
                   type="button"
-                  className="galaxy-popup-exclude"
+                  variant="destructive" className="galaxy-popup-exclude" style={{ width: '100%' }}
                   aria-label={`Exclude ${star.label} from Sky Observer`}
                   onClick={(event) => { event.stopPropagation(); handleExcludeRequest(); }}
                 >
                   <span>◉̸</span> Exclude from Sky Observer
-                </button>
+                </DomButton>
               )}
             </div>
           </div>

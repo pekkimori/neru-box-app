@@ -1,7 +1,9 @@
+import { ButtonLabel, TextButton } from '@/components/app-controls';
+import { AppButton } from '@/components/native-controls';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput } from 'react-native';
+import { ActivityIndicator, Text, TextInput } from 'react-native';
 import { useAuth } from '@/features/auth/auth-provider';
-import { AuthButton, AuthError, AuthPage, authStyles } from '@/features/auth/auth-ui';
+import { AuthError, AuthPage, authStyles } from '@/features/auth/auth-ui';
 import { GoogleButton } from '@/features/auth/google-button';
 import { useAppTheme } from '@/theme/app-theme';
 import { errorMessage } from '@/lib/api/client';
@@ -16,7 +18,7 @@ export default function SignInScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitting = useRef(false);
-  const passwordInput = useRef<TextInput>(null);
+  const passwordInput = useRef<import('react-native').TextInputInstance>(null);
 
   const run = async (action: () => Promise<void>) => {
     if (submitting.current || busy) return;
@@ -48,8 +50,8 @@ export default function SignInScreen() {
       <AuthPage title="Let’s reconnect" subtitle="Your session couldn’t be restored. Try again when your connection is ready.">
         <AuthError message={error ?? sessionError} />
         {client && <>
-          <AuthButton label="Try again" loading={busy} onPress={() => { void run(client.restore); }} />
-          <AuthButton secondary label="Sign out on this device" disabled={busy} onPress={() => { void run(client.forgetSession); }} />
+          <AppButton label="Try again" loading={busy} onPress={() => { void run(client.restore); }} />
+          <AppButton variant="secondary" label="Sign out on this device" disabled={busy} onPress={() => { void run(client.forgetSession); }} />
           <Text style={[authStyles.note, { color: colors.textMuted }]}>Local sign-out removes your saved login here. It does not sign out other devices.</Text>
         </>}
       </AuthPage>
@@ -57,7 +59,7 @@ export default function SignInScreen() {
   }
 
   return (
-    <AuthPage title={register ? 'Meet your companion' : 'Welcome back'} subtitle={register ? 'Create your Neru account to get started.' : 'Sign in and take your next small step.'}>
+    <AuthPage title={register ? 'Create account' : 'Sign in'}>
       <Text style={[authStyles.label, { color: colors.text }]}>Email</Text>
       <TextInput accessibilityLabel="Email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address"
         autoComplete="email" textContentType="emailAddress" value={email} onChangeText={setEmail} editable={!busy}
@@ -70,14 +72,14 @@ export default function SignInScreen() {
         textContentType={register ? 'newPassword' : 'password'} value={password} onChangeText={setPassword}
         editable={!busy} returnKeyType="go" onSubmitEditing={submit}
         style={[authStyles.input, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surface }]} />
-      <Pressable accessibilityRole="button" accessibilityLabel={visiblePassword ? 'Hide password' : 'Show password'}
-        onPress={() => setVisiblePassword(value => !value)} style={{ paddingVertical: 12 }}>
-        <Text style={{ color: colors.textSecondary }}>{visiblePassword ? 'Hide password' : 'Show password'}</Text>
-      </Pressable>
+      <TextButton accessibilityRole="button" accessibilityLabel={visiblePassword ? 'Hide password' : 'Show password'}
+        onPress={() => setVisiblePassword(value => !value)}>
+        <ButtonLabel>{visiblePassword ? 'Hide password' : 'Show password'}</ButtonLabel>
+      </TextButton>
       <AuthError message={error} />
-      <AuthButton label={register ? 'Create account' : 'Sign in'} loading={busy} onPress={submit} disabled={!client} />
+      <AppButton label={register ? 'Create account' : 'Sign in'} loading={busy} onPress={submit} disabled={!client} />
       {client && <GoogleButton busy={busy} onBusy={setBusy} onError={setError} onToken={client.googleLogin} />}
-      <AuthButton secondary label={register ? 'Already have an account? Sign in' : 'New to Neru? Create an account'}
+      <AppButton variant="secondary" label={register ? 'Already have an account? Sign in' : 'New to Neru? Create an account'}
         disabled={busy} onPress={() => { setRegister(value => !value); setError(null); setPassword(''); }} />
     </AuthPage>
   );

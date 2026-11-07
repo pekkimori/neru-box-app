@@ -4,19 +4,40 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 
 export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, testApiUrl, email, password, artifacts, failures, proxyApi }) {
   const block = await page.evaluate(() => { const h = new Date().getHours(); return h >= 5 && h < 12 ? 'Morning' : h >= 12 && h < 18 ? 'Afternoon' : 'Evening'; });
+  const initialBlock = block === 'Morning' ? 'Afternoon' : 'Morning';
   await page.getByRole('button', { name: 'Manage week plan', exact: true }).click();
+  const studio = page.getByRole('dialog', { name: 'Weekly studio', exact: true });
   await page.getByRole('button', { name: 'Create a new nebula', exact: true }).click();
-  await page.getByLabel('Domain name', { exact: true }).fill('Browser original sky');
-  await page.getByLabel('Domain icon', { exact: true }).fill('piano');
+  await page.getByLabel('Nebula name', { exact: true }).fill('Browser original sky');
+  await page.getByLabel('Nebula icon', { exact: true }).fill('piano');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await page.getByText('🎹', { exact: true }).first().waitFor();
   await page.getByRole('button', { name: /^Create Browser original sky task for/ }).click();
-  await page.getByLabel('Task name', { exact: true }).fill('Browser original star');
-  await page.getByRole('button', { name: block, exact: true }).click();
-  await page.getByRole('button', { name: 'Create and schedule task', exact: true }).click();
-  await page.getByRole('button', { name: 'Close Weekly Studio', exact: true }).click({ position: { x: 12, y: 12 } });
+  const taskEditor = page.getByRole('dialog', { name: 'New star', exact: true });
+  await taskEditor.getByLabel('Task name', { exact: true }).fill('Browser draft star');
+  await taskEditor.getByRole('button', { name: initialBlock, exact: true }).click();
+  await taskEditor.getByRole('button', { name: 'Create', exact: true }).click();
+  const datePicker = page.getByLabel('Plan date', { exact: true });
+  const todayKey = await datePicker.inputValue();
+  const { past, future } = await page.evaluate(today => {
+    const offset = days => {
+      const date = new Date(today + 'T12:00:00');
+      date.setDate(date.getDate() + days);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+    return { past: offset(-7), future: offset(7) };
+  }, todayKey);
+  await datePicker.fill(past);
+  await studio.getByText('Read only', { exact: true }).waitFor();
+  await studio.getByText('No task was set for this nebula', { exact: true }).first().waitFor();
+  await datePicker.fill(future);
+  await studio.getByRole('button', { name: /^Create Browser original sky task for/ }).waitFor();
+  assert.equal(await studio.getByText('Browser draft star', { exact: true }).count(), 0);
+  await studio.getByRole('button', { name: 'Return to today' }).click();
+  assert.equal(await datePicker.inputValue(), todayKey);
+  await studio.getByText('Browser draft star', { exact: true }).waitFor();
   const savedReply = page.waitForResponse(response => response.url().endsWith('/planning/commands') && response.request().postDataJSON()?.command?.kind === 'saveStudioPlan');
-  await page.getByRole('button', { name: 'Save plan and close', exact: true }).click();
+  await studio.getByRole('button', { name: 'Save', exact: true }).click();
   const saved = await savedReply;
   assert.equal(saved.status(), 200, await saved.text());
   const authorization = saved.request().headers().authorization;
@@ -26,7 +47,30 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   assert.equal(domains.nebulas.find(nebula => nebula.name === 'Browser original sky').icon, 'piano');
   const routineDefinitions = await (await page.request.get(testApiUrl + '/routines?date=' + saved.request().postDataJSON().command.days[0].date, { headers })).json();
   assert.ok(routineDefinitions.quests.every(quest => /^[a-z][a-z0-9-]{0,63}$/.test(quest.icon)));
-  await page.getByRole('button', { name: 'Close Weekly Studio', exact: true }).waitFor({ state: 'detached' });
+  await studio.waitFor({ state: 'hidden' });
+  const draftTaskId = saved.request().postDataJSON().command.days[0].edits[0].taskId;
+  const editButton = studio.getByRole('button', { name: 'Edit Browser draft star', exact: true });
+  const editDialog = page.getByRole('dialog', { name: 'Edit task', exact: true });
+  const nameField = editDialog.getByLabel('Task name', { exact: true });
+  await page.getByRole('button', { name: 'Manage week plan', exact: true }).click();
+  await editButton.click();
+  assert.equal(await nameField.inputValue(), 'Browser draft star');
+  await nameField.fill('Discard this rename');
+  await editDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await editButton.click();
+  assert.equal(await nameField.inputValue(), 'Browser draft star');
+  await nameField.fill('Browser original star');
+  await editDialog.getByRole('button', { name: block, exact: true }).click();
+  await editDialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await studio.getByText('Browser original star', { exact: true }).waitFor();
+  const editedReply = page.waitForResponse(response => response.url().endsWith('/planning/commands') && response.request().postDataJSON()?.command?.kind === 'saveStudioPlan');
+  await studio.getByRole('button', { name: 'Save', exact: true }).click();
+  const edited = await editedReply;
+  assert.equal(edited.status(), 200, await edited.text());
+  assert.deepEqual(edited.request().postDataJSON().command.days[0].edits, [{
+    kind: 'editTask', taskId: draftTaskId, blockId: initialBlock.toLowerCase(), title: 'Browser original star', targetBlockId: block.toLowerCase(),
+  }]);
+  await studio.waitFor({ state: 'hidden' });
   await page.getByText('Browser original star', { exact: true }).first().waitFor();
   assert.equal(await page.getByRole('tab', { name: /^(Online|On device) tasks$/ }).count(), 0);
   assert.equal(await page.getByRole('button', { name: 'Create constellation', exact: true }).count(), 0);
@@ -36,16 +80,16 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   await lockedTask.waitFor();
   assert.equal(await page.getByRole('checkbox', { name: /not complete$/ }).count(), 4);
   await lockedTask.click();
-  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
+  await page.getByRole('dialog', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
   assert.match(await page.getByRole('alert').innerText(), /0\/4 rotinas concluídas/);
   assert.equal(await page.getByRole('button', { name: 'Choose a photo from library', exact: true }).count(), 0);
   await page.screenshot({ path: join(artifacts, 'task-locked-routines-notice.png'), fullPage: true });
-  await page.getByRole('button', { name: 'Entendi', exact: true }).click();
-  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
   await page.getByLabel('Browser original star, unavailable', { exact: true }).click();
-  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Entendi', exact: true }).click();
-  await page.getByRole('heading', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
+  await page.getByRole('dialog', { name: 'Complete as rotinas primeiro', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog', { name: 'Complete as rotinas primeiro', exact: true }).waitFor({ state: 'detached' });
   for (let index = 0; index < 4; index++) {
     const checkbox = page.getByRole('checkbox', { name: /not complete$/ }).first();
     const reply = page.waitForResponse(response => response.url().endsWith('/routines/commands'));
@@ -53,6 +97,8 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
     assert.equal((await reply).status(), 200);
     await page.getByRole('button', { name: 'Edit routine tasks', exact: true }).waitFor();
     await page.waitForFunction(() => !document.querySelector('[aria-label="Saving routines"]'));
+    await page.waitForFunction(remaining => Array.from(document.querySelectorAll('[role="checkbox"]'))
+      .filter(element => element.getAttribute('aria-label')?.endsWith('not complete')).length === remaining, 3 - index);
     if (index < 3) await lockedTask.waitFor();
   }
   await page.getByRole('button', { name: 'Complete: Browser original star', exact: true }).waitFor();
@@ -68,6 +114,7 @@ export async function verifyUnifiedBrowser({ page, browser, origin, apiUrl, test
   const scheduleReply = await page.request.get(testApiUrl + `/schedules/${today}`, { headers });
   const schedule = (await scheduleReply.json()).schedule;
   const task = schedule.tasks.find(task => task.title === 'Browser original star');
+  assert.equal(task.id, draftTaskId);
   assert.equal(task.status, 'lit');
   assert.equal(task.coinsEarned, 11);
   const wallet = await page.request.get(testApiUrl + '/account/wallet', { headers });

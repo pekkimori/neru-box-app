@@ -9,6 +9,7 @@ import { todayString } from '../tasks/time-helpers';
 import { streamChat } from './chat-stream';
 import { CHAT_ATTEMPT_KEY, chatRepository, readHistory, readList, readPreferences, readChatAttempt, saveChatCommand, discardChatCommand, type ChatAttempt, type ChatCommand, type ConversationDTO, type HistoryDTO, type PreferencesDTO } from './chat-repository';
 import { PERSONALITIES, type ChatMessage, type PersonalityId } from './preview-model';
+import { buildQuizMemories, type QuizProfile } from './personality-quiz-model';
 
 export type ChatConversation = {
   id: string; number: number; title?: string; preview: string; revision: number;
@@ -167,6 +168,14 @@ export function useChat(onConversationChange: () => void) {
     return c ? apply({ kind: 'delete',conversationId: id,revision: c.revision },stateRef.current.activeId === id ? '' : undefined) : Promise.resolve(false);
   },[apply]);
   const updatePreferences = useCallback((personality: PersonalityId,memories = stateRef.current.preferences.memories) => apply({ kind: 'preferences',revision: stateRef.current.preferences.revision,personality,memories }),[apply]);
+  const savePersonalityQuiz = useCallback(async (personality: PersonalityId, profile: QuizProfile) => {
+    try {
+      return await updatePreferences(personality, buildQuizMemories(stateRef.current.preferences.memories, profile));
+    } catch (e) {
+      setChatError(error(e));
+      return false;
+    }
+  }, [updatePreferences]);
   const addMemory = useCallback(async () => {
     const text = memoryDraft.trim(); if (!text) return;
     if (await updatePreferences(stateRef.current.preferences.personality,[...stateRef.current.preferences.memories,{ id: Crypto.randomUUID(),text }])) setMemoryDraft('');
@@ -242,12 +251,14 @@ export function useChat(onConversationChange: () => void) {
   if (!messages.length) messages.push({ id: 'greeting',text: selectedPersonalityData.greeting,sender: 'neru',timestamp: new Date() });
   return {
     selectedPersonality: state.preferences.personality,selectedPersonalityData,
-    setSelectedPersonality: updatePreferences,messages,activeConversationId: state.activeId,
+    setSelectedPersonality: updatePreferences,savePersonalityQuiz,messages,activeConversationId: state.activeId,
     conversationNumber: active?.number ?? 1,conversationHistory: conversations,
     startNewConversation,selectConversation,renameConversation,deleteConversation,
     inputText,setInputText,isTyping: !!streaming,chatError,cancelPendingReply,
     memoryItems: state.preferences.memories,memoryDraft,setMemoryDraft,sendMessage,addMemory,removeMemory,editMemory,
-    busy,canSend: ready && !busy && !pendingChange && !history?.turns.some(t => t.status === 'running'),
+    preferencesReady: ready,
+    busy,canPersonalize: ready && !busy && !pendingChange && !streaming && !history?.turns.some(t => t.status === 'running'),
+    canSend: ready && !busy && !pendingChange && !history?.turns.some(t => t.status === 'running'),
     refreshChat,loadOlder,hasOlder: !!history?.nextBefore,loadMoreConversations,hasMoreConversations: !!state.nextBefore,
     pendingChange,retryChange: () => pendingChange ? apply(pendingChange.command,pendingChange.command.kind === 'create' ? pendingChange.command.conversationId : undefined,pendingChange) : Promise.resolve(false),
   } as const;

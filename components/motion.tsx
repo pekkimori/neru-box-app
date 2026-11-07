@@ -8,7 +8,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   type TouchableOpacityProps,
-  type View,
+  type ViewInstance,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -48,7 +48,7 @@ export type MotionPressableProps = PressableProps & MotionControlProps;
  * Drop-in Pressable with a quick compression and a softer spring release.
  * The system Reduce Motion preference is respected by Reanimated.
  */
-export const MotionPressable = forwardRef<View, MotionPressableProps>(function MotionPressable(
+export const MotionPressable = forwardRef<ViewInstance, MotionPressableProps>(function MotionPressable(
   {
     disabled,
     feedback = 'tap',
@@ -108,7 +108,7 @@ export const MotionPressable = forwardRef<View, MotionPressableProps>(function M
 export type MotionTouchableOpacityProps = TouchableOpacityProps & MotionControlProps;
 
 /** TouchableOpacity-compatible variant for existing controls. */
-export const MotionTouchableOpacity = forwardRef<View, MotionTouchableOpacityProps>(
+export const MotionTouchableOpacity = forwardRef<ViewInstance, MotionTouchableOpacityProps>(
   function MotionTouchableOpacity(
     {
       activeOpacity = 0.86,

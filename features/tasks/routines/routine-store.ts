@@ -19,6 +19,9 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
   const listeners = new Set<() => void>();
   let reading = 0;
   let busy = false;
+  // A multi-row editor reuses the exact attempt when Save is retried.
+  const draftAttempts = new Map<string, RoutineAttempt>();
+  const savedDraftChanges = new Set<string>();
   function publish(patch: Partial<RoutineState>) {
     try { guard(); } catch { return; }
     state = { ...state, ...patch }; listeners.forEach(listener => listener());
@@ -68,12 +71,14 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
     } catch (cause) {
       if (cause && typeof cause === 'object' && 'status' in cause && [400, 404, 409].includes(Number(cause.status))) {
         guard();
+        draftAttempts.forEach((value, key) => { if (value.operationId === attempt.operationId) draftAttempts.delete(key); });
         await storage.setItem(OUTBOX + attempt.operationId, 'null');
       }
       throw cause;
     }
   }
-  async function mutate(change?: RoutineChange) {
+  async function mutate(change?: RoutineChange, draftId?: string) {
+    if (draftId && savedDraftChanges.has(draftId)) return true;
     if (busy || state.loading) return false;
     busy = true;
     ++reading;
@@ -83,9 +88,11 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
       let attempt: RoutineAttempt;
       if (change) {
         if (change.kind === 'create' || change.kind === 'update') change = { ...change, icon: iconKey(change.icon) };
-        if (!state.fresh) throw new Error('Reload your routines before editing.');
-        if (attempts.length) throw new Error('Retry the pending routine save before making another change.');
-        attempt = { operationId: uuid(), command: { ...change, revision: state.snapshot.revision }, createdAt: new Date().toISOString() };
+        const previous = draftId ? draftAttempts.get(draftId) : undefined;
+        if (!previous && !state.fresh) throw new Error('Reload your routines before editing.');
+        if (attempts.some(item => item.operationId !== previous?.operationId)) throw new Error('Retry the pending routine save before making another change.');
+        attempt = previous ?? { operationId: uuid(), command: { ...change, revision: state.snapshot.revision }, createdAt: new Date().toISOString() };
+        if (draftId) draftAttempts.set(draftId, attempt);
         await storage.setItem(OUTBOX + attempt.operationId, JSON.stringify(attempt));
       } else {
         if (!attempts.length) return true;
@@ -97,6 +104,7 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
       publish({ pending: await pending() });
       const snapshot = await refresh();
       publish({ snapshot, fresh: true });
+      if (draftId) savedDraftChanges.add(draftId);
       return true;
     } catch (cause) {
       publish({ fresh: false, error: cause instanceof Error ? cause.message : 'Could not save routines.' });
@@ -108,7 +116,7 @@ export function createRoutineStore(repository: ReturnType<typeof routineReposito
     getSnapshot: () => state,
     subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     reload,
-    run: (change: RoutineChange) => mutate(change),
+    run: (change: RoutineChange, draftId?: string) => mutate(change, draftId),
     retry: () => mutate(),
   };
 }

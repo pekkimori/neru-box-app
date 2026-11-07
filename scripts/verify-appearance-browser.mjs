@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 
+export async function openConfigurations(page) {
+  await page.getByRole('button', { name: 'Play with NERU', exact: true }).click({ delay: 2_100 });
+  await page.waitForURL('**/configurations');
+}
+
 // Run against a disposable signed-in account, as in verify-auth-browser.mjs.
 export async function verifyAppearanceBrowser(page) {
   const path = '/account/values/app-appearance-v1';
@@ -26,6 +31,7 @@ export async function verifyAppearanceBrowser(page) {
   }
   try {
     await page.getByRole('tab', { name: 'Control', exact: true }).click();
+    await openConfigurations(page);
     assert.equal((await custom('#F5DF88')).status(), 200, 'Custom colors are accepted by the server');
     await page.getByText('#F5DF88', { exact: true }).waitFor();
     const count = writes.length;
@@ -33,7 +39,7 @@ export async function verifyAppearanceBrowser(page) {
     assert.equal(writes.length, count + 1, 'Presentation fallback and onShow must not duplicate saves');
     assert.equal(writes.at(-1).value.customAccent, '#32105D');
 
-    assert.equal((await save(() => page.getByRole('radio', { name: 'Dark mode', exact: true }).click())).status(), 200);
+    assert.equal((await save(() => page.getByRole('button', { name: 'Dark', exact: true }).click())).status(), 200);
     assert.equal(writes.at(-1).value.customAccent, '#32105D', 'Changing mode retains the custom color');
     await page.getByText('Dark · Custom', { exact: true }).waitFor();
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -48,14 +54,23 @@ export async function verifyAppearanceBrowser(page) {
     await page.getByRole('button', { name: 'Retry settings save', exact: true }).click();
     await page.getByRole('button', { name: 'Retry settings save', exact: true }).waitFor({ state: 'hidden' });
     await page.getByText('#32105D', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Go back', exact: true }).click();
     await page.getByRole('tab', { name: 'Chat', exact: true }).click();
-    await page.getByRole('tab', { name: 'Control', exact: true }).click();
+    await page.getByRole('button', { name: 'Play with NERU', exact: true }).press('Enter');
+    await page.waitForURL('**/configurations');
     assert.equal((await custom('#ABC123')).status(), 200, 'A new custom color works after recovery');
     await page.getByText('#ABC123', { exact: true }).waitFor();
     assert.equal((await save(() => page.getByRole('radio', { name: 'NERU accent. Signal red', exact: true }).click())).status(), 200);
-    assert.equal((await save(() => page.getByRole('radio', { name: 'Light mode', exact: true }).click())).status(), 200);
+    assert.equal((await save(() => page.getByRole('button', { name: 'Light', exact: true }).click())).status(), 200);
     await page.getByText('Light · NERU', { exact: true }).waitFor();
-    console.log('Appearance: custom colors, canceled animations, one save per change, mode/reload persistence, rejected save recovery and navigation passed.');
+    const silent = page.getByRole('radio', { name: /^Silent\./ });
+    assert.equal((await save(() => silent.click())).status(), 200);
+    assert.equal(writes.at(-1).value.soundSet, 'silent');
+    assert.equal(await silent.getAttribute('aria-checked'), 'true');
+    assert.equal((await save(() => page.getByRole('radio', { name: /^Neru classic\./ }).click())).status(), 200);
+    await page.getByRole('button', { name: 'Go back', exact: true }).click();
+    await page.waitForURL('**/chat');
+    console.log('Configurations: appearance and sound saves, retry, keyboard access and return to the original tab passed.');
   } finally {
     page.off('request', observe);
     await noAnimations.evaluate(element => element.remove()).catch(() => undefined);

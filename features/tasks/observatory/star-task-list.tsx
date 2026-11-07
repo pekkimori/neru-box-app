@@ -1,12 +1,15 @@
+import { AppBox } from '@/components/app-box';
+import { ScrollView } from '@/components/feedback-scroll-view';
+import { ActionButton, ButtonIcon, ButtonLabel } from '@/components/app-controls';
 import { iconGlyph } from '../../../lib/icons/icon-reference';
 // features/tasks/observatory/star-task-list.tsx
-import { Text, View, ScrollView } from 'react-native';
+import { Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MotionTouchableOpacity as TouchableOpacity } from '@/components/motion';
+
 import { createEditorialStyles } from '@/theme/editorial-theme';
 import { useThemedStyles } from '@/theme/app-theme';
 import { Type } from '@/theme/typography';
-import { Palette, Sp, R, useTasksPalette } from '../tokens';
+import { Palette, Sp,  useTasksPalette } from '../tokens';
 import type { BlockType, Star, Constellation, PlannedTask } from '../../../types/tasks';
 
 interface Props {
@@ -14,11 +17,12 @@ interface Props {
   stars: Star[];
   constellations: Constellation[];
   tasksUnlocked: boolean;
+  disabled?: boolean;
   onStarPress: (star: Star) => void;
 }
 
 export function StarTaskList({
-  tasks, stars, constellations, tasksUnlocked, onStarPress,
+  tasks, stars, constellations, tasksUnlocked, disabled = false, onStarPress,
 }: Props) {
   const styles = useThemedStyles(themedStyles);
   const Palette = useTasksPalette();
@@ -40,7 +44,7 @@ export function StarTaskList({
         const isLit = task.status === 'lit';
 
         return (
-          <View key={`${block}-${task.starId}`} style={styles.row}>
+          <AppBox variant="card" padding="sm" key={`${block}-${task.starId}`} style={styles.row}>
             <View style={styles.rowMain}>
               <Ionicons
                 name={isLit ? 'star' : 'star-outline'}
@@ -63,28 +67,23 @@ export function StarTaskList({
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.completeButton,
-                isLit && styles.doneButton,
-                !isLit && !tasksUnlocked && styles.lockedButton,
-              ]}
+            <ActionButton size="sm"
+
               onPress={() => onStarPress(star)}
-              disabled={isLit}
+              disabled={isLit || disabled}
               accessibilityRole="button"
               accessibilityLabel={`${isLit ? 'Completed' : tasksUnlocked ? 'Complete' : 'Locked'}: ${star.label}`}
-              accessibilityState={{ disabled: isLit }}
+              accessibilityState={{ disabled: isLit || disabled }}
             >
-              <Ionicons
+              <ButtonIcon
                 name={isLit ? 'checkmark' : tasksUnlocked ? 'sparkles-outline' : 'lock-closed-outline'}
                 size={14}
-                color={isLit || !tasksUnlocked ? Palette.warmMuted : Palette.onRed}
               />
-              <Text style={[styles.completeText, (isLit || !tasksUnlocked) && styles.mutedActionText]}>
+              <ButtonLabel>
                 {isLit ? 'Done' : tasksUnlocked ? 'Complete' : 'Locked'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              </ButtonLabel>
+            </ActionButton>
+          </AppBox>
         );
       })}
     </ScrollView>
@@ -94,12 +93,7 @@ export function StarTaskList({
 const themedStyles = createEditorialStyles(() => ({
   list: { flex: 1 },
   listContent: { gap: 8 },
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Palette.bgElevated, borderRadius: R.sm,
-    borderWidth: 1, borderColor: Palette.gray,
-    paddingHorizontal: 12, minHeight: 56,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 56 },
   rowMain: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: Sp.sm,
   },
@@ -109,12 +103,4 @@ const themedStyles = createEditorialStyles(() => ({
     color: Palette.warmDim, textDecorationLine: 'line-through', opacity: 0.7,
   },
   meta: { ...Type.bodySmall, color: Palette.warmDim },
-  completeButton: {
-    height: 38, flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 11, borderRadius: R.sm, backgroundColor: Palette.red,
-  },
-  doneButton: { backgroundColor: Palette.graySoft },
-  lockedButton: { backgroundColor: Palette.graySoft },
-  completeText: { ...Type.captionStrong, color: Palette.onRed },
-  mutedActionText: { color: Palette.warmMuted },
 }));

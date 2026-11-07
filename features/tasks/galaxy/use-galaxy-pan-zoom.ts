@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { PanResponder } from 'react-native';
+import { playSwipeFeedback } from '@/utils/interaction-feedback';
 import type { ViewBox } from './galaxy-geometry';
 
 const TOUCH_SLOP = 5;
@@ -180,6 +181,7 @@ export function useGalaxyPanZoom({
               Math.abs(evt.nativeEvent.pageX - panStart.current.x) > TOUCH_SLOP
               || Math.abs(evt.nativeEvent.pageY - panStart.current.y) > TOUCH_SLOP
             ) {
+              if (!gestureMoved.current) playSwipeFeedback();
               gestureMoved.current = true;
             }
             const dx = panStart.current.x - evt.nativeEvent.pageX;

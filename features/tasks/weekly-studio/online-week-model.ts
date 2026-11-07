@@ -23,8 +23,11 @@ export function weeklyDayEdits(day: DraftDay, keepIds = false): WeeklyPlanEdit[]
   // Removals and moves refer to assignment IDs, including repeated quests.
   for (const task of originals.values()) {
     const next = desired.get(task.id);
+    const targetBlockId = next?.blockId && next.blockId !== task.blockId ? next.blockId : undefined;
     if (!next) edits.push({ kind: 'removeTask', taskId: task.id, blockId: task.blockId ?? null });
-    else if (next.blockId && next.blockId !== task.blockId) edits.push({ kind: 'moveTask', taskId: task.id, blockId: task.blockId ?? null, targetBlockId: next.blockId });
+    else if (next.title !== task.title) edits.push({ kind: 'editTask', taskId: task.id, blockId: task.blockId ?? null,
+      title: next.title, ...(targetBlockId ? { targetBlockId } : {}) });
+    else if (targetBlockId) edits.push({ kind: 'moveTask', taskId: task.id, blockId: task.blockId ?? null, targetBlockId });
   }
   for (const task of day.tasks) if (!originals.has(task.id)) {
     if (!task.blockId) throw new Error('Choose a block for each new task.');
@@ -51,11 +54,13 @@ export function reviewWeeklyDraft(draft: WeekDraft, schedules: Record<string, Sc
       const index = tasks.findIndex(task => task.id === edit.taskId);
       if (index < 0) {
         if (edit.kind === 'removeTask') continue; // Already removed elsewhere.
-        throw new Error('A task you moved was removed elsewhere. Undo this draft and plan it again.');
+        throw new Error('A task you edited was removed elsewhere. Undo this draft and plan it again.');
       }
       if (edit.kind === 'removeTask') {
         if (!canRemoveWeeklyTask(tasks[index])) throw new Error('A task you removed now has progress or photos. Undo this draft to keep its history.');
         tasks.splice(index, 1);
+      } else if (edit.kind === 'editTask') {
+        tasks[index] = { ...tasks[index], title: edit.title, blockId: edit.targetBlockId ?? tasks[index].blockId };
       } else tasks[index] = { ...tasks[index], blockId: edit.targetBlockId };
     }
     const oldIds = new Set((day.base?.tasks ?? []).map(task => task.id));

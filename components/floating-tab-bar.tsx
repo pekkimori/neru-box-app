@@ -1,14 +1,9 @@
+import { AppLayout, tabDockBottom } from '@/theme/layout';
+import { TabButton } from '@/components/app-controls';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useEffect, useRef, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  Text,
-  useWindowDimensions,
-  View,
-  type LayoutRectangle,
-} from 'react-native';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { Platform, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   ReduceMotion,
@@ -56,12 +51,12 @@ const TAB_META: Record<
 type DockItemProps = {
   route: BottomTabBarProps['state']['routes'][number];
   focused: boolean;
-  navigation: BottomTabBarProps['navigation'];
+  emitter: BottomTabBarProps['emitter'];
+  navigateToTab: BottomTabBarProps['navigateToTab'];
   width: number;
-  onLayout: (layout: LayoutRectangle) => void;
 };
 
-function DockItem({ route, focused, navigation, width, onLayout }: DockItemProps) {
+function DockItem({ route, focused, emitter, navigateToTab, width }: DockItemProps) {
   const { colors } = useAppTheme();
   const styles = useThemedStyles(themedStyles);
   const meta = TAB_META[route.name];
@@ -72,32 +67,31 @@ function DockItem({ route, focused, navigation, width, onLayout }: DockItemProps
       emitNeruMascotPress();
       return;
     }
-    const event = navigation.emit({
+    const event = emitter.emit({
       type: 'tabPress',
       target: route.key,
       canPreventDefault: true,
     });
 
     if (!focused && !event.defaultPrevented) {
-      navigation.navigate(route.name, route.params);
+      navigateToTab(route.key);
     }
   };
 
   const onLongPress = () => {
-    navigation.emit({ type: 'tabLongPress', target: route.key });
+    emitter.emit({ type: 'tabLongPress', target: route.key });
   };
 
   if (!meta) return null;
 
   return (
-    <Pressable
+    <TabButton customFeedback
       accessibilityRole="tab"
       accessibilityLabel={meta.label}
       accessibilityState={{ selected: focused }}
       onPress={onPress}
       onLongPress={onLongPress}
       onPressIn={() => { if (!focused) playTapFeedback(); }}
-      onLayout={(event) => onLayout(event.nativeEvent.layout)}
       style={[styles.item, { width }, isPrimary && styles.primaryItem]}
     >
       <View
@@ -128,26 +122,39 @@ function DockItem({ route, focused, navigation, width, onLayout }: DockItemProps
       >
         {meta.label.toUpperCase()}
       </Text>
-    </Pressable>
+    </TabButton>
   );
 }
 
-export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const styles = useThemedStyles(themedStyles);
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const [layouts, setLayouts] = useState<Record<string, LayoutRectangle>>({});
   const activeRoute = state.routes[state.index];
-  const layout = layouts[activeRoute.key];
-  const fromX = useSharedValue(0);
-  const fromY = useSharedValue(0);
-  const fromSize = useSharedValue(40);
-  const toX = useSharedValue(0);
-  const toY = useSharedValue(0);
-  const toSize = useSharedValue(40);
+  // Use the same concrete lanes for the icons and highlight. Waiting for
+  // onLayout leaves the first animated frame at the screen's origin.
+  const dockWidth = Math.min(
+    DOCK_MAX_WIDTH,
+    Math.max(0, windowWidth - insets.left - insets.right - DOCK_SCREEN_MARGIN * 2),
+  );
+  const tabWidth = Math.max(
+    0,
+    (dockWidth - DOCK_HORIZONTAL_PADDING * 2 - 2) / state.routes.length,
+  );
+  const primary = activeRoute.name === 'tasks';
+  const nextSize = primary ? 54 : 40;
+  const nextX = DOCK_HORIZONTAL_PADDING + 1 + state.index * tabWidth
+    + (tabWidth - nextSize) / 2 + HIGHLIGHT_X_CORRECTION
+    + (TAB_META[activeRoute.name]?.iconOffsetX ?? 0);
+  const nextY = primary ? -12 : 6;
+  const fromX = useSharedValue(nextX);
+  const fromY = useSharedValue(nextY);
+  const fromSize = useSharedValue(nextSize);
+  const toX = useSharedValue(nextX);
+  const toY = useSharedValue(nextY);
+  const toSize = useSharedValue(nextSize);
   const morphProgress = useSharedValue(1);
-  const ready = useSharedValue(false);
   const previousTabIndex = useRef(state.index);
   const previousHighlight = useRef<{
     routeKey: string;
@@ -163,16 +170,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     }
   }, [state.index]);
 
-  useEffect(() => {
-    if (!layout) return;
-    const primary = activeRoute.name === 'tasks';
-    const nextSize = primary ? 54 : 40;
-    const iconOffsetX = TAB_META[activeRoute.name]?.iconOffsetX ?? 0;
-    // The native circle renders a touch heavier on its right edge. Shift it
-    // one point left, then apply the same optical correction as the icon.
-    const nextX = layout.x + (layout.width - nextSize) / 2 + HIGHLIGHT_X_CORRECTION + iconOffsetX;
-    const nextY = primary ? -12 : 6;
-
+  useLayoutEffect(() => {
     const previous = previousHighlight.current;
     if (!previous || previous.routeKey === activeRoute.key) {
       fromX.value = nextX;
@@ -203,16 +201,16 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       y: nextY,
       size: nextSize,
     };
-    ready.value = true;
   }, [
     activeRoute.key,
     activeRoute.name,
     fromSize,
     fromX,
     fromY,
-    layout,
+    nextX,
+    nextY,
+    nextSize,
     morphProgress,
-    ready,
     toSize,
     toX,
     toY,
@@ -238,7 +236,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     const deltaY = mainCenterY - trailCenterY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    if (!ready.value || distance < 1 || trailRadius < 1) {
+    if (distance < 1 || trailRadius < 1) {
       return { d: '' };
     }
 
@@ -286,7 +284,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     const centerX = startCenterX + (endCenterX - startCenterX) * trailProgress;
     const centerY = startCenterY + (endCenterY - startCenterY) * trailProgress;
     return {
-      opacity: ready.value && currentSize > 0.5 ? 1 : 0,
+      opacity: currentSize> 0.5 ? 1 : 0,
       width: currentSize,
       height: currentSize,
       borderRadius: currentSize / 2,
@@ -310,7 +308,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     const centerX = startCenterX + (endCenterX - startCenterX) * progress;
     const centerY = startCenterY + (endCenterY - startCenterY) * progress;
     return {
-      opacity: ready.value ? 1 : 0,
+      opacity: 1,
       width: currentWidth,
       height: currentHeight,
       borderRadius: Math.max(currentWidth, currentHeight) / 2,
@@ -320,19 +318,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       ],
     };
   });
-  const bottom = Math.max(12, insets.bottom - (Platform.OS === 'ios' ? 8 : 0));
-  // Yoga can resolve a percentage-width child to zero when its parent centers
-  // children and is itself absolutely positioned. That shows up on Android as
-  // every flex item sharing the left edge. Give the dock a concrete width so
-  // each tab always receives an equal, measurable lane.
-  const dockWidth = Math.min(
-    DOCK_MAX_WIDTH,
-    Math.max(0, windowWidth - insets.left - insets.right - DOCK_SCREEN_MARGIN * 2),
-  );
-  const tabWidth = Math.max(
-    0,
-    (dockWidth - DOCK_HORIZONTAL_PADDING * 2 - 2) / state.routes.length,
-  );
+  const bottom = tabDockBottom(insets.bottom, Platform.OS === 'ios');
 
   useTabScreenVisibility(state.index, state.routes.length);
 
@@ -365,13 +351,8 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             key={route.key}
             route={route}
             focused={state.index === index}
-            navigation={navigation}
+            emitter={emitter} navigateToTab={navigateToTab}
             width={tabWidth}
-            onLayout={(next) => setLayouts((current) => {
-              const previous = current[route.key];
-              if (previous?.x === next.x && previous?.width === next.width) return current;
-              return { ...current, [route.key]: next };
-            })}
           />
         ))}
       </View>
@@ -387,7 +368,7 @@ const themedStyles = createEditorialStyles(() => ({
     elevation: 20,
   },
   dock: {
-    height: 70,
+    height: AppLayout.dockHeight,
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'stretch',
@@ -419,7 +400,7 @@ const themedStyles = createEditorialStyles(() => ({
     flexGrow: 0,
     flexShrink: 0,
     minWidth: 0,
-    height: 70,
+    height: AppLayout.dockHeight,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

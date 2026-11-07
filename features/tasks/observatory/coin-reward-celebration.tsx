@@ -1,3 +1,4 @@
+import { AppBox } from '@/components/app-box';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef } from 'react';
@@ -177,24 +178,24 @@ export function CoinRewardCelebration({ reward, nebulaName, onFinished }: Props)
           opacity: details,
           transform: [{ translateY: details.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
         }]}>
-          <View style={[styles.rewardChip, { backgroundColor: Palette.bgElevated }]}>
+          <AppBox variant="card" padding="sm" style={[styles.rewardChip, { backgroundColor: Palette.bgElevated }]}>
             <View style={[styles.chipIcon, { backgroundColor: '#FFE4DC' }]}><Ionicons name="flame" size={18} color={FLAME} /></View>
             <View style={styles.chipCopy}>
               <Text style={[styles.chipTitle, { color: Palette.warmWhite }]}>{reward.streakDays} DAY STREAK</Text>
               <Text style={[styles.chipHint, { color: Palette.warmMuted }]}>Momentum bonus</Text>
             </View>
             <Text style={[styles.chipValue, { color: FLAME }]}>+{reward.streak}</Text>
-          </View>
+          </AppBox>
 
           {reward.reachedThreeActiveDays && (
-            <View style={[styles.rewardChip, styles.nebulaChip]}>
+            <AppBox variant="card" padding="sm" style={[styles.rewardChip, styles.nebulaChip]}>
               <View style={styles.nebulaIcon}><Ionicons name="planet" size={19} color={GOLD_DARK} /></View>
               <View style={styles.chipCopy}>
                 <Text style={[styles.chipTitle, { color: GOLD_DARK }]}>NEBULA GOAL!</Text>
                 <Text style={styles.nebulaHint} numberOfLines={1}>3 active days · {nebulaName ?? 'Nebula'}</Text>
               </View>
               <Text style={[styles.chipValue, { color: GOLD_DARK }]}>+{reward.nebula}</Text>
-            </View>
+            </AppBox>
           )}
         </Animated.View>
       </Animated.View>
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   labelLine: { width: 32, height: 2, borderRadius: 1, backgroundColor: GOLD },
   coinsLabel: { ...Type.label, color: GOLD_LIGHT, letterSpacing: 2.2 },
   bonusStack: { position: 'absolute', top: 382, width: '84%', gap: 9 },
-  rewardChip: { minHeight: 62, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 7 },
+  rewardChip: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 10 },
   chipIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   chipCopy: { flex: 1, minWidth: 0 },
   chipTitle: { ...Type.captionStrong, letterSpacing: 0.8 },
